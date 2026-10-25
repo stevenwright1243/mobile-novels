@@ -2,11 +2,15 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
+    <title>VN Mobile</title>
   </head>
   <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
+    <header>
+      <h1>Pick a window</h1>
+      <button id="refresh">Refresh</button>
+    </header>
+    <ul id="window-list"></ul>
+    <video id="preview" autoplay muted></video>
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>

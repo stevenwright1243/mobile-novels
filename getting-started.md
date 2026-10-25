@@ -32,10 +32,25 @@ Four separate problems, and it helps to keep them separate:
 
 ### Capture
 - Electron has this built in: `desktopCapturer.getSources({ types: ['window'] })` lists windows, and you feed the chosen one into a `<video>` element with `getUserMedia`. Then draw regions of that video onto `<canvas>` elements. No native code needed.
+- This captures **the app window itself**, not an area of the screen: it follows the game when it moves and still works when other windows cover it. (Minimized windows go black, so keep the game open.)
+- On Windows the source ID looks like `window:<number>:0`, where the number is the window's handle (HWND). Keep it: the input bridge can use it to target the same window.
 
 ### Reformat
 - A "calibration" screen where you drag rectangles over a screenshot of the game: *background area*, *text box*, *name box*, *menu buttons*. Save those per game as a small JSON file.
-- The portrait window then draws: the background region cropped/scaled to fill the top, the text box region enlarged below it, and a row of big buttons (Menu, Skip, Auto, Back, etc.).
+- **Regions are stored as fractions of the game window (0 to 1), not pixels.** For example, `{ "x": 0.05, "y": 0.72, "w": 0.9, "h": 0.25 }`. That way they still line up if the game window is moved, resized, or run at another resolution.
+- **"Set text zone" setting (the first calibration tool).** A button in the main window turns the live game preview into a drawing surface. You click and drag a rectangle over the game's text box, and that rectangle becomes the region the portrait view shows in its text zone:
+  - While dragging, an outline follows the mouse. After you let go it stays visible, so you can see what's being captured, and dragging again replaces it.
+  - The mouse position is converted to fractions of the *game frame*, not of the preview element. The preview is letterboxed (`object-fit: contain`), so the black bars have to be subtracted first. The video's `videoWidth`/`videoHeight` give the real frame size.
+  - The region goes main window → main process → portrait window over IPC, and the portrait's text zone switches to the new crop immediately, live.
+  - Later, the same region is what gets OCR'd (see *Text* below), and Milestone 2 reuses this drag tool for the other regions and saves them per game.
+- **The portrait view uses responsive layout, not a fixed 1080x1920 canvas.** It has to fit whatever resolution Apollo picks for the phone, or a resizable window while testing. The principles:
+  - **CSS Grid with named areas for the zones** (background, name, text box, buttons). For example: `grid-template-areas: 'bg' 'name' 'text' 'buttons'` with `grid-template-rows: 3fr auto 2fr auto`. `fr` units share out the space. Rearranging the layout, such as for landscape, means changing only the area map, not the HTML. A layout can then live in the per-game JSON as data.
+  - **Flexbox only for one-dimensional rows**, like the button row.
+  - **No fixed pixel sizes.** Zones take shares (`fr`). Text and buttons scale with `clamp()`, e.g. `font-size: clamp(1rem, 4vw, 2rem)`, so they're never too small or too huge.
+  - **Media or container queries for big shape changes** (portrait vs landscape, very narrow screens), instead of separate layouts per resolution.
+  - **Canvases need code to be responsive.** CSS stretches the canvas *box*, but its drawing is in pixels:
+    - A `ResizeObserver` resets each canvas's pixel size to its box size × `devicePixelRatio`, so it stays sharp on high-resolution phone screens.
+    - The drawing code chooses *contain* (show the whole crop, with bars) or *cover* (fill the zone, trim the edges): contain for the text box so no text is lost, cover for the background.
 - **Text, in stages:**
   1. *First:* just show the text box as an enlarged image crop. Zero extra work, already readable.
   2. *Then real text:* **Textractor** hooks most VN engines and pulls out the actual text (very reliable, especially for Japanese VNs). It has plugins that can forward text over a WebSocket, which Electron can read easily. Fallback for games it can't hook: OCR the text box region (`tesseract.js`, or Windows' built-in OCR).
@@ -51,6 +66,7 @@ Four separate problems, and it helps to keep them separate:
 - **The real problem is translation and focus.** A tap lands on your Electron window, so the app has to work out "that was the Skip button" or "that was at (x, y) in the game" and then send that click or key to the game. Two catches:
   - Electron can't click on other windows by itself. You need a small native helper. The easiest route in a Node app is calling Windows' `SendInput`/`PostMessage` through **koffi** (an FFI library, no C++ compiling). `robotjs` and `nut.js` exist too, but robotjs is unmaintained and nut.js moved to a paid license.
   - Clicking your window takes focus away from the game, and some VNs pause or ignore input when they're not focused. Usually the fix is to briefly focus the game, send the input, then refocus your app. Or send messages straight to the game window, which works for some engines.
+  - **Map taps through the same fractions:** tap position inside a zone → fraction of that zone's region → fraction of the game window → real pixel position using the game window's *current* position, looked up from its HWND at click time. Nothing depends on where the game sits on screen.
   - **This is the riskiest part, so test it early** (Milestone 3).
 - Safety net: a "raw mode" toggle that shows the whole game, letterboxed, where every tap maps 1:1. That way you can always reach settings screens your layout doesn't cover.
 
@@ -59,8 +75,8 @@ Four separate problems, and it helps to keep them separate:
 | # | Goal | Done when |
 |---|------|-----------|
 | 0 | Setup | Forge app opens a window from VS Code; repo on GitHub |
-| 1 | **Capture + layout** | Pick the VN window from a list. A 1080x1920 window shows a cropped background on top and the text box enlarged below, live |
-| 2 | Calibration | Drag rectangles to define regions, saved per game as JSON |
+| 1 | **Capture + layout** | 1a: pick the VN window from a list and see it live. 1b: a responsive portrait window (Grid zones, canvases sized with `ResizeObserver`) shows the cropped background on top and the text box enlarged below, live, and still fits when you resize the window. 1c: a "Set text zone" button lets you drag a rectangle over the live preview, and the portrait's text zone switches to that crop live |
+| 2 | Calibration | Reuse the 1c drag tool for the other regions (background, name box, buttons) and save them per game as JSON (fractions of the window, not pixels), loaded automatically when you pick that game again |
 | 3 | Input bridge | Clicking "Advance" or a mapped region in your window makes the game advance/click. Raw mode works |
 | 4 | Streaming | Apollo + Tailscale: play from your phone on mobile data |
 | 5 | Real text | Textractor → WebSocket → nicely styled text in the app; OCR fallback |
@@ -75,6 +91,7 @@ Four separate problems, and it helps to keep them separate:
 - Keep requests milestone-sized. For example: *"Add a window picker using desktopCapturer and show the selected window live in a video element."*
 - Commit after each working step (`git commit`), so you can roll back when something goes wrong.
 - Ask it "why" freely. Having it explain its code is the fastest way to relearn.
+- **Expect pushback on outdated ideas.** Some of my knowledge is years old. When I suggest a technique and there's a better current best practice, Claude should say so, explain why it's better, and urge me to consider it before building. Example: I suggested flexbox for the zones, and CSS Grid with named areas turned out to fit better. This rule is also in `CLAUDE.md`, so it applies in every session.
 
 ### A first prompt you can paste into Claude Code (after scaffolding)
-> This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second "portrait" window that draws two hard-coded regions of that capture onto canvases: a background crop scaled to fill the top 60%, and a text-box crop scaled to fill the bottom 40%. Keep it simple and explain the main-process vs renderer split as you go.
+> This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second "portrait" window laid out with CSS Grid named areas, each zone holding a canvas that a ResizeObserver keeps sized to its box (times devicePixelRatio). Draw two hard-coded regions of that capture into them, given as fractions of the game window: a background crop (cover) in a top zone (3fr) and a text-box crop (contain) in a bottom zone (2fr). Keep it simple and explain the main-process vs renderer split as you go.
