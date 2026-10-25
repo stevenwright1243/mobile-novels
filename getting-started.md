@@ -77,4 +77,4 @@ Four separate problems, and it helps to keep them separate:
 - Ask it "why" freely. Having it explain its code is the fastest way to relearn.
 
 ### A first prompt you can paste into Claude Code (after scaffolding)
-> This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second 1080x1920 "portrait" window that draws two hard-coded regions of that capture onto canvases: a background crop scaled to fill the top 60%, and a text-box crop scaled to fill the bottom 40%. Keep it simple and explain the main-process vs renderer split as you go.
+> This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second "portrait" window that draws two hard-coded regions of that capture onto canvases: a background crop scaled to fill the top 60%, and a text-box crop scaled to fill the bottom 40%. Keep it simple and explain the main-process vs renderer split as you go.
