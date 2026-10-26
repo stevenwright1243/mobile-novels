@@ -43,9 +43,10 @@ if (started) {
   app.quit();
 }
 
-// Debug logging, switched on by starting with `npm run start:debug`, which
-// passes this flag to the app.
-const DEBUG_OCR = process.argv.includes('--debug-ocr');
+// Debug mode, switched on by starting with `npm run start:debug`, which
+// passes this flag to the app: OCR reads are logged in the terminal, and the
+// picker shows its debug tools (see `is-debug`).
+const DEBUG = process.argv.includes('--debug');
 
 // The game window the user picked. Its ID lets the portrait window capture it
 // too.
@@ -568,11 +569,14 @@ app.whenReady().then(() => {
   });
 
   // OCR: the picker sends a PNG of the text box, main reads it.
+  // Whether the app is in debug mode (see `DEBUG`).
+  ipcMain.handle('is-debug', () => DEBUG);
+
   // With `npm run start:debug`, each read is logged to the terminal, to help
   // tune what counts as garbage (see text-reader.ts).
   ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
     const result = await readText(png);
-    if (DEBUG_OCR) {
+    if (DEBUG) {
       console.log(`OCR ${result.confidence}% ${result.ms}ms:`, result.text);
     }
     return result;

@@ -138,11 +138,15 @@
         </span>
         <button id="bg-reset" disabled>Reset</button>
       </div>
-      <button id="ocr-test-button" disabled>Read text (OCR test)</button>
-      <label>
-        <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean up
-        image
-      </label>
+      <!-- Debug tools, only shown with `npm run start:debug` (ocr-test.ts). -->
+      <span id="debug-tools" role="group" aria-label="Debug tools" hidden>
+        <strong>Debug:</strong>
+        <button id="ocr-test-button" disabled>Read text (OCR test)</button>
+        <label>
+          <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean up
+          image
+        </label>
+      </span>
       <!-- Shown while editing a region (see region-editor.ts). -->
       <div id="edit-panel" role="group" aria-label="Region settings" hidden>
         <label><input type="checkbox" id="snap" checked /> Snap to edges</label>

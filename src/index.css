@@ -478,6 +478,24 @@ h2 {
 }
 
 /* `ch` is the width of one character: room for "100.0". */
+/* Debug tools: a dashed outline marks them as not part of normal use. A
+   single row, so flexbox. */
+#debug-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.75rem;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+/* `display: flex` above would otherwise override the `hidden` attribute. */
+#debug-tools[hidden] {
+  display: none;
+}
+
 /* The note beside the text size while a long line is shrunk to fit. */
 #text-shrink-note {
   margin-left: 0.5rem;

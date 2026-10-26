@@ -17,7 +17,7 @@ Their knowledge of web and tooling practices may be outdated, and they've asked 
 ## Commands
 
 - `npm start`: run the app in dev mode (Electron Forge + Vite, with hot reload for the renderer). Type `rs` in that terminal to restart after main-process or preload changes.
-- `npm run start:debug`: the same, with debug logging (`--debug-ocr`: every OCR read, its confidence and time, printed in the terminal).
+- `npm run start:debug`: the same, in debug mode (`--debug`): every OCR read, its confidence and time, is printed in the terminal, and the picker shows its **Debug** tools (the OCR test button and its "Clean up image" checkbox; `isDebug()`).
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run lint`: oxlint plus an oxfmt format check. `npm run lint:fix` fixes both.
 - `npm run package` / `npm run make`: build a distributable (Squirrel installer on Windows).

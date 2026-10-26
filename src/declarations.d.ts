@@ -166,6 +166,8 @@ interface Window {
     onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;
+    // Whether the app was started in debug mode (`npm run start:debug`).
+    isDebug(): Promise<boolean>;
     // Reads the text in a PNG image with OCR (ocr.ts).
     readText(png: Uint8Array): Promise<OcrResult>;
     // The game's current line of text, as read by OCR (text-reader.ts).
