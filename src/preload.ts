@@ -1,8 +1,24 @@
 // Runs before the page loads and is the only bridge between the page and the
 // main process. Whatever is exposed here shows up in the page as `window.vn`.
+// Both windows use this same preload.
 // See: https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('vn', {
   listWindows: () => ipcRenderer.invoke('list-windows'),
+  selectSource: (sourceId) => ipcRenderer.invoke('select-source', sourceId),
+  getSelectedSource: () => ipcRenderer.invoke('get-selected-source'),
+  onSourceSelected: (callback) => {
+    // Pass on just the ID, so the page never sees Electron's event object.
+    ipcRenderer.on('source-selected', (_event, sourceId: string) =>
+      callback(sourceId),
+    );
+  },
+  getRegions: () => ipcRenderer.invoke('get-regions'),
+  setRegion: (name, region) => ipcRenderer.invoke('set-region', name, region),
+  onRegionsChanged: (callback) => {
+    ipcRenderer.on('regions-changed', (_event, regions: Regions) =>
+      callback(regions),
+    );
+  },
 } satisfies Window['vn']);

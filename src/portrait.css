@@ -1,0 +1,56 @@
+body {
+  margin: 0;
+  background: #000;
+  color: #ccc;
+  font-family: system-ui, sans-serif;
+}
+
+/* The zones. To rearrange the layout, change the area map and row sizes
+   here; the HTML stays the same. `fr` = a share of the available space. */
+.portrait {
+  height: 100dvh;
+  display: grid;
+  grid-template-areas:
+    'background'
+    'text';
+  grid-template-rows: 3fr 2fr;
+}
+
+#background-zone {
+  grid-area: background;
+}
+
+#text-zone {
+  grid-area: text;
+}
+
+/* The canvas is pinned to its zone, so the zone's size comes only from the
+   grid. Otherwise resizing the canvas's pixels could feed back into the
+   layout and make it grow. */
+.zone {
+  position: relative;
+  min-height: 0;
+}
+
+.zone canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#status {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 1rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: clamp(1rem, 5vw, 1.5rem);
+}
+
+/* `display: grid` above would otherwise override the `hidden` attribute. */
+#status[hidden] {
+  display: none;
+}
