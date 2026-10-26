@@ -4,6 +4,10 @@
    (read by portrait.ts). A pale sky wash keeps it bright. */
 :root {
   --backdrop-tint: rgb(214 236 255 / 35%);
+  /* The text size at 100% in the picker: follows the window's width, within
+     limits. Used by the message window and the history log. (Raised by half
+     from 1.125rem / 5vw / 2rem, so 100% now reads comfortably on a phone.) */
+  --base-font-size: clamp(1.6875rem, 7.5vw, 3rem);
 }
 
 body {
@@ -104,9 +108,9 @@ body {
     position: relative;
     box-sizing: border-box;
     margin: 0;
-    /* The text size chosen in the picker: follows the window's width, times
-       the size setting. */
-    --chosen-font-size: calc(clamp(1.125rem, 5vw, 2rem) * var(--text-size, 1));
+    /* The text size chosen in the picker: the base size (100%) times the size
+       setting. */
+    --chosen-font-size: calc(var(--base-font-size) * var(--text-size, 1));
     --line-height: 1.55;
     /* Room for 3 lines at the chosen size, so the window stays the same size
        for most lines. It's worked out from the chosen size (not the actual
@@ -319,7 +323,7 @@ body {
 /* The same size as the message window's text. */
 #log-text {
   margin: 0;
-  font-size: calc(clamp(1.125rem, 5vw, 2rem) * var(--text-size, 1));
+  font-size: calc(var(--base-font-size) * var(--text-size, 1));
   font-weight: 600;
   line-height: 1.55;
   text-wrap: pretty;

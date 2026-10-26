@@ -14,7 +14,6 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
 import {
-  DEFAULT_BACKGROUND_VIEW,
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
   deleteProfile,
@@ -86,7 +85,6 @@ const snapshot = (current: GameProfile) =>
     clickMethod: current.clickMethod,
     textMode: current.textMode,
     textStyle: current.textStyle,
-    backgroundView: current.backgroundView,
   });
 
 const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
@@ -375,7 +373,6 @@ app.whenReady().then(() => {
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-mode-changed', profile.textMode);
     broadcast('text-style-changed', profile.textStyle);
-    broadcast('background-view-changed', profile.backgroundView);
     // The last game's line no longer applies.
     textLine = '';
     textHistory = [];
@@ -568,20 +565,6 @@ app.whenReady().then(() => {
     if (profile) {
       profile = { ...profile, textMode: mode };
       broadcast('text-mode-changed', mode, event.sender);
-      sendSaveState();
-    }
-  });
-
-  // How the background is zoomed and positioned in the portrait, part of the
-  // game's profile. The picker changes it; the portrait redraws.
-  ipcMain.handle(
-    'get-background-view',
-    () => profile?.backgroundView ?? DEFAULT_BACKGROUND_VIEW,
-  );
-  ipcMain.handle('set-background-view', (event, view: ZoneView) => {
-    if (profile) {
-      profile = { ...profile, backgroundView: view };
-      broadcast('background-view-changed', view, event.sender);
       sendSaveState();
     }
   });
