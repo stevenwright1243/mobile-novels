@@ -14,8 +14,29 @@
         <p id="text-line" class="glass"></p>
       </div>
 
+      <!-- Switches between the reader layout and the whole game (portrait.ts).
+           Shows whichever it switches to. -->
+      <button
+        id="raw-button"
+        class="corner-button glass"
+        aria-label="Menus: show the whole game"
+      >
+        <svg class="to-raw" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 5h18v12H3zM8 21h8M12 17v4" />
+        </svg>
+        <svg class="to-reader" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 5h16M4 10h16M4 15h10M4 20h7" />
+        </svg>
+        <span class="to-raw">Menus</span>
+        <span class="to-reader">Reader</span>
+      </button>
+
       <!-- Opens the history log (history-log.ts). -->
-      <button id="log-button" class="glass" aria-label="History log">
+      <button
+        id="log-button"
+        class="corner-button glass"
+        aria-label="History log"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 3" />
         </svg>

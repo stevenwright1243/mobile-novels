@@ -171,6 +171,22 @@ body {
   }
 }
 
+/* Whole-game mode: the background zone fills the portrait and shows the
+   entire game (portrait.ts places it with `SHOW_ALL`, so nothing is cut
+   off); the text zone is hidden. After the text-mode rules, so it wins. */
+.portrait.raw-mode {
+  grid-template-areas: 'stage';
+  grid-template-rows: 1fr;
+
+  #background-zone {
+    grid-area: stage;
+  }
+
+  #text-zone {
+    display: none;
+  }
+}
+
 @keyframes bob {
   50% {
     translate: 0 0.2em;
@@ -181,7 +197,7 @@ body {
 /* --- History log -------------------------------------------------------------- */
 
 /* Icons: simple line drawings that take the text colour. */
-#log-button svg,
+.corner-button svg,
 #log svg {
   width: 1.2em;
   height: 1.2em;
@@ -194,7 +210,7 @@ body {
 
 /* Buttons in the portrait: no browser default look; big, rounded, with the
    theme's font. */
-#log-button,
+.corner-button,
 #log button {
   font: inherit;
   font-weight: 700;
@@ -202,12 +218,13 @@ body {
   border-radius: 999px;
 }
 
-/* The Log button: a small frosted pill in the top-right corner, over the
-   background. Still at least 44px tall, a comfortable size for a finger. */
-#log-button {
+/* The corner buttons (Menus top-left, Log top-right): small frosted
+   pills over the background. Still at least 44px tall, a comfortable size
+   for a finger. */
+.corner-button {
+  --corner-gap: clamp(0.5rem, 3vw, 1rem);
   position: absolute;
-  top: clamp(0.5rem, 3vw, 1rem);
-  right: clamp(0.5rem, 3vw, 1rem);
+  top: var(--corner-gap);
   z-index: 2;
   display: flex;
   align-items: center;
@@ -215,6 +232,25 @@ body {
   min-height: 44px;
   padding: 0.4em 1em;
   font-size: clamp(0.95rem, 4vw, 1.2rem);
+}
+
+#raw-button {
+  left: var(--corner-gap);
+}
+
+#log-button {
+  right: var(--corner-gap);
+}
+
+/* The Menus button shows the icon and label of the layout it switches
+   to (the `raw` class is set by portrait.ts while the whole game shows). */
+#raw-button .to-reader,
+#raw-button.raw .to-raw {
+  display: none;
+}
+
+#raw-button.raw .to-reader {
+  display: inline;
 }
 
 /* The history log fills the whole portrait. */
@@ -317,7 +353,7 @@ body {
 
 /* A quick press-in, so a tap feels registered. */
 #log button:active:not(:disabled),
-#log-button:active {
+.corner-button:active {
   scale: 0.97;
 }
 

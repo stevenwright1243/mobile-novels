@@ -247,19 +247,50 @@ const createPortraitWindow = (bounds: Rectangle) => {
     // also means keyboard shortcuts like Ctrl+Shift+I don't reach it.)
     focusable: false,
   });
+  const portrait = portraitWindow;
   // No File / Edit / View menu bar: this window is what the phone sees.
-  portraitWindow.removeMenu();
+  portrait.removeMenu();
   // On Windows, `focusable: false` also hides the window from the taskbar
   // and Alt+Tab, so it can get lost behind other windows. Put it back in
   // both. The native handle is the window's HWND, stored as 8 bytes.
-  showInTaskbar(
-    Number(portraitWindow.getNativeWindowHandle().readBigUInt64LE()),
-  );
-  portraitWindow.setSkipTaskbar(false);
-  portraitWindow.on('closed', () => {
+  const keepInTaskbar = () => {
+    showInTaskbar(Number(portrait.getNativeWindowHandle().readBigUInt64LE()));
+    portrait.setSkipTaskbar(false);
+  };
+  keepInTaskbar();
+
+  // A non-focusable window's title bar doesn't work on Windows: Chromium
+  // answers Windows' "should this click activate the window?" question
+  // (WM_MOUSEACTIVATE) with "no, and throw the click away", so the title bar
+  // can't be clicked to the front or dragged. That question says where the
+  // click landed, and it arrives before Chromium answers it, so: for a click
+  // on the title bar or borders (anything but the page, HTCLIENT), make the
+  // window focusable first. Chromium then says "yes", and the click works
+  // like on any window. Clicks on the page are left alone.
+  const WM_MOUSEACTIVATE = 0x0021;
+  const HTCLIENT = 1;
+  portrait.hookWindowMessage(WM_MOUSEACTIVATE, (_wParam, lParam) => {
+    // The low 16 bits of lParam say where the click landed.
+    const hit = lParam.readUInt16LE(0);
+    if (hit !== HTCLIENT && !portrait.isFocusable()) {
+      portrait.setFocusable(true);
+      portrait.focus();
+    }
+  });
+  // Once focus moves elsewhere (the game, the picker), go back to
+  // non-focusable, so taps on the page never take focus from the game.
+  // Changing it resets the taskbar settings, so restore those too.
+  portrait.on('blur', () => {
+    if (portrait.isFocusable()) {
+      portrait.setFocusable(false);
+      keepInTaskbar();
+    }
+  });
+
+  portrait.on('closed', () => {
     portraitWindow = null;
   });
-  loadPage(portraitWindow, 'portrait.html');
+  loadPage(portrait, 'portrait.html');
 };
 
 // For now, open the two windows docked side by side and centered on the main
