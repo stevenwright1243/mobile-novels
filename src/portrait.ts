@@ -74,6 +74,36 @@ function setTextMode(mode: TextMode) {
 window.vn.onTextModeChanged(setTextMode);
 window.vn.getTextMode().then(setTextMode);
 
+// --- Menus: the whole game ("raw mode") -------------------------------------------------------
+
+// The top-left button switches between the reader layout and the whole game:
+// the entire game screen in full, so every menu, setting and choice can be
+// seen and tapped, with taps landing 1:1. Just for now, not saved. The
+// `raw-mode` class switches the layout in portrait.css.
+const WHOLE_GAME: Region = { x: 0, y: 0, w: 1, h: 1 };
+let rawMode = false;
+const rawButton = document.querySelector<HTMLButtonElement>('#raw-button')!;
+rawButton.addEventListener('click', () => {
+  rawMode = !rawMode;
+  portrait.classList.toggle('raw-mode', rawMode);
+  rawButton.classList.toggle('raw', rawMode);
+  rawButton.setAttribute(
+    'aria-label',
+    rawMode ? 'Back to the reader layout' : 'Menus: show the whole game',
+  );
+});
+
+// What a zone shows, and how: in whole-game mode the background zone shows
+// the whole game, all of it (`SHOW_ALL`); otherwise its own region and view.
+function zoneRegion(zone: Zone, regions: Regions) {
+  return rawMode && zone.region === 'background'
+    ? WHOLE_GAME
+    : regions[zone.region];
+}
+function zoneView(zone: Zone) {
+  return rawMode && zone.region === 'background' ? SHOW_ALL : zone.view();
+}
+
 // The text size (see `TextStyle`), passed to portrait.css as `--text-size`.
 function setTextStyle(style: TextStyle) {
   chosenSize = style.size;
@@ -210,14 +240,14 @@ for (const zone of zones) {
 // to draw the zone and to work out where a tap on it points in the game.
 function placeZone(zone: Zone, regions: Regions) {
   const { canvas } = zone;
-  const region = regions[zone.region];
+  const region = zoneRegion(zone, regions);
   const { sx, sy, sw, sh } = regionInVideo(video, clientArea, region);
   const { dx, dy, dw, dh } = placeInZone(
     sw,
     sh,
     canvas.width,
     canvas.height,
-    zone.view(),
+    zoneView(zone),
   );
   return { sx, sy, sw, sh, dx, dy, dw, dh };
 }
@@ -311,7 +341,8 @@ function drawFrame() {
   if (regions && video.videoWidth > 0) {
     fitTextZone(regions);
     for (const zone of zones) {
-      if (zone.region === 'text' && textMode === 'text') {
+      // The text zone's picture isn't shown in text mode or whole-game mode.
+      if (zone.region === 'text' && (textMode === 'text' || rawMode)) {
         continue;
       }
       drawZone(zone, regions);
@@ -344,7 +375,7 @@ function tapToGame(zone: Zone, event: MouseEvent) {
   if (u < 0 || u > 1 || v < 0 || v > 1) {
     return null;
   }
-  const region = regions[zone.region];
+  const region = zoneRegion(zone, regions);
   return { x: region.x + u * region.w, y: region.y + v * region.h };
 }
 
