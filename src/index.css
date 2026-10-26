@@ -132,8 +132,18 @@ h2 {
   color: #fff;
 }
 
-#window-list {
+#windows {
   grid-area: list;
+}
+
+/* The fold-out line, styled like the "Your games" heading. */
+#windows > summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+#window-list {
   /* Fits as many 10rem+ columns as there's room for, then wraps. `rem` is
      relative to the text size, so the grid scales with it. */
   display: grid;
@@ -171,13 +181,63 @@ h2 {
   white-space: nowrap;
 }
 
-#preview-area {
+/* The zoom controls above the preview, which gets the rest of the height. */
+#preview-section {
   grid-area: preview;
   /* Grid items won't shrink below their content size by default; this lets
      the preview shrink to fit its row. */
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+/* A single row, so flexbox. */
+#zoom-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+#zoom-controls button {
+  min-width: 2rem;
+}
+
+#zoom-level {
+  min-width: 4ch;
+  text-align: center;
+}
+
+#zoom-controls .hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+#preview-area {
   position: relative;
   background: #000;
+  /* Scrollbars appear when zoomed in. */
+  overflow: auto;
+}
+
+/* The video and the region outlines. Zooming makes it bigger than the
+   preview area (`--zoom` times its size, set by preview-zoom.ts), and the
+   area scrolls. */
+#zoom-box {
+  position: relative;
+  width: calc(var(--zoom, 1) * 100%);
+  height: calc(var(--zoom, 1) * 100%);
+}
+
+/* Zoomed in: drag to move around (not while editing; see above). */
+#preview-area.zoomed:not(.editing) {
+  cursor: grab;
+}
+
+#preview-area.panning,
+#preview-area.panning.editing {
+  cursor: grabbing;
 }
 
 #preview {
