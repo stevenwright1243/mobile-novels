@@ -9,11 +9,12 @@
       <h1>Pick a window</h1>
       <button id="refresh">Refresh</button>
       <button id="send-to-back" disabled>Send game to back</button>
+      <button id="save-profile" disabled>Save profile</button>
       <button data-region="background" disabled>Edit background</button>
       <button data-region="text" disabled>Edit text zone</button>
       <label>
         Taps click by
-        <select id="click-method">
+        <select id="click-method" disabled>
           <option value="message">Sending messages</option>
           <option value="mouse">Simulating the mouse</option>
         </select>
@@ -31,6 +32,11 @@
         <label><input type="checkbox" id="lock-size" /> Lock size</label>
       </div>
     </header>
+    <!-- Saved game profiles; filled in by renderer.ts. -->
+    <section id="games" hidden>
+      <h2>Your games</h2>
+      <ul id="game-list"></ul>
+    </section>
     <ul id="window-list"></ul>
     <div id="preview-area">
       <video id="preview" autoplay muted></video>

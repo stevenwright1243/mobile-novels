@@ -75,6 +75,23 @@ const SetWindowLongPtr = user32.func(
 const GWL_EXSTYLE = -20;
 const WS_EX_APPWINDOW = 0x00040000;
 
+// For finding which program (.exe) a window belongs to.
+const kernel32 = koffi.load('kernel32.dll');
+const GetWindowThreadProcessId = user32.func(
+  'uint32_t __stdcall GetWindowThreadProcessId(intptr_t hWnd, _Out_ uint32_t *lpdwProcessId)',
+);
+const OpenProcess = kernel32.func(
+  'intptr_t __stdcall OpenProcess(uint32_t dwDesiredAccess, bool bInheritHandle, uint32_t dwProcessId)',
+);
+const QueryFullProcessImageName = kernel32.func(
+  'bool __stdcall QueryFullProcessImageNameW(intptr_t hProcess, uint32_t dwFlags, uint16_t *lpExeName, _Inout_ uint32_t *lpdwSize)',
+);
+const CloseHandle = kernel32.func(
+  'bool __stdcall CloseHandle(intptr_t hObject)',
+);
+// Enough access to read a process's name, even for most other users' apps.
+const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
 // For keeping the game un-minimized.
 const IsWindow = user32.func('bool __stdcall IsWindow(intptr_t hWnd)');
 const IsIconic = user32.func('bool __stdcall IsIconic(intptr_t hWnd)');
@@ -143,6 +160,47 @@ export function sendToBack(hwnd: number) {
 export function restoreBehind(hwnd: number) {
   ShowWindow(hwnd, SW_SHOWNOACTIVATE);
   sendToBack(hwnd);
+}
+
+/**
+ * The full path of the program that owns a window, e.g.
+ * "D:\...\totono_Steam.exe". Null if it can't be read, e.g. the game runs as
+ * administrator and this app doesn't.
+ */
+export function exePathOf(hwnd: number): string | null {
+  // Single-element arrays act as "output" variables that Windows fills in.
+  const processId = [0];
+  GetWindowThreadProcessId(hwnd, processId);
+  const process = OpenProcess(
+    PROCESS_QUERY_LIMITED_INFORMATION,
+    false,
+    processId[0],
+  );
+  if (!process) {
+    return null;
+  }
+  try {
+    // Windows writes the path as UTF-16 text into this buffer, and sets
+    // `length` to how many characters it wrote.
+    const buffer = Buffer.alloc(1024 * 2);
+    const length = [1024];
+    return QueryFullProcessImageName(process, 0, buffer, length)
+      ? buffer.toString('utf16le', 0, length[0] * 2)
+      : null;
+  } finally {
+    // `finally` runs even after `return`, so the handle is always released.
+    CloseHandle(process);
+  }
+}
+
+// The game's client area (its content, without title bar) in pixels.
+export function clientSize(hwnd: number) {
+  const client = {} as Rect;
+  // A minimized window's content measures 0×0, which isn't useful to save.
+  if (!GetClientRect(hwnd, client) || client.right <= 0) {
+    return null;
+  }
+  return { width: client.right, height: client.bottom };
 }
 
 // desktopCapturer window IDs look like "window:<HWND>:0".

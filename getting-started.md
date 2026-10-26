@@ -1,6 +1,43 @@
 # VN Mobile App: how to start
 
-This is a planning doc, not code yet. It assumes a **Windows PC** (where most VNs and Sunshine live). If you're on something else, say so and parts change.
+This is the project's planning doc. It assumes a **Windows PC** (where most VNs and Sunshine live).
+
+## Status (as of 2026-10-25)
+
+**Read this first when picking the project up in a new chat or tool.**
+
+**Done:** milestones 1a–1c, 2, 3a and 3d (see the table in section 3).
+- The picker window lists open windows and saved **game profiles**. The portrait window draws the background and text zone live.
+- Regions are edited with handles, snapping (toggle, or hold Alt to flip it), an exact-pixel X/Y/W/H panel, a size lock and arrow-key nudging.
+- The title bar is cropped by measuring the game's client area through Win32 (koffi).
+- Taps in the portrait click the same spot in the game. There are two methods, posted messages or simulated mouse, and the test VN accepts both.
+- The portrait window is non-focusable (so the game keeps focus) but still listed in the taskbar and Alt+Tab.
+- Minimized games are restored behind other windows automatically. Use "Send game to back" instead of minimizing.
+- Profiles: one JSON file per game, keyed by `.exe`.
+  - Saving is **manual**: the Save button or Ctrl+S, with Save / Don't save / Cancel when switching games or closing with unsaved edits.
+  - Right-clicking a game card opens a native menu: Pick / Show file in folder / Delete.
+
+**Key decisions, and why:**
+- **CSS Grid** for layout, flexbox only for single rows. Nothing is hard-coded to a resolution.
+- **Regions are fractions of the game's client area**, so they survive window moves, resizes and DPI changes. The same coordinates are used for clicking.
+- **Profiles are keyed by `.exe`**, not window title, because titles can change per chapter.
+- **Manual saving** was the user's preference over autosave.
+- **Native Electron menus and dialogs** rather than HTML imitations.
+- **koffi 3** for Win32: pointers are BigInts, so window handles are declared as `intptr_t` and passed as plain numbers. New Win32 calls are tested with a small scratch probe before being written into the app.
+
+**Known gaps:**
+- `npm run package` doesn't include koffi yet. Forge's Vite plugin only packages `.vite/`. `npm start` is fine.
+- No landscape layout for the portrait.
+- A game that was maximized may come back un-maximized after auto-restore.
+
+**Next step: Milestone 3b.**
+- A button row in the portrait (Advance / Back / Skip / Auto / Menu) that sends keys or clicks *button regions* drawn in the picker.
+- Size the text zone's row to the text region's shape, to remove the black gaps.
+- Remove the menu bar from the portrait window.
+
+Then 3c (raw mode: the whole game letterboxed, with 1:1 taps), then Milestone 4 (Apollo + Tailscale).
+
+**Working agreement:** small steps the user can test and commit; explain TypeScript and Electron patterns briefly; when the user suggests something and a better current practice exists, say so and explain before building (see `CLAUDE.md`).
 
 ## 1. The big picture
 
@@ -42,7 +79,8 @@ Four separate problems, and it helps to keep them separate:
 - **Minimized games can't be captured or clicked.** Windows doesn't draw minimized windows, and most engines pause their game loop when minimized. A game that's only *covered* by other windows keeps running fine. So the app checks once a second and, if the selected game is minimized, restores it *without focusing it* and pushes it behind all other windows. Use the picker's **Send game to back** button instead of minimizing.
 
 ### Reformat
-- A "calibration" screen where you drag rectangles over a screenshot of the game: *background area*, *text box*, *name box*, *menu buttons*. Save those per game as a small JSON file.
+- A "calibration" screen where you drag rectangles over a screenshot of the game: *background area*, *text box*, *name box*, *menu buttons*. Save those per game in a **game profile**.
+- **Game profiles:** one JSON file per game in `%APPDATA%\mobile-novel\games\`, named after the game's `.exe` (e.g. `totono_steam.exe.json`), so it survives window-title changes. It holds the exe path, last window title, click method, regions, the game's pixel size and when it was last played. The picker's **Your games** list shows each profile as a card with an *Open / Not running* badge. Clicking an open game's card picks its window. **Saving is manual:** changes apply live, but the file is only written when you click **Save profile** (or press Ctrl+S). Switching games or closing the app with unsaved changes asks whether to save them.
 - **Drawing snaps** to the game picture's sides and to the other regions' edges, so regions can sit flush against each other. Hold Alt to place freely.
 - **Regions are stored as fractions of the game's content (0 to 1), not pixels.** For example, `{ "x": 0.05, "y": 0.72, "w": 0.9, "h": 0.25 }`. That way they still line up if the game window is moved, resized, or run at another resolution.
 - **"Set text zone" setting (the first calibration tool).** A button in the main window turns the live game preview into a drawing surface. You click and drag a rectangle over the game's text box, and that rectangle becomes the region the portrait view shows in its text zone:
@@ -87,8 +125,8 @@ Four separate problems, and it helps to keep them separate:
 |---|------|-----------|
 | 0 | Setup | Forge app opens a window from VS Code; repo on GitHub |
 | 1 | **Capture + layout** | 1a: pick the VN window from a list and see it live. 1b: a responsive portrait window (Grid zones, canvases sized with `ResizeObserver`) shows the cropped background on top and the text box enlarged below, live, and still fits when you resize the window. 1c: a "Set text zone" button lets you drag a rectangle over the live preview, and the portrait's text zone switches to that crop live |
-| 2 | Calibration | Reuse the 1c drag tool for the background too. Regions save automatically per game as JSON (fractions of the window, not pixels) and load when you pick that game again. Games are identified by window title for now. Name box and button regions are deferred: the name box only when a game needs it, buttons to Milestone 3 |
-| 3 | Input bridge | 3a ✅: tapping anywhere in the portrait clicks the same spot in the game, with two delivery methods (posted messages vs simulated mouse). The portrait window never takes focus from the game. *Result: "YOU and ME and HER" accepts both methods; minimized games are auto-restored behind other windows.* 3b: save the working method per game, and add a portrait button row (Advance, Back, Skip, Auto, Menu…) that sends keys or clicks button regions drawn in the picker. 3c: raw mode: the whole game letterboxed, taps map 1:1. 3d: identify games by their `.exe` instead of window title (titles can change per chapter) |
+| 2 | Calibration | Reuse the 1c drag tool for the background too. Regions save automatically per game as JSON (fractions of the window, not pixels) and load when you pick that game again. Now part of each game's profile, keyed by `.exe`. Name box and button regions are deferred: the name box only when a game needs it, buttons to Milestone 3 |
+| 3 | Input bridge | 3a ✅: tapping anywhere in the portrait clicks the same spot in the game, with two delivery methods (posted messages vs simulated mouse). The portrait window never takes focus from the game. *Result: "YOU and ME and HER" accepts both methods; minimized games are auto-restored behind other windows.* 3b: save the working method per game, and add a portrait button row (Advance, Back, Skip, Auto, Menu…) that sends keys or clicks button regions drawn in the picker. 3c: raw mode: the whole game letterboxed, taps map 1:1. 3d ✅: identify games by their `.exe` instead of window title (titles can change per chapter). Done as part of game profiles, which also save the click method per game (originally planned for 3b) |
 | 4 | Streaming | Apollo + Tailscale: play from your phone on mobile data |
 | 5 | Real text | Textractor → WebSocket → nicely styled text in the app; OCR fallback |
 | 6+ | Creative | Sprite extraction, themes, per-game presets, history log |
