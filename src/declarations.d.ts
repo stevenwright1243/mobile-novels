@@ -175,5 +175,7 @@ interface Window {
     getTextLine(): Promise<string>;
     setTextLine(line: string): Promise<void>;
     onTextLineChanged(callback: (line: string) => void): void;
+    // The history log: the last 30 lines read, oldest first.
+    getTextHistory(): Promise<string[]>;
   };
 }

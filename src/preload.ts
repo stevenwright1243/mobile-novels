@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld('vn', {
   isDebug: () => ipcRenderer.invoke('is-debug'),
   readText: (png) => ipcRenderer.invoke('read-text', png),
   getTextLine: () => ipcRenderer.invoke('get-text-line'),
+  getTextHistory: () => ipcRenderer.invoke('get-text-history'),
   setTextLine: (line) => ipcRenderer.invoke('set-text-line', line),
   onTextLineChanged: (callback) => {
     ipcRenderer.on('text-line-changed', (_event, line: string) =>
