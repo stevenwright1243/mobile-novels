@@ -10,9 +10,12 @@ contextBridge.exposeInMainWorld('vn', {
   getSelectedSource: () => ipcRenderer.invoke('get-selected-source'),
   onSourceSelected: (callback) => {
     // Pass on just the ID, so the page never sees Electron's event object.
-    ipcRenderer.on('source-selected', (_event, sourceId: string) =>
+    ipcRenderer.on('source-selected', (_event, sourceId: string | null) =>
       callback(sourceId),
     );
+  },
+  onWindowsChanged: (callback) => {
+    ipcRenderer.on('windows-changed', () => callback());
   },
   getClientArea: () => ipcRenderer.invoke('get-client-area'),
   getRegions: () => ipcRenderer.invoke('get-regions'),
@@ -28,6 +31,20 @@ contextBridge.exposeInMainWorld('vn', {
   onClickMethodChanged: (callback) => {
     ipcRenderer.on('click-method-changed', (_event, method: ClickMethod) =>
       callback(method),
+    );
+  },
+  getTextStyle: () => ipcRenderer.invoke('get-text-style'),
+  setTextStyle: (style) => ipcRenderer.invoke('set-text-style', style),
+  onTextStyleChanged: (callback) => {
+    ipcRenderer.on('text-style-changed', (_event, style: TextStyle) =>
+      callback(style),
+    );
+  },
+  getTextShrink: () => ipcRenderer.invoke('get-text-shrink'),
+  setTextShrink: (size) => ipcRenderer.invoke('set-text-shrink', size),
+  onTextShrinkChanged: (callback) => {
+    ipcRenderer.on('text-shrink-changed', (_event, size: number | null) =>
+      callback(size),
     );
   },
   getTextMode: () => ipcRenderer.invoke('get-text-mode'),

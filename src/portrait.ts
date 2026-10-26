@@ -4,8 +4,15 @@
  * of it into the layout's zones.
  */
 
+// The rounded font, bundled with the app (works offline).
+import '@fontsource-variable/nunito';
 import './portrait.css';
-import { getClientArea, playCapture, regionInVideo } from './capture';
+import {
+  getClientArea,
+  playCapture,
+  regionInVideo,
+  stopCapture,
+} from './capture';
 import { startTextReader } from './text-reader';
 import { placeInZone, SHOW_ALL } from './zone-view';
 
@@ -61,9 +68,106 @@ let textMode: TextMode = 'text';
 function setTextMode(mode: TextMode) {
   textMode = mode;
   portrait.classList.toggle('text-mode', mode === 'text');
+  layoutChanged();
 }
 window.vn.onTextModeChanged(setTextMode);
 window.vn.getTextMode().then(setTextMode);
+
+// The text size (see `TextStyle`), passed to portrait.css as `--text-size`.
+function setTextStyle(style: TextStyle) {
+  chosenSize = style.size;
+  oversizedSize = style.oversizedSize ?? null;
+  portrait.style.setProperty('--text-size', String(style.size));
+  layoutChanged();
+}
+window.vn.onTextStyleChanged(setTextStyle);
+window.vn.getTextStyle().then(setTextStyle);
+
+// --- Keeping things in step -------------------------------------------------------
+
+// Something that affects the message window changed (text mode, text size,
+// or the window's size): tell the picker the background zone's size, and
+// refit the current line. The background picture doesn't depend on the text
+// at all: it fills the whole portrait, and the window lies over it.
+function layoutChanged() {
+  reportZoneSize();
+  fitText();
+}
+
+// --- Fitting long lines -----------------------------------------------------------
+
+// The text size chosen in the picker (see `TextStyle`).
+let chosenSize = 1;
+// The size for lines too long to fit at the chosen size, or null to shrink
+// each one just enough ("Auto").
+let oversizedSize: number | null = null;
+// The smallest a line may shrink to, as a text size: the slider's minimum.
+const SMALLEST_SIZE = 0.6;
+// The last shrunk size sent to main (null = not shrunk), to only send changes.
+let reportedShrink: number | null = null;
+
+// Changes the size of a line that's too long for the message window's
+// resting height (room for 3 lines at the chosen size):
+//  - With a long-line size set, it's shown at exactly that size, and the
+//    window grows over the background picture as much as it needs to.
+//  - With "Auto", it's shrunk just enough to fit, so the window doesn't grow.
+// Every new line starts again at the chosen size. Text too long for the
+// window's maximum height scrolls inside it.
+function fitText() {
+  const line = document.querySelector<HTMLElement>('#text-line')!;
+  let fit = 1;
+  if (textMode === 'text' && line.textContent) {
+    // The window's resting height, in CSS pixels.
+    const limit = parseFloat(getComputedStyle(line).minHeight) || 0;
+    // `scrollHeight` is the height the window's text needs. Reading it right
+    // after changing the size makes the browser lay the text out again
+    // straight away, so each try is measured for real.
+    const fits = (scale: number) => {
+      line.style.setProperty('--fit', String(scale));
+      return line.scrollHeight <= limit + 1;
+    };
+    // The long-line size as a fit (never bigger than the chosen size).
+    const oversizedFit =
+      oversizedSize === null ? null : Math.min(1, oversizedSize / chosenSize);
+    if (fits(1)) {
+      fit = 1;
+    } else if (oversizedFit !== null) {
+      fit = oversizedFit;
+    } else {
+      // A "binary search": try halfway between a size that fits and one that
+      // doesn't, and keep the half the answer is in. 8 tries narrows it to
+      // within half a percent.
+      let low = Math.min(1, SMALLEST_SIZE / chosenSize);
+      let high = 1;
+      for (let i = 0; i < 8; i++) {
+        const middle = (low + high) / 2;
+        if (fits(middle)) {
+          low = middle;
+        } else {
+          high = middle;
+        }
+      }
+      fit = low;
+    }
+  }
+  line.style.setProperty('--fit', String(fit));
+
+  // Tell the picker, which shows a note while a line is shrunk.
+  const shrunkTo = fit < 1 ? chosenSize * fit : null;
+  if (shrunkTo !== reportedShrink) {
+    reportedShrink = shrunkTo;
+    window.vn.setTextShrink(shrunkTo);
+  }
+}
+
+// The picker outlines the part of the background that's shown, which depends
+// on the zone's shape, so let it know.
+function reportZoneSize() {
+  window.vn.setBackgroundZoneSize({
+    width: backgroundCanvas.width,
+    height: backgroundCanvas.height,
+  });
+}
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!;
 
@@ -89,13 +193,10 @@ const resizeObserver = new ResizeObserver((entries) => {
     const size = entry.devicePixelContentBoxSize[0];
     canvas.width = size.inlineSize;
     canvas.height = size.blockSize;
-    // The picker outlines the part of the background that's shown, which
-    // depends on the zone's shape, so let it know.
+    // The window resized: the zone's shape, and the text's size (which
+    // follows the window's width), may have changed.
     if (canvas === backgroundCanvas) {
-      window.vn.setBackgroundZoneSize({
-        width: canvas.width,
-        height: canvas.height,
-      });
+      layoutChanged();
     }
   }
 });
@@ -128,6 +229,12 @@ const BACKDROP_SHRINK = 24;
 const backdrop = document.createElement('canvas');
 const backdropContext = backdrop.getContext('2d')!;
 
+// The colour washed over the backdrop, from the theme in portrait.css.
+const backdropTint =
+  getComputedStyle(document.documentElement)
+    .getPropertyValue('--backdrop-tint')
+    .trim() || 'rgb(0 0 0 / 55%)';
+
 function drawBackdrop(
   context: CanvasRenderingContext2D,
   { sx, sy, sw, sh }: { sx: number; sy: number; sw: number; sh: number },
@@ -159,8 +266,8 @@ function drawBackdrop(
     fill.dh,
   );
   context.drawImage(backdrop, 0, 0, width, height);
-  // Darken it, so the real picture stands out.
-  context.fillStyle = 'rgb(0 0 0 / 55%)';
+  // Wash it with the theme's tint, so the real picture stands out.
+  context.fillStyle = backdropTint;
   context.fillRect(0, 0, width, height);
 }
 
@@ -271,9 +378,23 @@ for (const zone of zones) {
   });
 }
 
-function showSource(sourceId: string) {
-  status.hidden = true;
-  playCapture(video, sourceId);
+function showSource(sourceId: string | null) {
+  if (sourceId) {
+    status.hidden = true;
+    playCapture(video, sourceId);
+    return;
+  }
+  // The game was closed: stop the (now blank) capture, clear its last frame
+  // from the zones, and say so.
+  stopCapture(video);
+  for (const zone of zones) {
+    zone.canvas
+      .getContext('2d')!
+      .clearRect(0, 0, zone.canvas.width, zone.canvas.height);
+  }
+  status.textContent =
+    'The game was closed. Start it again, then pick it in the main window.';
+  status.hidden = false;
 }
 
 // --- Text mode -----------------------------------------------------------------
@@ -285,10 +406,17 @@ function showTextLine(line: string) {
     return;
   }
   textLine.textContent = line;
-  textLine.animate([{ opacity: 0 }, { opacity: 1 }], {
-    duration: 150,
-    easing: 'ease-out',
-  });
+  // A new line starts at the chosen size, shrunk only if it doesn't fit.
+  fitText();
+  // Fades in while drifting up slightly, like a message window turning a
+  // page.
+  textLine.animate(
+    [
+      { opacity: 0, translate: '0 0.3rem' },
+      { opacity: 1, translate: '0 0' },
+    ],
+    { duration: 220, easing: 'ease-out' },
+  );
 }
 window.vn.onTextLineChanged(showTextLine);
 window.vn.getTextLine().then(showTextLine);

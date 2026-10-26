@@ -1,0 +1,16 @@
+/* The app's theme, shared by both windows: a bright, airy sky-blue and white
+   look (in the spirit of Aokana). Retune the whole app from here. */
+:root {
+  --sky: #6cc4f5;
+  --sky-deep: #2f86d6;
+  --sky-pale: #e8f6ff;
+  /* Dark navy for text: softer than black on white. */
+  --ink: #23364f;
+  /* Thin borders and dividers. */
+  --line: #b9dcf5;
+  /* The rounded font, bundled with the app (imported in renderer.ts and
+     portrait.ts). */
+  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  /* Colours native controls (checkboxes, sliders) to match. */
+  accent-color: var(--sky-deep);
+}

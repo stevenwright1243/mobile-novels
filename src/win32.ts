@@ -137,6 +137,11 @@ export function showInTaskbar(hwnd: number) {
 // minimized, so a minimized game can't be captured or clicked. A game that's
 // just covered by other windows keeps running fine.
 
+// Whether the window still exists (it's gone once its program closes it).
+export function windowExists(hwnd: number) {
+  return IsWindow(hwnd);
+}
+
 // Whether the window still exists and is minimized ("iconic" in Win32 terms).
 export function isMinimized(hwnd: number) {
   return IsWindow(hwnd) && IsIconic(hwnd);

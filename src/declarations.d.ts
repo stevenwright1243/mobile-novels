@@ -36,10 +36,20 @@ type ClickMethod = 'message' | 'mouse';
 // box (the fallback for games OCR reads badly).
 type TextMode = 'text' | 'image';
 
+// How the text is styled in the portrait's message window. `size` scales
+// the text (1 = normal, 1.5 = half as big again); the window grows with it.
+// `oversizedSize` is the size for lines too long to fit at `size`, or null
+// to shrink each such line just enough to fit ("Auto").
+interface TextStyle {
+  size: number;
+  oversizedSize: number | null;
+}
+
 // How a region sits in its portrait zone (zone-view.ts). `fill` zooms from 0
 // (the whole region fits, with space around it) to 1 (it fills the zone,
-// with its edges trimmed). When it's trimmed, `x` and `y` choose which part
-// shows: 0 = the left / top edge, 0.5 = the middle, 1 = the right / bottom.
+// with its edges trimmed). `x` and `y` line it up: 0 = left / top, 0.5 =
+// middle, 1 = right / bottom. When it's trimmed, that chooses which part
+// shows; when there's space around it, where in that space it sits.
 interface ZoneView {
   fill: number;
   x: number;
@@ -71,6 +81,7 @@ interface GameProfile {
   title: string;
   clickMethod: ClickMethod;
   textMode: TextMode;
+  textStyle: TextStyle;
   // How the background region is zoomed and positioned in the portrait.
   backgroundView: ZoneView;
   regions: Regions;
@@ -84,7 +95,7 @@ interface GameProfile {
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
 type ProfileSummary = Omit<
   GameProfile,
-  'version' | 'regions' | 'textMode' | 'backgroundView'
+  'version' | 'regions' | 'textMode' | 'textStyle' | 'backgroundView'
 > & {
   isOpen: boolean;
   sourceId?: string;
@@ -107,7 +118,10 @@ interface Window {
     // cancelled when asked about unsaved edits.
     selectSource(source: GameWindow): Promise<boolean>;
     getSelectedSource(): Promise<string | null>;
-    onSourceSelected(callback: (sourceId: string) => void): void;
+    // The game window to capture, or null when the game was closed.
+    onSourceSelected(callback: (sourceId: string | null) => void): void;
+    // Windows opened or closed (see main.ts), so lists should refresh.
+    onWindowsChanged(callback: () => void): void;
     // Where the game's content is, as fractions of the capture; null if the
     // window can't be measured.
     getClientArea(): Promise<Region | null>;
@@ -122,6 +136,15 @@ interface Window {
     getTextMode(): Promise<TextMode>;
     setTextMode(mode: TextMode): Promise<void>;
     onTextModeChanged(callback: (mode: TextMode) => void): void;
+    getTextStyle(): Promise<TextStyle>;
+    setTextStyle(style: TextStyle): Promise<void>;
+    onTextStyleChanged(callback: (style: TextStyle) => void): void;
+    // The text size the current line was shrunk to so it fits the message
+    // window (as a multiple of normal, like `TextStyle.size`), or null when
+    // it's at the chosen size. Sent by the portrait, shown in the picker.
+    getTextShrink(): Promise<number | null>;
+    setTextShrink(size: number | null): Promise<void>;
+    onTextShrinkChanged(callback: (size: number | null) => void): void;
     getBackgroundView(): Promise<ZoneView>;
     setBackgroundView(view: ZoneView): Promise<void>;
     onBackgroundViewChanged(callback: (view: ZoneView) => void): void;
