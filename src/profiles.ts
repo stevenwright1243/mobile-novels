@@ -14,6 +14,9 @@ export const DEFAULT_REGIONS: Regions = {
 // The background fills its zone, trimmed evenly on both sides.
 export const DEFAULT_BACKGROUND_VIEW: ZoneView = { fill: 1, x: 0.5, y: 0.5 };
 
+// Normal-sized text.
+export const DEFAULT_TEXT_STYLE: TextStyle = { size: 1, oversizedSize: null };
+
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
 // title, 3 is the full profile keyed by .exe.
@@ -74,7 +77,11 @@ export async function loadProfile(
     const profile = {
       ...newProfile(id, exePath, title),
       ...saved,
+      // Settings made of several values are laid over their defaults too,
+      // so a value added since the file was saved gets its default.
       regions: { ...DEFAULT_REGIONS, ...saved.regions },
+      textStyle: { ...DEFAULT_TEXT_STYLE, ...saved.textStyle },
+      backgroundView: { ...DEFAULT_BACKGROUND_VIEW, ...saved.backgroundView },
     };
     return { profile, saved: true, legacyFile: null };
   }
@@ -104,6 +111,7 @@ function newProfile(
     title,
     clickMethod: 'message',
     textMode: 'text',
+    textStyle: DEFAULT_TEXT_STYLE,
     backgroundView: DEFAULT_BACKGROUND_VIEW,
     regions: DEFAULT_REGIONS,
     window: null,

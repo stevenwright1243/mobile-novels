@@ -16,6 +16,7 @@ import { readText } from './ocr';
 import {
   DEFAULT_BACKGROUND_VIEW,
   DEFAULT_REGIONS,
+  DEFAULT_TEXT_STYLE,
   deleteProfile,
   listProfiles,
   loadProfile,
@@ -34,6 +35,7 @@ import {
   sendClick,
   sendToBack,
   showInTaskbar,
+  windowExists,
 } from './win32';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -52,6 +54,10 @@ let portraitWindow: BrowserWindow | null = null;
 
 // The size of the portrait's background zone (see `setBackgroundZoneSize`).
 let backgroundZoneSize: Size | null = null;
+
+// The size the portrait shrank the current line to, to fit (null = it
+// didn't need to). Passed on to the picker for its note.
+let textShrink: number | null = null;
 
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
@@ -73,6 +79,7 @@ const snapshot = (current: GameProfile) =>
     regions: current.regions,
     clickMethod: current.clickMethod,
     textMode: current.textMode,
+    textStyle: current.textStyle,
     backgroundView: current.backgroundView,
   });
 
@@ -330,6 +337,7 @@ app.whenReady().then(() => {
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-mode-changed', profile.textMode);
+    broadcast('text-style-changed', profile.textStyle);
     broadcast('background-view-changed', profile.backgroundView);
     // The last game's line no longer applies.
     textLine = '';
@@ -448,14 +456,44 @@ app.whenReady().then(() => {
 
   // Minimized games stop drawing and running, so check once a second and
   // quietly restore the selected game behind other windows if needed.
+  //
+  // Also notice when the game is closed: forget its window (its profile, and
+  // any unsaved edits, stay until another game is picked) and tell the pages,
+  // with `null` for "no game window".
   setInterval(() => {
     if (selectedSource) {
       const hwnd = hwndFromSourceId(selectedSource.id);
-      if (isMinimized(hwnd)) {
+      if (!windowExists(hwnd)) {
+        selectedSource = null;
+        textLine = '';
+        broadcast('source-selected', null);
+        broadcast('text-line-changed', textLine);
+      } else if (isMinimized(hwnd)) {
         restoreBehind(hwnd);
       }
     }
   }, 1000);
+
+  // Tell the picker when windows open or close, so its lists stay current.
+  // Asking for the windows without thumbnails is cheap, so check every 2
+  // seconds and compare their IDs; the picker then fetches the full list
+  // (with thumbnails) only when something changed. Title changes alone are
+  // ignored: some windows (browsers, music players) retitle themselves often.
+  let windowIds = '';
+  setInterval(async () => {
+    const sources = await desktopCapturer.getSources({
+      types: ['window'],
+      thumbnailSize: { width: 0, height: 0 },
+    });
+    const ids = sources
+      .map((source) => source.id)
+      .sort()
+      .join(' ');
+    if (windowIds && ids !== windowIds) {
+      broadcast('windows-changed');
+    }
+    windowIds = ids;
+  }, 2000);
 
   // How taps reach the game (see win32.ts), part of the game's profile.
   ipcMain.handle('get-click-method', () => profile?.clickMethod ?? 'message');
@@ -467,6 +505,26 @@ app.whenReady().then(() => {
   });
 
   // How the portrait shows the game's text, part of the game's profile.
+  // How the text is styled (its size, for now), part of the game's profile.
+  ipcMain.handle(
+    'get-text-style',
+    () => profile?.textStyle ?? DEFAULT_TEXT_STYLE,
+  );
+  ipcMain.handle('set-text-style', (event, style: TextStyle) => {
+    if (profile) {
+      profile = { ...profile, textStyle: style };
+      broadcast('text-style-changed', style, event.sender);
+      sendSaveState();
+    }
+  });
+
+  // The portrait shrank (or stopped shrinking) a line to fit its window.
+  ipcMain.handle('get-text-shrink', () => textShrink);
+  ipcMain.handle('set-text-shrink', (event, size: number | null) => {
+    textShrink = size;
+    broadcast('text-shrink-changed', size, event.sender);
+  });
+
   ipcMain.handle('get-text-mode', () => profile?.textMode ?? 'text');
   ipcMain.handle('set-text-mode', (event, mode: TextMode) => {
     if (profile) {

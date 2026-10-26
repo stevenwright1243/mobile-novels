@@ -1,8 +1,17 @@
+@import './theme.css';
+
+/* Laid over the blurred copy of the background around a zoomed-out picture
+   (read by portrait.ts). A pale sky wash keeps it bright. */
+:root {
+  --backdrop-tint: rgb(214 236 255 / 35%);
+}
+
 body {
   margin: 0;
-  background: #000;
-  color: #ccc;
-  font-family: system-ui, sans-serif;
+  /* A clear sky, seen before the game is picked. */
+  background: linear-gradient(to bottom, #8fd3ff, var(--sky-pale));
+  color: var(--ink);
+  font-family: var(--font);
 }
 
 /* The zones. To rearrange the layout, change the area map and row sizes
@@ -30,6 +39,7 @@ body {
   grid-area: text;
   aspect-ratio: var(--text-aspect, 4);
   max-height: 60dvh;
+  background: #000;
 }
 
 /* Text mode: the line read by OCR, as real text styled for phones, instead
@@ -39,37 +49,124 @@ body {
 }
 
 .portrait.text-mode {
-  /* The text zone grows with the text, and the background takes the rest. */
+  /* Both zones share one grid cell: the background fills the whole portrait
+     and the message window floats over its bottom edge. The window can grow
+     and shrink with the text without moving the background. */
+  grid-template-areas: 'stage';
+  grid-template-rows: 1fr;
+
+  #background-zone,
   #text-zone {
+    grid-area: stage;
+  }
+
+  #text-zone {
+    /* Only as tall as the text, at the bottom, drawn over the background,
+       with a little space around it so it floats. */
+    align-self: end;
+    z-index: 1;
     aspect-ratio: auto;
     max-height: none;
+    background: none;
+    --gap: clamp(0.5rem, 3vw, 1rem);
+    padding: 0 var(--gap) var(--gap);
   }
 
   #text-zone canvas {
     display: none;
   }
 
+  /* The message window: frosted white glass with a sky-blue edge. */
   #text-line {
     display: block;
+    position: relative;
     box-sizing: border-box;
     margin: 0;
-    /* Always room for 3 lines (`lh` = one line's height), so the background
-       doesn't jump about as lines change length; longer text scrolls rather
-       than squeezing the background away. */
-    min-height: calc(3lh + 2 * var(--padding-block));
+    /* The text size chosen in the picker: follows the window's width, times
+       the size setting. */
+    --chosen-font-size: calc(clamp(1.125rem, 5vw, 2rem) * var(--text-size, 1));
+    --line-height: 1.55;
+    /* Room for 3 lines at the chosen size, so the window stays the same size
+       for most lines. It's worked out from the chosen size (not the actual
+       font size below), so shrinking one long line to fit never changes it.
+       Very long text scrolls inside the window. */
+    --padding-block: clamp(0.9rem, 4.5vw, 1.6rem);
+    min-height: calc(
+      3 * var(--line-height) * var(--chosen-font-size) + 2 *
+        var(--padding-block)
+    );
     max-height: 60dvh;
     overflow-y: auto;
-    --padding-block: clamp(0.75rem, 4vw, 1.5rem);
-    padding: var(--padding-block) clamp(1rem, 5vw, 2rem);
-    background: #111;
-    border-top: 1px solid rgb(255 255 255 / 12%);
-    color: #f2f2f2;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: clamp(1.125rem, 5vw, 2rem);
-    line-height: 1.5;
+    padding: var(--padding-block) clamp(1.1rem, 5.5vw, 2rem);
+    border-radius: clamp(0.75rem, 3vw, 1.25rem);
+    /* Mostly white, a touch of sky toward the bottom. `backdrop-filter`
+       blurs whatever is behind the window: the frosted-glass effect. */
+    background: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 90%),
+      rgb(236 247 255 / 86%)
+    );
+    backdrop-filter: blur(10px) saturate(1.3);
+    border: 1px solid rgb(255 255 255 / 90%);
+    box-shadow:
+      inset 0 0 0 1px rgb(108 196 245 / 35%),
+      0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+    color: var(--ink);
+    font-family: var(--font);
+    /* The chosen size, times `--fit`: below 1 when portrait.ts shrinks a line
+       that's too long for the window (see `fitText()`). */
+    font-size: calc(var(--chosen-font-size) * var(--fit, 1));
+    font-weight: 600;
+    line-height: var(--line-height);
+    letter-spacing: 0.01em;
     /* Avoids a lone word on the last line where it can. */
     text-wrap: pretty;
     cursor: pointer;
+  }
+
+  /* A sky-blue ribbon along the window's top edge, fading out at the ends. */
+  #text-line::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--sky) 20%,
+      var(--sky-deep) 50%,
+      var(--sky) 80%,
+      transparent
+    );
+  }
+
+  /* The "tap to continue" arrow, gently bobbing in the bottom corner. Hidden
+     while there's no line (`:empty`). */
+  #text-line::after {
+    content: '';
+    position: absolute;
+    right: clamp(0.75rem, 3.5vw, 1.25rem);
+    bottom: clamp(0.5rem, 2.5vw, 0.9rem);
+    width: 0.7em;
+    height: 0.5em;
+    /* A downward triangle, cut out of a plain box. */
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    background: linear-gradient(var(--sky), var(--sky-deep));
+    animation: bob 1.2s ease-in-out infinite;
+  }
+
+  #text-line:empty::after {
+    display: none;
+  }
+}
+
+@keyframes bob {
+  50% {
+    translate: 0 0.2em;
+    opacity: 0.6;
   }
 }
 
@@ -97,16 +194,19 @@ body {
   place-items: center;
   text-align: center;
   font-size: clamp(1rem, 5vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ink);
 }
 
-/* Tap feedback: a circle that grows and fades where you tapped. */
+/* Tap feedback: a sky-blue ring that grows and fades where you tapped. */
 .ripple {
   position: fixed;
   width: 3rem;
   height: 3rem;
   translate: -50% -50%;
   border-radius: 50%;
-  border: 2px solid rgb(255 255 255 / 80%);
+  border: 2px solid var(--sky);
+  box-shadow: 0 0 0.75rem rgb(108 196 245 / 70%);
   pointer-events: none;
   animation: ripple 0.4s ease-out forwards;
 }

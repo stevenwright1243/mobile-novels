@@ -9,11 +9,17 @@ export async function getClientArea() {
   return (await window.vn.getClientArea()) ?? FULL_FRAME;
 }
 
+// Stops a capture playing in `video`, if there is one.
+export function stopCapture(video: HTMLVideoElement) {
+  const stream = video.srcObject as MediaStream | null;
+  stream?.getTracks().forEach((track) => track.stop());
+  video.srcObject = null;
+}
+
 // Starts playing a live capture of a window in `video`, replacing (and
 // stopping) whatever it was showing before.
 export async function playCapture(video: HTMLVideoElement, sourceId: string) {
-  const previous = video.srcObject as MediaStream | null;
-  previous?.getTracks().forEach((track) => track.stop());
+  stopCapture(video);
 
   // `mandatory.chromeMediaSource` is a Chromium/Electron extension for
   // capturing a specific window by ID. It isn't in TypeScript's built-in

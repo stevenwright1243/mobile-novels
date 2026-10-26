@@ -27,8 +27,10 @@ export function placeInZone(
   const scale = showAll * (fill / showAll) ** view.fill;
   const dw = sw * scale;
   const dh = sh * scale;
-  // Bigger than the zone: `x` / `y` choose which part shows. Smaller: center.
-  const dx = (width - dw) * (dw > width ? view.x : 0.5);
-  const dy = (height - dh) * (dh > height ? view.y : 0.5);
+  // `x` / `y` line it up: 0 = left / top edges together, 1 = right / bottom.
+  // Bigger than the zone, that chooses which part shows; smaller, it chooses
+  // where the picture sits in the space.
+  const dx = (width - dw) * view.x;
+  const dy = (height - dh) * view.y;
   return { scale, dx, dy, dw, dh };
 }

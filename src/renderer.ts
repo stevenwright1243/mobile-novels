@@ -3,12 +3,15 @@
  * anything from main has to come through `window.vn` (see preload.ts).
  */
 
+// The rounded font, bundled with the app (works offline).
+import '@fontsource-variable/nunito';
 import './index.css';
-import { playCapture } from './capture';
+import { playCapture, stopCapture } from './capture';
 import { enableBackgroundControls } from './background-view';
 import { enableOcrTest } from './ocr-test';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
+import { enableTextStyle } from './text-style';
 
 // The `!` tells TypeScript "this element definitely exists", since
 // querySelector would otherwise be typed as possibly null.
@@ -35,6 +38,7 @@ async function pickWindow(source: GameWindow) {
   enableRegionEditing();
   enableOcrTest(preview);
   enableBackgroundControls();
+  enableTextStyle();
   // Fold the window list away; its summary line still opens it again.
   windowsSection.open = false;
   sendToBackButton.disabled = false;
@@ -173,7 +177,21 @@ function refresh() {
 
 refreshButton.addEventListener('click', refresh);
 window.vn.onProfilesChanged(showGameList);
+// Main says when windows open or close; also refresh on coming back to this
+// window, in case something changed while it was in the background.
+window.vn.onWindowsChanged(refresh);
+window.addEventListener('focus', refresh);
 refresh();
+
+// The game was closed (main sends `null`): stop the blank preview and unfold
+// the window list, ready to pick the next game.
+window.vn.onSourceSelected((sourceId) => {
+  if (sourceId === null) {
+    stopCapture(preview);
+    windowsSection.open = true;
+    sendToBackButton.disabled = true;
+  }
+});
 
 // --- Game controls -------------------------------------------------------------
 
