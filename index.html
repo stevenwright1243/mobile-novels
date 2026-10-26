@@ -8,9 +8,16 @@
     <header>
       <h1>Pick a window</h1>
       <button id="refresh">Refresh</button>
+      <button id="set-text-zone" disabled>Set text zone</button>
     </header>
     <ul id="window-list"></ul>
-    <video id="preview" autoplay muted></video>
+    <div id="preview-area">
+      <video id="preview" autoplay muted></video>
+      <!-- Sized by renderer.ts to sit exactly over the game picture. -->
+      <div id="frame">
+        <div id="text-outline"></div>
+      </div>
+    </div>
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>

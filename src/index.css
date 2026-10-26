@@ -69,13 +69,39 @@ h1 {
   white-space: nowrap;
 }
 
-#preview {
+#preview-area {
   grid-area: preview;
   /* Grid items won't shrink below their content size by default; this lets
-     the video shrink to fit its row. */
+     the preview shrink to fit its row. */
   min-height: 0;
-  height: 100%;
-  width: 100%;
-  object-fit: contain;
+  position: relative;
   background: #000;
+}
+
+#preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Covers just the game picture, not the black bars around it. */
+#frame {
+  position: absolute;
+  /* Stops touch input from scrolling the page while drawing. */
+  touch-action: none;
+}
+
+#frame.drawing {
+  cursor: crosshair;
+}
+
+#text-outline {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed #4af;
+  background: rgb(68 170 255 / 15%);
+  /* Let pointer events pass through to the frame underneath. */
+  pointer-events: none;
 }
