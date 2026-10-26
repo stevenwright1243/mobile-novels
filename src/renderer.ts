@@ -5,6 +5,7 @@
 
 import './index.css';
 import { playCapture } from './capture';
+import { enableOcrTest } from './ocr-test';
 import { enableRegionEditing } from './region-editor';
 
 // The `!` tells TypeScript "this element definitely exists", since
@@ -27,6 +28,7 @@ async function pickWindow(source: GameWindow) {
   }
   playCapture(preview, source.id);
   enableRegionEditing();
+  enableOcrTest(preview);
   sendToBackButton.disabled = false;
   clickMethodSelect.disabled = false;
 }

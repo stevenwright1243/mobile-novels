@@ -31,6 +31,15 @@ type Regions = Record<RegionName, Region>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
+// What OCR read from an image (ocr.ts).
+interface OcrResult {
+  text: string;
+  // Tesseract's own guess at how right it is, 0 to 100.
+  confidence: number;
+  // How long the reading took, in milliseconds.
+  ms: number;
+}
+
 // Everything the app remembers about one game, saved as JSON (profiles.ts).
 interface GameProfile {
   version: 3;
@@ -96,5 +105,7 @@ interface Window {
     onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;
+    // Reads the text in a PNG image with OCR (ocr.ts).
+    readText(png: Uint8Array): Promise<OcrResult>;
   };
 }

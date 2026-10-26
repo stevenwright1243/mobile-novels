@@ -12,6 +12,7 @@ import {
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { readText } from './ocr';
 import {
   DEFAULT_REGIONS,
   deleteProfile,
@@ -456,6 +457,9 @@ app.whenReady().then(() => {
     broadcast('regions-changed', profile.regions, event.sender);
     sendSaveState();
   });
+
+  // OCR: the picker sends a PNG of the text box, main reads it.
+  ipcMain.handle('read-text', (_event, png: Uint8Array) => readText(png));
 
   createWindows();
 

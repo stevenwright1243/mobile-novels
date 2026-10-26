@@ -19,6 +19,11 @@
           <option value="mouse">Simulating the mouse</option>
         </select>
       </label>
+      <button id="ocr-test-button" disabled>Read text (OCR test)</button>
+      <label>
+        <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean up
+        image
+      </label>
       <!-- Shown while editing a region (see region-editor.ts). -->
       <div id="edit-panel" role="group" aria-label="Region settings" hidden>
         <label><input type="checkbox" id="snap" checked /> Snap to edges</label>
@@ -38,6 +43,14 @@
       <ul id="game-list"></ul>
     </section>
     <ul id="window-list"></ul>
+    <!-- OCR test results; filled in by ocr-test.ts. -->
+    <section id="ocr-test" hidden>
+      <img id="ocr-image" alt="The image that was read" />
+      <div>
+        <p id="ocr-stats"></p>
+        <pre id="ocr-output"></pre>
+      </div>
+    </section>
     <div id="preview-area">
       <video id="preview" autoplay muted></video>
       <!-- Sized by renderer.ts to sit exactly over the game picture. -->
