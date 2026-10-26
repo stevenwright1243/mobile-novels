@@ -63,6 +63,11 @@ let textShrink: number | null = null;
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
 
+// The history log: the last lines read, oldest first. Cleared when another
+// game is picked.
+const HISTORY_LENGTH = 30;
+let textHistory: string[] = [];
+
 // The picked game's profile: its regions, click method and so on (see
 // profiles.ts). Null until a game is picked. Changes apply live, but are only
 // written to its file when the user clicks "Save profile".
@@ -342,6 +347,7 @@ app.whenReady().then(() => {
     broadcast('background-view-changed', profile.backgroundView);
     // The last game's line no longer applies.
     textLine = '';
+    textHistory = [];
     broadcast('text-line-changed', textLine);
     sendSaveState();
     return true;
@@ -588,7 +594,14 @@ app.whenReady().then(() => {
   ipcMain.handle('set-text-line', (_event, line: string) => {
     textLine = line;
     broadcast('text-line-changed', textLine);
+    // Add it to the history log, unless it's empty (no text box showing) or
+    // the same line again (the box was hidden and shown again). `.at(-1)` is
+    // the last item; `.slice(-N)` keeps the last N.
+    if (line && line !== textHistory.at(-1)) {
+      textHistory = [...textHistory, line].slice(-HISTORY_LENGTH);
+    }
   });
+  ipcMain.handle('get-text-history', () => textHistory);
 
   createWindows();
 

@@ -13,6 +13,7 @@ import {
   regionInVideo,
   stopCapture,
 } from './capture';
+import './history-log';
 import { startTextReader } from './text-reader';
 import { placeInZone, SHOW_ALL } from './zone-view';
 

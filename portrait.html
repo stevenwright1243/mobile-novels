@@ -11,8 +11,42 @@
       <div class="zone" id="text-zone">
         <canvas></canvas>
         <!-- The line read by OCR, shown in text mode (see portrait.ts). -->
-        <p id="text-line"></p>
+        <p id="text-line" class="glass"></p>
       </div>
+
+      <!-- Opens the history log (history-log.ts). -->
+      <button id="log-button" class="glass" aria-label="History log">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 3" />
+        </svg>
+        Log
+      </button>
+
+      <!-- The history log: one past line at a time, with big buttons to step
+           back and forward. A <dialog> sits on top of the whole page and
+           blocks taps to it while open. -->
+      <dialog id="log" aria-label="History log">
+        <button id="log-close" class="glass">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+          Return to game
+        </button>
+        <div id="log-message" class="glass">
+          <p id="log-count"></p>
+          <p id="log-text"></p>
+        </div>
+        <button id="log-older" class="log-arrow" aria-label="Older line">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
+        <button id="log-newer" class="log-arrow" aria-label="Newer line">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </dialog>
     </main>
     <p id="status">Pick a window in the main window to start.</p>
     <script type="module" src="/src/portrait.ts"></script>

@@ -14,6 +14,25 @@ body {
   font-family: var(--font);
 }
 
+/* Frosted white glass with a sky-blue edge: the message window, the Log
+   button and the history log share this look. */
+.glass {
+  border-radius: clamp(0.75rem, 3vw, 1.25rem);
+  /* Mostly white, a touch of sky toward the bottom. `backdrop-filter` blurs
+     whatever is behind the element: the frosted-glass effect. */
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 90%),
+    rgb(236 247 255 / 86%)
+  );
+  backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 90%);
+  box-shadow:
+    inset 0 0 0 1px rgb(108 196 245 / 35%),
+    0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+  color: var(--ink);
+}
+
 /* The zones. To rearrange the layout, change the area map and row sizes
    here; the HTML stays the same. `fr` = a share of the available space.
    The text row is `auto`: as tall as the text zone needs to be (see below),
@@ -25,6 +44,9 @@ body {
     'background'
     'text';
   grid-template-rows: 1fr auto;
+  /* So the Log button can be placed in a corner (it's `position: absolute`,
+     which places it relative to here). */
+  position: relative;
 }
 
 #background-zone {
@@ -98,20 +120,6 @@ body {
     max-height: 60dvh;
     overflow-y: auto;
     padding: var(--padding-block) clamp(1.1rem, 5.5vw, 2rem);
-    border-radius: clamp(0.75rem, 3vw, 1.25rem);
-    /* Mostly white, a touch of sky toward the bottom. `backdrop-filter`
-       blurs whatever is behind the window: the frosted-glass effect. */
-    background: linear-gradient(
-      to bottom,
-      rgb(255 255 255 / 90%),
-      rgb(236 247 255 / 86%)
-    );
-    backdrop-filter: blur(10px) saturate(1.3);
-    border: 1px solid rgb(255 255 255 / 90%);
-    box-shadow:
-      inset 0 0 0 1px rgb(108 196 245 / 35%),
-      0 0.4rem 1.5rem rgb(30 90 150 / 25%);
-    color: var(--ink);
     font-family: var(--font);
     /* The chosen size, times `--fit`: below 1 when portrait.ts shrinks a line
        that's too long for the window (see `fitText()`). */
@@ -168,6 +176,149 @@ body {
     translate: 0 0.2em;
     opacity: 0.6;
   }
+}
+
+/* --- History log -------------------------------------------------------------- */
+
+/* Icons: simple line drawings that take the text colour. */
+#log-button svg,
+#log svg {
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Buttons in the portrait: no browser default look; big, rounded, with the
+   theme's font. */
+#log-button,
+#log button {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+/* The Log button: a small frosted pill in the top-right corner, over the
+   background. Still at least 44px tall, a comfortable size for a finger. */
+#log-button {
+  position: absolute;
+  top: clamp(0.5rem, 3vw, 1rem);
+  right: clamp(0.5rem, 3vw, 1rem);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  min-height: 44px;
+  padding: 0.4em 1em;
+  font-size: clamp(0.95rem, 4vw, 1.2rem);
+}
+
+/* The history log fills the whole portrait. */
+#log {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: none;
+  background: none;
+  --gap: clamp(0.75rem, 4vw, 1.5rem);
+  padding: var(--gap);
+  color: var(--ink);
+  font-family: var(--font);
+}
+
+/* The page behind an open dialog: blurred and washed with deep sky. */
+#log::backdrop {
+  background: rgb(20 60 110 / 45%);
+  backdrop-filter: blur(6px);
+}
+
+/* Laid out only while open (a closed <dialog> is hidden by the browser):
+   "Return to game" on top, the line in the middle, the arrows below. */
+#log[open] {
+  display: grid;
+  grid-template-areas:
+    'close close'
+    'message message'
+    'older newer';
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+}
+
+#log-close {
+  grid-area: close;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 3.5rem;
+  padding: 0.5em 1.5em;
+  font-size: clamp(1.05rem, 4.5vw, 1.4rem);
+}
+
+/* The line, centered in a glass card. Long lines scroll inside it. */
+#log-message {
+  grid-area: message;
+  align-self: center;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: clamp(1rem, 5vw, 2rem);
+}
+
+#log-count {
+  margin: 0 0 0.75em;
+  font-size: clamp(0.85rem, 3.5vw, 1.05rem);
+  font-weight: 700;
+  color: var(--sky-deep);
+  letter-spacing: 0.05em;
+}
+
+/* The same size as the message window's text. */
+#log-text {
+  margin: 0;
+  font-size: calc(clamp(1.125rem, 5vw, 2rem) * var(--text-size, 1));
+  font-weight: 600;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+/* The big arrow buttons: solid sky blue, white arrows. */
+.log-arrow {
+  display: grid;
+  place-items: center;
+  min-height: clamp(4rem, 16vw, 6rem);
+  border: 1px solid rgb(255 255 255 / 70%);
+  background: linear-gradient(var(--sky), var(--sky-deep));
+  box-shadow: 0 0.4rem 1.5rem rgb(30 90 150 / 35%);
+  color: #fff;
+  font-size: clamp(1.75rem, 8vw, 2.75rem);
+}
+
+#log-older {
+  grid-area: older;
+}
+
+#log-newer {
+  grid-area: newer;
+}
+
+/* At the oldest or newest line: that way is greyed out. */
+.log-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* A quick press-in, so a tap feels registered. */
+#log button:active:not(:disabled),
+#log-button:active {
+  scale: 0.97;
 }
 
 /* The canvas is pinned to its zone, so the zone's size comes only from the
