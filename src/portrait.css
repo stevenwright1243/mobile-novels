@@ -32,6 +32,47 @@ body {
   max-height: 60dvh;
 }
 
+/* Text mode: the line read by OCR, as real text styled for phones, instead
+   of the picture of the game's text box. */
+#text-line {
+  display: none;
+}
+
+.portrait.text-mode {
+  /* The text zone grows with the text, and the background takes the rest. */
+  #text-zone {
+    aspect-ratio: auto;
+    max-height: none;
+  }
+
+  #text-zone canvas {
+    display: none;
+  }
+
+  #text-line {
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    /* Always room for 3 lines (`lh` = one line's height), so the background
+       doesn't jump about as lines change length; longer text scrolls rather
+       than squeezing the background away. */
+    min-height: calc(3lh + 2 * var(--padding-block));
+    max-height: 60dvh;
+    overflow-y: auto;
+    --padding-block: clamp(0.75rem, 4vw, 1.5rem);
+    padding: var(--padding-block) clamp(1rem, 5vw, 2rem);
+    background: #111;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+    color: #f2f2f2;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: clamp(1.125rem, 5vw, 2rem);
+    line-height: 1.5;
+    /* Avoids a lone word on the last line where it can. */
+    text-wrap: pretty;
+    cursor: pointer;
+  }
+}
+
 /* The canvas is pinned to its zone, so the zone's size comes only from the
    grid. Otherwise resizing the canvas's pixels could feed back into the
    layout and make it grow. */

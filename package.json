@@ -10,6 +10,7 @@
   "main": ".vite/build/main.cjs",
   "scripts": {
     "start": "electron-forge start",
+    "start:debug": "electron-forge start -- --debug-ocr",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "release": "electron-forge release",

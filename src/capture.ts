@@ -31,3 +31,63 @@ export async function playCapture(video: HTMLVideoElement, sourceId: string) {
   });
   await video.play();
 }
+
+// A rectangle in the video's own pixels: `s` for "source", as in
+// `drawImage`'s arguments.
+export interface VideoRect {
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+}
+
+// Where a region is in the video's pixels. Regions are fractions of the
+// game's content (`clientArea`), which is itself a part of the capture.
+export function regionInVideo(
+  video: HTMLVideoElement,
+  clientArea: Region,
+  region: Region,
+): VideoRect {
+  const contentWidth = clientArea.w * video.videoWidth;
+  const contentHeight = clientArea.h * video.videoHeight;
+  return {
+    sx: clientArea.x * video.videoWidth + region.x * contentWidth,
+    sy: clientArea.y * video.videoHeight + region.y * contentHeight,
+    sw: region.w * contentWidth,
+    sh: region.h * contentHeight,
+  };
+}
+
+// OCR reads small text better when it's enlarged first.
+const OCR_SCALE = 2;
+
+// Copies part of the video into a PNG for OCR, enlarged. With `clean`, the
+// copy is made greyscale with stronger contrast, which usually helps.
+export async function cropForOcr(
+  video: HTMLVideoElement,
+  { sx, sy, sw, sh }: VideoRect,
+  clean = true,
+) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw * OCR_SCALE);
+  canvas.height = Math.round(sh * OCR_SCALE);
+  const context = canvas.getContext('2d')!;
+  // `filter` works like the CSS property, applied to whatever is drawn next.
+  context.filter = clean ? 'grayscale(1) contrast(1.5)' : 'none';
+  context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+  // `toBlob` hands over the PNG through a callback; wrapping it in a Promise
+  // lets us `await` it instead.
+  return new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error('No image'))),
+      'image/png',
+    ),
+  );
+}
+
+// The bytes of a PNG, ready to send to main. IPC can carry raw bytes, and a
+// Uint8Array is the usual way to send them.
+export async function pngBytes(blob: Blob) {
+  return new Uint8Array(await blob.arrayBuffer());
+}
