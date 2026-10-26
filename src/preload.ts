@@ -25,5 +25,21 @@ contextBridge.exposeInMainWorld('vn', {
   clickGame: (point) => ipcRenderer.invoke('click-game', point),
   getClickMethod: () => ipcRenderer.invoke('get-click-method'),
   setClickMethod: (method) => ipcRenderer.invoke('set-click-method', method),
+  onClickMethodChanged: (callback) => {
+    ipcRenderer.on('click-method-changed', (_event, method: ClickMethod) =>
+      callback(method),
+    );
+  },
+  listProfiles: () => ipcRenderer.invoke('list-profiles'),
+  onProfilesChanged: (callback) => {
+    ipcRenderer.on('profiles-changed', () => callback());
+  },
+  saveProfile: () => ipcRenderer.invoke('save-profile'),
+  showProfileMenu: (card) => ipcRenderer.invoke('show-profile-menu', card),
+  onSaveStateChanged: (callback) => {
+    ipcRenderer.on('save-state-changed', (_event, state: SaveState) =>
+      callback(state),
+    );
+  },
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
 } satisfies Window['vn']);

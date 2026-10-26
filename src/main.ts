@@ -2,15 +2,28 @@ import {
   app,
   BrowserWindow,
   desktopCapturer,
+  dialog,
   ipcMain,
+  Menu,
   screen,
+  shell,
   type Rectangle,
   type WebContents,
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import { DEFAULT_REGIONS, loadRegions, saveRegions } from './game-config';
 import {
+  DEFAULT_REGIONS,
+  deleteProfile,
+  listProfiles,
+  loadProfile,
+  profileFile,
+  profileId,
+  saveProfile,
+} from './profiles';
+import {
+  clientSize,
+  exePathOf,
   getClientArea,
   hwndFromSourceId,
   isMinimized,
@@ -27,38 +40,128 @@ if (started) {
 }
 
 // The game window the user picked. Its ID lets the portrait window capture it
-// too; its title identifies the game for saving settings.
+// too.
 let selectedSource: GameWindow | null = null;
 let portraitWindow: BrowserWindow | null = null;
 
-// The regions of the game window the portrait view shows, loaded per game.
-let regions: Regions = DEFAULT_REGIONS;
+// The picked game's profile: its regions, click method and so on (see
+// profiles.ts). Null until a game is picked. Changes apply live, but are only
+// written to its file when the user clicks "Save profile".
+let profile: GameProfile | null = null;
+// Whether this game has a profile file yet.
+let profileSaved = false;
+// A pre-profile file to delete once this profile is first saved.
+let legacyFile: string | null = null;
+// The editable parts of the profile as last saved or loaded, to tell whether
+// there are unsaved edits.
+let savedSnapshot = '';
 
-// How taps in the portrait are delivered to the game (see win32.ts). Chosen
-// in the picker while we find out which one each game accepts.
-let clickMethod: ClickMethod = 'message';
+const snapshot = (current: GameProfile) =>
+  JSON.stringify({
+    regions: current.regions,
+    clickMethod: current.clickMethod,
+  });
 
-// Tells every window about the current regions, except `skip`: the window
-// that made the change, which already has them.
-const sendRegions = (skip?: WebContents) => {
+const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
+
+// Sends a message to every window, except `skip`: the window that made the
+// change, which already knows.
+const broadcast = (channel: string, value?: unknown, skip?: WebContents) => {
   for (const window of BrowserWindow.getAllWindows()) {
     if (window.webContents !== skip) {
-      window.webContents.send('regions-changed', regions);
+      window.webContents.send(channel, value);
     }
   }
 };
 
-// A drag sends many updates, so wait until they've stopped for half a second,
-// then write the file once.
-let saveTimer: NodeJS.Timeout | undefined;
-const scheduleSave = (title: string, regionsToSave: Regions) => {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    saveRegions(title, regionsToSave).catch((error) =>
-      console.error('Saving regions failed:', error),
-    );
-  }, 500);
+// Tells the picker whether there's anything to save, for its Save button.
+const sendSaveState = () => {
+  const state: SaveState = {
+    hasGame: profile !== null,
+    edited: hasEdits(),
+    saved: profileSaved,
+  };
+  broadcast('save-state-changed', state);
 };
+
+const saveCurrentProfile = async () => {
+  if (!profile) {
+    return;
+  }
+  await saveProfile(profile, legacyFile);
+  profileSaved = true;
+  legacyFile = null;
+  savedSnapshot = snapshot(profile);
+  sendSaveState();
+  broadcast('profiles-changed');
+};
+
+// If there are unsaved edits, asks whether to save them before they'd be
+// lost. Returns false if the user picks Cancel.
+const resolveUnsavedEdits = async (parent: BrowserWindow | null) => {
+  if (!profile || !hasEdits()) {
+    return true;
+  }
+  const options: Electron.MessageBoxOptions = {
+    type: 'question',
+    buttons: ['Save', "Don't save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    message: `Save changes to ${profile.title}?`,
+    detail: "This game's region and click settings have unsaved changes.",
+  };
+  const { response } = parent
+    ? await dialog.showMessageBox(parent, options)
+    : await dialog.showMessageBox(options);
+  if (response === 2) {
+    return false;
+  }
+  if (response === 0) {
+    await saveCurrentProfile();
+  } else {
+    // "Don't save": treat the edits as dealt with, so we don't ask again.
+    savedSnapshot = snapshot(profile);
+  }
+  return true;
+};
+
+// Asks before deleting a game's profile file, since it can't be undone.
+const confirmDeleteProfile = async (
+  parent: BrowserWindow | null,
+  card: Pick<ProfileSummary, 'id' | 'title'>,
+) => {
+  const options: Electron.MessageBoxOptions = {
+    type: 'warning',
+    buttons: ['Delete', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `Delete the profile for ${card.title}?`,
+    detail:
+      "Its saved regions and click settings will be removed. This can't be undone.",
+  };
+  const { response } = parent
+    ? await dialog.showMessageBox(parent, options)
+    : await dialog.showMessageBox(options);
+  if (response !== 0) {
+    return;
+  }
+  await deleteProfile(card.id);
+  // If it's the game being edited, its settings stay as they are on screen,
+  // but now count as never saved (so the Save button offers to save again).
+  if (profile?.id === card.id) {
+    profileSaved = false;
+    legacyFile = null;
+    sendSaveState();
+  }
+  broadcast('profiles-changed');
+};
+
+// Set when the whole app is quitting (e.g. File → Quit), rather than just the
+// picker window closing.
+let quitting = false;
+app.on('before-quit', () => {
+  quitting = true;
+});
 
 // Loads one of the renderer's HTML pages: from the Vite dev server in
 // development, or from the built files when packaged.
@@ -81,6 +184,25 @@ const createMainWindow = (bounds: Rectangle) => {
     },
   });
   loadPage(mainWindow, 'index.html');
+
+  // Closing the picker with unsaved edits asks first. `preventDefault()`
+  // stops the close; the window is closed for real (`destroy()`, which skips
+  // this check) once the user has chosen.
+  mainWindow.on('close', async (event) => {
+    if (!hasEdits()) {
+      return;
+    }
+    event.preventDefault();
+    if (await resolveUnsavedEdits(mainWindow)) {
+      if (quitting) {
+        app.quit();
+      } else {
+        mainWindow.destroy();
+      }
+    } else {
+      quitting = false;
+    }
+  });
 };
 
 // The portrait view that gets streamed to the phone.
@@ -154,13 +276,118 @@ app.whenReady().then(() => {
   });
 
   // The main window reports which game window was picked: load that game's
-  // saved regions and pass both on. `handle` + `invoke` is a request/response
-  // pair, while `webContents.send` is a one-way message from main to a page.
-  ipcMain.handle('select-source', async (_event, source: GameWindow) => {
+  // profile and pass it on. `handle` + `invoke` is a request/response pair,
+  // while `webContents.send` is a one-way message from main to a page.
+  // Returns false if the user cancelled (when asked about unsaved edits).
+  ipcMain.handle('select-source', async (event, source: GameWindow) => {
+    if (source.id === selectedSource?.id) {
+      // Already picked: keep the profile (and any unsaved edits) as is.
+      return true;
+    }
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    if (!(await resolveUnsavedEdits(parent))) {
+      return false;
+    }
     selectedSource = source;
-    regions = await loadRegions(source.name);
+
+    const hwnd = hwndFromSourceId(source.id);
+    const exePath = exePathOf(hwnd);
+    const loaded = await loadProfile(
+      profileId(exePath, source.name),
+      exePath,
+      source.name,
+    );
+    // Refresh what may have changed since the game was last played. These
+    // details are written along with everything else when you save.
+    profile = {
+      ...loaded.profile,
+      exePath: exePath ?? loaded.profile.exePath,
+      title: source.name,
+      window: clientSize(hwnd) ?? loaded.profile.window,
+      lastPlayed: new Date().toISOString(),
+    };
+    profileSaved = loaded.saved;
+    legacyFile = loaded.legacyFile;
+    savedSnapshot = snapshot(profile);
+
     portraitWindow?.webContents.send('source-selected', source.id);
-    sendRegions();
+    broadcast('regions-changed', profile.regions);
+    broadcast('click-method-changed', profile.clickMethod);
+    sendSaveState();
+    return true;
+  });
+
+  // The picker's "Save profile" button (or Ctrl+S).
+  ipcMain.handle('save-profile', saveCurrentProfile);
+
+  // Right-clicking a game card shows a native Windows menu. Resolves to
+  // 'pick' if the user chose to pick the game (the picker does that part),
+  // otherwise null; the other actions are handled here.
+  ipcMain.handle(
+    'show-profile-menu',
+    (event, card: Pick<ProfileSummary, 'id' | 'title' | 'isOpen'>) => {
+      const parent = BrowserWindow.fromWebContents(event.sender);
+      // A Promise we resolve ourselves: with the choice when an item is
+      // clicked, or with null when the menu closes. Only the first counts.
+      return new Promise<'pick' | null>((resolve) => {
+        const menu = Menu.buildFromTemplate([
+          {
+            label: 'Pick this game',
+            enabled: card.isOpen,
+            click: () => resolve('pick'),
+          },
+          {
+            label: 'Show profile file in folder',
+            click: () => shell.showItemInFolder(profileFile(card.id)),
+          },
+          { type: 'separator' },
+          {
+            label: 'Delete profile…',
+            click: () => confirmDeleteProfile(parent, card),
+          },
+        ]);
+        menu.popup({
+          window: parent ?? undefined,
+          callback: () => resolve(null),
+        });
+      });
+    },
+  );
+
+  // The saved profiles for the picker's "Your games" list, each marked with
+  // whether that game is running now (matched by .exe against open windows).
+  ipcMain.handle('list-profiles', async (): Promise<ProfileSummary[]> => {
+    const [profiles, sources] = await Promise.all([
+      listProfiles(),
+      desktopCapturer.getSources({
+        types: ['window'],
+        thumbnailSize: { width: 0, height: 0 },
+      }),
+    ]);
+    // The first open window for each profile ID. A `Map` is a lookup table:
+    // `set(key, value)` stores, `get(key)` finds.
+    const openWindows = new Map<string, GameWindow>();
+    for (const source of sources) {
+      const exePath = exePathOf(hwndFromSourceId(source.id));
+      const id = profileId(exePath, source.name);
+      if (!openWindows.has(id)) {
+        openWindows.set(id, { id: source.id, name: source.name });
+      }
+    }
+    return profiles.map((saved) => {
+      const open = openWindows.get(saved.id);
+      return {
+        id: saved.id,
+        exePath: saved.exePath,
+        // A running game shows its current title, which may have changed.
+        title: open?.name ?? saved.title,
+        clickMethod: saved.clickMethod,
+        window: saved.window,
+        lastPlayed: saved.lastPlayed,
+        isOpen: open !== undefined,
+        sourceId: open?.id,
+      };
+    });
   });
 
   // Lets a portrait window that (re)loads later catch up on the current pick.
@@ -185,7 +412,7 @@ app.whenReady().then(() => {
         restoreBehind(hwnd);
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      return clickMethod === 'mouse'
+      return profile?.clickMethod === 'mouse'
         ? sendClick(hwnd, point)
         : postClick(hwnd, point);
     },
@@ -209,22 +436,25 @@ app.whenReady().then(() => {
     }
   }, 1000);
 
-  ipcMain.handle('get-click-method', () => clickMethod);
+  // How taps reach the game (see win32.ts), part of the game's profile.
+  ipcMain.handle('get-click-method', () => profile?.clickMethod ?? 'message');
   ipcMain.handle('set-click-method', (_event, method: ClickMethod) => {
-    clickMethod = method;
+    if (profile) {
+      profile = { ...profile, clickMethod: method };
+      sendSaveState();
+    }
   });
 
   // The picker changes one region; main keeps the current set, forwards it
-  // to the other windows, and saves it for this game.
-  ipcMain.handle('get-regions', () => regions);
+  // to the other windows. It's saved with the profile when you click Save.
+  ipcMain.handle('get-regions', () => profile?.regions ?? DEFAULT_REGIONS);
   ipcMain.handle('set-region', (event, name: RegionName, region: Region) => {
-    // A new object rather than changing the old one, so a save that's still
-    // waiting keeps the regions it was given.
-    regions = { ...regions, [name]: region };
-    sendRegions(event.sender);
-    if (selectedSource) {
-      scheduleSave(selectedSource.name, regions);
+    if (!profile) {
+      return;
     }
+    profile = { ...profile, regions: { ...profile.regions, [name]: region } };
+    broadcast('regions-changed', profile.regions, event.sender);
+    sendSaveState();
   });
 
   createWindows();

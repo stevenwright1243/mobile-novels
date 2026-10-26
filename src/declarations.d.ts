@@ -31,13 +31,45 @@ type Regions = Record<RegionName, Region>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
+// Everything the app remembers about one game, saved as JSON (profiles.ts).
+interface GameProfile {
+  version: 3;
+  // The .exe name, e.g. "totono_steam.exe" (or "title:..." as a fallback).
+  id: string;
+  exePath: string | null;
+  // The window title when last played.
+  title: string;
+  clickMethod: ClickMethod;
+  regions: Regions;
+  // The game's content size in pixels when last played.
+  window: { width: number; height: number } | null;
+  // When last picked, as an ISO date string.
+  lastPlayed: string;
+}
+
+// A profile as listed in the picker: `Omit<T, K>` is T without the listed
+// properties. `isOpen` and `sourceId` say whether (and where) it's running.
+type ProfileSummary = Omit<GameProfile, 'version' | 'regions'> & {
+  isOpen: boolean;
+  sourceId?: string;
+};
+
+// For the picker's Save button: whether a game is picked, whether its profile
+// has unsaved edits, and whether it has a profile file at all yet.
+interface SaveState {
+  hasGame: boolean;
+  edited: boolean;
+  saved: boolean;
+}
+
 // The API that preload.ts exposes on `window.vn`.
 interface Window {
   vn: {
     listWindows(): Promise<WindowSource[]>;
     // Tells main which game window was picked, so the portrait window follows
-    // and that game's saved regions are loaded.
-    selectSource(source: GameWindow): Promise<void>;
+    // and that game's profile is loaded. Resolves to false if the user
+    // cancelled when asked about unsaved edits.
+    selectSource(source: GameWindow): Promise<boolean>;
     getSelectedSource(): Promise<string | null>;
     onSourceSelected(callback: (sourceId: string) => void): void;
     // Where the game's content is, as fractions of the capture; null if the
@@ -50,6 +82,18 @@ interface Window {
     clickGame(point: { x: number; y: number }): Promise<void>;
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
+    onClickMethodChanged(callback: (method: ClickMethod) => void): void;
+    // Saved game profiles, marked with whether each game is running now.
+    listProfiles(): Promise<ProfileSummary[]>;
+    onProfilesChanged(callback: () => void): void;
+    // The right-click menu for a game card. Resolves to 'pick' if the user
+    // chose to pick that game; main handles the other choices itself.
+    showProfileMenu(
+      card: Pick<ProfileSummary, 'id' | 'title' | 'isOpen'>,
+    ): Promise<'pick' | null>;
+    // Writes the picked game's profile to its file.
+    saveProfile(): Promise<void>;
+    onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;
   };

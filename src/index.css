@@ -12,9 +12,10 @@ body {
   display: grid;
   grid-template-areas:
     'header'
+    'games'
     'list'
     'preview';
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   gap: 0.5rem;
 }
 
@@ -58,6 +59,76 @@ header {
 h1 {
   font-size: 1.25rem;
   margin: 0;
+}
+
+/* --- Your games (saved profiles) --- */
+
+#games {
+  grid-area: games;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+}
+
+#game-list {
+  /* The same wrapping-columns pattern as the window list. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 20dvh;
+  overflow-y: auto;
+}
+
+/* Title and badge on the first row; .exe and details below, full width. */
+.game-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.5rem;
+  width: 100%;
+  padding: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.game-card[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.game-title,
+.game-exe,
+.game-details {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-exe,
+.game-details {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+}
+
+.game-exe {
+  opacity: 0.7;
+}
+
+.badge {
+  padding: 0 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  background: #ddd;
+  color: #333;
+}
+
+.badge.open {
+  background: #2a7;
+  color: #fff;
 }
 
 #window-list {
