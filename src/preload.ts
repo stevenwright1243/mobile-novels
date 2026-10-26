@@ -22,4 +22,8 @@ contextBridge.exposeInMainWorld('vn', {
       callback(regions),
     );
   },
+  clickGame: (point) => ipcRenderer.invoke('click-game', point),
+  getClickMethod: () => ipcRenderer.invoke('get-click-method'),
+  setClickMethod: (method) => ipcRenderer.invoke('set-click-method', method),
+  sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
 } satisfies Window['vn']);

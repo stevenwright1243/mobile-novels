@@ -27,6 +27,10 @@ interface Region {
 type RegionName = 'background' | 'text';
 type Regions = Record<RegionName, Region>;
 
+// How a tap is delivered to the game: 'message' posts click messages to its
+// window; 'mouse' simulates real mouse input (see win32.ts).
+type ClickMethod = 'message' | 'mouse';
+
 // The API that preload.ts exposes on `window.vn`.
 interface Window {
   vn: {
@@ -42,5 +46,11 @@ interface Window {
     getRegions(): Promise<Regions>;
     setRegion(name: RegionName, region: Region): Promise<void>;
     onRegionsChanged(callback: (regions: Regions) => void): void;
+    // Clicks the game at a point given as fractions of its client area.
+    clickGame(point: { x: number; y: number }): Promise<void>;
+    getClickMethod(): Promise<ClickMethod>;
+    setClickMethod(method: ClickMethod): Promise<void>;
+    // Puts the game behind all other windows without minimizing it.
+    sendGameToBack(): Promise<void>;
   };
 }

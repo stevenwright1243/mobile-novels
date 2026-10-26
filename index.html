@@ -8,8 +8,28 @@
     <header>
       <h1>Pick a window</h1>
       <button id="refresh">Refresh</button>
-      <button data-region="background" disabled>Set background</button>
-      <button data-region="text" disabled>Set text zone</button>
+      <button id="send-to-back" disabled>Send game to back</button>
+      <button data-region="background" disabled>Edit background</button>
+      <button data-region="text" disabled>Edit text zone</button>
+      <label>
+        Taps click by
+        <select id="click-method">
+          <option value="message">Sending messages</option>
+          <option value="mouse">Simulating the mouse</option>
+        </select>
+      </label>
+      <!-- Shown while editing a region (see region-editor.ts). -->
+      <div id="edit-panel" role="group" aria-label="Region settings" hidden>
+        <label><input type="checkbox" id="snap" checked /> Snap to edges</label>
+        <span class="coordinates">
+          <label>X <input type="number" id="field-x" min="0" /></label>
+          <label>Y <input type="number" id="field-y" min="0" /></label>
+          <label>W <input type="number" id="field-w" min="1" /></label>
+          <label>H <input type="number" id="field-h" min="1" /></label>
+          <span id="game-size"></span>
+        </span>
+        <label><input type="checkbox" id="lock-size" /> Lock size</label>
+      </div>
     </header>
     <ul id="window-list"></ul>
     <div id="preview-area">

@@ -39,6 +39,7 @@ Four separate problems, and it helps to keep them separate:
   - Borderless or fullscreen-windowed games: there's no title bar, so nothing is removed, which is correct.
   - Games that draw their *own* title bar inside the window (like VS Code or Discord do): Windows counts it as content, so it stays. Draw your regions to leave it out.
   - Exclusive-fullscreen games may not capture at all. Switch them to windowed or borderless.
+- **Minimized games can't be captured or clicked.** Windows doesn't draw minimized windows, and most engines pause their game loop when minimized. A game that's only *covered* by other windows keeps running fine. So the app checks once a second and, if the selected game is minimized, restores it *without focusing it* and pushes it behind all other windows. Use the picker's **Send game to back** button instead of minimizing.
 
 ### Reformat
 - A "calibration" screen where you drag rectangles over a screenshot of the game: *background area*, *text box*, *name box*, *menu buttons*. Save those per game as a small JSON file.
@@ -73,6 +74,10 @@ Four separate problems, and it helps to keep them separate:
   - Electron can't click on other windows by itself. You need a small native helper. The easiest route in a Node app is calling Windows' `SendInput`/`PostMessage` through **koffi** (an FFI library, no C++ compiling). `robotjs` and `nut.js` exist too, but robotjs is unmaintained and nut.js moved to a paid license.
   - Clicking your window takes focus away from the game, and some VNs pause or ignore input when they're not focused. Usually the fix is to briefly focus the game, send the input, then refocus your app. Or send messages straight to the game window, which works for some engines.
   - **Map taps through the same fractions:** tap position inside a zone → fraction of that zone's region → fraction of the game window → real pixel position using the game window's *current* position, looked up from its HWND at click time. Nothing depends on where the game sits on screen.
+  - **Two ways to deliver a click**, and which one works depends on the game's engine:
+    - *Posted messages* (`PostMessage` with `WM_LBUTTONDOWN`/`UP`): sent straight to the game window. No cursor movement and no focus change, but engines that read raw input ignore them.
+    - *Simulated mouse* (`SendInput`): brings the game to the front, moves the real cursor there, clicks, and moves it back. Works almost everywhere, at the cost of a visible cursor jump.
+  - The portrait window is created with `focusable: false`, so tapping it never takes focus from the game.
   - **This is the riskiest part, so test it early** (Milestone 3).
 - Safety net: a "raw mode" toggle that shows the whole game, letterboxed, where every tap maps 1:1. That way you can always reach settings screens your layout doesn't cover.
 
@@ -83,7 +88,7 @@ Four separate problems, and it helps to keep them separate:
 | 0 | Setup | Forge app opens a window from VS Code; repo on GitHub |
 | 1 | **Capture + layout** | 1a: pick the VN window from a list and see it live. 1b: a responsive portrait window (Grid zones, canvases sized with `ResizeObserver`) shows the cropped background on top and the text box enlarged below, live, and still fits when you resize the window. 1c: a "Set text zone" button lets you drag a rectangle over the live preview, and the portrait's text zone switches to that crop live |
 | 2 | Calibration | Reuse the 1c drag tool for the background too. Regions save automatically per game as JSON (fractions of the window, not pixels) and load when you pick that game again. Games are identified by window title for now. Name box and button regions are deferred: the name box only when a game needs it, buttons to Milestone 3 |
-| 3 | Input bridge | Clicking "Advance" or a mapped region in your window makes the game advance/click. Raw mode works. Add button regions here. Once koffi is in, identify games by their `.exe` instead of window title (titles can change per chapter) |
+| 3 | Input bridge | 3a ✅: tapping anywhere in the portrait clicks the same spot in the game, with two delivery methods (posted messages vs simulated mouse). The portrait window never takes focus from the game. *Result: "YOU and ME and HER" accepts both methods; minimized games are auto-restored behind other windows.* 3b: save the working method per game, and add a portrait button row (Advance, Back, Skip, Auto, Menu…) that sends keys or clicks button regions drawn in the picker. 3c: raw mode: the whole game letterboxed, taps map 1:1. 3d: identify games by their `.exe` instead of window title (titles can change per chapter) |
 | 4 | Streaming | Apollo + Tailscale: play from your phone on mobile data |
 | 5 | Real text | Textractor → WebSocket → nicely styled text in the app; OCR fallback |
 | 6+ | Creative | Sprite extraction, themes, per-game presets, history log |
