@@ -31,6 +31,11 @@ type Regions = Record<RegionName, Region>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
+// How the portrait's text zone shows the game's text: 'text' is the line
+// read by OCR, restyled for phones; 'image' is the picture of the game's text
+// box (the fallback for games OCR reads badly).
+type TextMode = 'text' | 'image';
+
 // What OCR read from an image (ocr.ts).
 interface OcrResult {
   text: string;
@@ -49,6 +54,7 @@ interface GameProfile {
   // The window title when last played.
   title: string;
   clickMethod: ClickMethod;
+  textMode: TextMode;
   regions: Regions;
   // The game's content size in pixels when last played.
   window: { width: number; height: number } | null;
@@ -58,7 +64,7 @@ interface GameProfile {
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
-type ProfileSummary = Omit<GameProfile, 'version' | 'regions'> & {
+type ProfileSummary = Omit<GameProfile, 'version' | 'regions' | 'textMode'> & {
   isOpen: boolean;
   sourceId?: string;
 };
@@ -92,6 +98,9 @@ interface Window {
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
     onClickMethodChanged(callback: (method: ClickMethod) => void): void;
+    getTextMode(): Promise<TextMode>;
+    setTextMode(mode: TextMode): Promise<void>;
+    onTextModeChanged(callback: (mode: TextMode) => void): void;
     // Saved game profiles, marked with whether each game is running now.
     listProfiles(): Promise<ProfileSummary[]>;
     onProfilesChanged(callback: () => void): void;
@@ -107,5 +116,10 @@ interface Window {
     sendGameToBack(): Promise<void>;
     // Reads the text in a PNG image with OCR (ocr.ts).
     readText(png: Uint8Array): Promise<OcrResult>;
+    // The game's current line of text, as read by OCR (text-reader.ts).
+    // Main keeps it and passes changes on to every window.
+    getTextLine(): Promise<string>;
+    setTextLine(line: string): Promise<void>;
+    onTextLineChanged(callback: (line: string) => void): void;
   };
 }

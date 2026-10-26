@@ -8,7 +8,11 @@
   <body>
     <main class="portrait">
       <div class="zone" id="background-zone"><canvas></canvas></div>
-      <div class="zone" id="text-zone"><canvas></canvas></div>
+      <div class="zone" id="text-zone">
+        <canvas></canvas>
+        <!-- The line read by OCR, shown in text mode (see portrait.ts). -->
+        <p id="text-line"></p>
+      </div>
     </main>
     <p id="status">Pick a window in the main window to start.</p>
     <script type="module" src="/src/portrait.ts"></script>

@@ -5,7 +5,8 @@
  */
 
 import './portrait.css';
-import { getClientArea, playCapture } from './capture';
+import { getClientArea, playCapture, regionInVideo } from './capture';
+import { startTextReader } from './text-reader';
 
 // How a region is scaled into its zone. `cover` fills the zone and trims the
 // edges; `contain` shows the whole region, with bars if the shapes differ.
@@ -39,6 +40,18 @@ window.vn.onRegionsChanged((newRegions) => {
 window.vn.getRegions().then((initialRegions) => {
   regions ??= initialRegions;
 });
+
+// How the text zone shows the game's text (see `TextMode`). The `text-mode`
+// class switches the zone's look in portrait.css; in text mode its canvas is
+// hidden and not drawn.
+const portrait = document.querySelector<HTMLElement>('.portrait')!;
+let textMode: TextMode = 'text';
+function setTextMode(mode: TextMode) {
+  textMode = mode;
+  portrait.classList.toggle('text-mode', mode === 'text');
+}
+window.vn.onTextModeChanged(setTextMode);
+window.vn.getTextMode().then(setTextMode);
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!;
 
@@ -77,14 +90,7 @@ function placeZone(zone: Zone, regions: Regions) {
   const { canvas, fit } = zone;
   const region = regions[zone.region];
 
-  // The region in the video's actual pixels. Regions are fractions of the
-  // game's content, which is itself a part of the capture.
-  const contentWidth = clientArea.w * video.videoWidth;
-  const contentHeight = clientArea.h * video.videoHeight;
-  const sx = clientArea.x * video.videoWidth + region.x * contentWidth;
-  const sy = clientArea.y * video.videoHeight + region.y * contentHeight;
-  const sw = region.w * contentWidth;
-  const sh = region.h * contentHeight;
+  const { sx, sy, sw, sh } = regionInVideo(video, clientArea, region);
 
   // Scale to fill (cover) or fit (contain) the canvas, then center it.
   const scaleX = canvas.width / sw;
@@ -131,6 +137,9 @@ function drawFrame() {
   if (regions && video.videoWidth > 0) {
     fitTextZone(regions);
     for (const zone of zones) {
+      if (zone.region === 'text' && textMode === 'text') {
+        continue;
+      }
       drawZone(zone, regions);
     }
   }
@@ -175,6 +184,17 @@ function showRipple(event: MouseEvent) {
   ripple.addEventListener('animationend', () => ripple.remove());
 }
 
+// In text mode, a tap on the text clicks the middle of the game's text box,
+// which moves on to the next line in most VNs.
+const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
+textLine.addEventListener('click', (event) => {
+  if (regions) {
+    const { x, y, w, h } = regions.text;
+    showRipple(event);
+    window.vn.clickGame({ x: x + w / 2, y: y + h / 2 });
+  }
+});
+
 for (const zone of zones) {
   zone.canvas.addEventListener('click', (event) => {
     const point = tapToGame(zone, event);
@@ -189,6 +209,30 @@ function showSource(sourceId: string) {
   status.hidden = true;
   playCapture(video, sourceId);
 }
+
+// --- Text mode -----------------------------------------------------------------
+
+// Shows the line read by OCR, with a quick fade-in so a new line is
+// noticeable without being jarring.
+function showTextLine(line: string) {
+  if (line === textLine.textContent) {
+    return;
+  }
+  textLine.textContent = line;
+  textLine.animate([{ opacity: 0 }, { opacity: 1 }], {
+    duration: 150,
+    easing: 'ease-out',
+  });
+}
+window.vn.onTextLineChanged(showTextLine);
+window.vn.getTextLine().then(showTextLine);
+
+// Read the game's text automatically (see text-reader.ts).
+startTextReader(video, () =>
+  regions && video.videoWidth > 0
+    ? regionInVideo(video, clientArea, regions.text)
+    : null,
+);
 
 window.vn.onSourceSelected(showSource);
 window.vn.getSelectedSource().then((sourceId) => {

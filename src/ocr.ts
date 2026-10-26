@@ -25,13 +25,28 @@ function getWorker() {
   return worker;
 }
 
+// Fixes letters OCR commonly mistakes for "I". A `|` never appears in VN
+// text, and a lowercase "l" on its own isn't an English word, so both are
+// almost certainly an "I" (e.g. "| wasn't", "l'm"). Telling Tesseract never
+// to output `|` doesn't work: it just picks `[` instead.
+function fixCommonMistakes(text: string) {
+  return (
+    text
+      .replaceAll('|', 'I')
+      // An "l" with no letter or digit right before or after it. `\p{L}` is
+      // any letter, `\p{N}` any digit; `(?<!...)` and `(?!...)` check the
+      // neighbours without including them in the match.
+      .replace(/(?<![\p{L}\p{N}])l(?![\p{L}\p{N}])/gu, 'I')
+  );
+}
+
 // Reads the text in a PNG image.
 export async function readText(png: Uint8Array): Promise<OcrResult> {
   const ocr = await getWorker();
   const start = performance.now();
   const { data } = await ocr.recognize(Buffer.from(png));
   return {
-    text: data.text.trim(),
+    text: fixCommonMistakes(data.text).trim(),
     confidence: Math.round(data.confidence),
     ms: Math.round(performance.now() - start),
   };

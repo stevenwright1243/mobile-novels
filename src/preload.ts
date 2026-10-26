@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld('vn', {
       callback(method),
     );
   },
+  getTextMode: () => ipcRenderer.invoke('get-text-mode'),
+  setTextMode: (mode) => ipcRenderer.invoke('set-text-mode', mode),
+  onTextModeChanged: (callback) => {
+    ipcRenderer.on('text-mode-changed', (_event, mode: TextMode) =>
+      callback(mode),
+    );
+  },
   listProfiles: () => ipcRenderer.invoke('list-profiles'),
   onProfilesChanged: (callback) => {
     ipcRenderer.on('profiles-changed', () => callback());
@@ -43,4 +50,11 @@ contextBridge.exposeInMainWorld('vn', {
   },
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
   readText: (png) => ipcRenderer.invoke('read-text', png),
+  getTextLine: () => ipcRenderer.invoke('get-text-line'),
+  setTextLine: (line) => ipcRenderer.invoke('set-text-line', line),
+  onTextLineChanged: (callback) => {
+    ipcRenderer.on('text-line-changed', (_event, line: string) =>
+      callback(line),
+    );
+  },
 } satisfies Window['vn']);

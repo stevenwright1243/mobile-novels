@@ -100,6 +100,7 @@ function newProfile(
     exePath,
     title,
     clickMethod: 'message',
+    textMode: 'text',
     regions: DEFAULT_REGIONS,
     window: null,
     lastPlayed: new Date().toISOString(),

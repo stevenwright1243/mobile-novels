@@ -40,10 +40,17 @@ if (started) {
   app.quit();
 }
 
+// Debug logging, switched on by starting with `npm run start:debug`, which
+// passes this flag to the app.
+const DEBUG_OCR = process.argv.includes('--debug-ocr');
+
 // The game window the user picked. Its ID lets the portrait window capture it
 // too.
 let selectedSource: GameWindow | null = null;
 let portraitWindow: BrowserWindow | null = null;
+
+// The game's current line of text, as read by the portrait's text reader.
+let textLine = '';
 
 // The picked game's profile: its regions, click method and so on (see
 // profiles.ts). Null until a game is picked. Changes apply live, but are only
@@ -61,6 +68,7 @@ const snapshot = (current: GameProfile) =>
   JSON.stringify({
     regions: current.regions,
     clickMethod: current.clickMethod,
+    textMode: current.textMode,
   });
 
 const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
@@ -221,6 +229,8 @@ const createPortraitWindow = (bounds: Rectangle) => {
     // also means keyboard shortcuts like Ctrl+Shift+I don't reach it.)
     focusable: false,
   });
+  // No File / Edit / View menu bar: this window is what the phone sees.
+  portraitWindow.removeMenu();
   // On Windows, `focusable: false` also hides the window from the taskbar
   // and Alt+Tab, so it can get lost behind other windows. Put it back in
   // both. The native handle is the window's HWND, stored as 8 bytes.
@@ -314,6 +324,10 @@ app.whenReady().then(() => {
     portraitWindow?.webContents.send('source-selected', source.id);
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
+    broadcast('text-mode-changed', profile.textMode);
+    // The last game's line no longer applies.
+    textLine = '';
+    broadcast('text-line-changed', textLine);
     sendSaveState();
     return true;
   });
@@ -446,6 +460,16 @@ app.whenReady().then(() => {
     }
   });
 
+  // How the portrait shows the game's text, part of the game's profile.
+  ipcMain.handle('get-text-mode', () => profile?.textMode ?? 'text');
+  ipcMain.handle('set-text-mode', (event, mode: TextMode) => {
+    if (profile) {
+      profile = { ...profile, textMode: mode };
+      broadcast('text-mode-changed', mode, event.sender);
+      sendSaveState();
+    }
+  });
+
   // The picker changes one region; main keeps the current set, forwards it
   // to the other windows. It's saved with the profile when you click Save.
   ipcMain.handle('get-regions', () => profile?.regions ?? DEFAULT_REGIONS);
@@ -459,7 +483,23 @@ app.whenReady().then(() => {
   });
 
   // OCR: the picker sends a PNG of the text box, main reads it.
-  ipcMain.handle('read-text', (_event, png: Uint8Array) => readText(png));
+  // With `npm run start:debug`, each read is logged to the terminal, to help
+  // tune what counts as garbage (see text-reader.ts).
+  ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
+    const result = await readText(png);
+    if (DEBUG_OCR) {
+      console.log(`OCR ${result.confidence}% ${result.ms}ms:`, result.text);
+    }
+    return result;
+  });
+
+  // The current line: the portrait's text reader sets it, and every window
+  // (the portrait included) hears about the change.
+  ipcMain.handle('get-text-line', () => textLine);
+  ipcMain.handle('set-text-line', (_event, line: string) => {
+    textLine = line;
+    broadcast('text-line-changed', textLine);
+  });
 
   createWindows();
 

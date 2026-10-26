@@ -324,9 +324,22 @@ h2 {
   align-items: start;
 }
 
+/* Spans every column, above the test results. */
+#live-text {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
 #ocr-image {
   width: 100%;
   background: #000;
+}
+
+/* No test image yet (live text can arrive before the test button is used):
+   hide the empty image instead of showing a broken-image icon. */
+#ocr-image:not([src]) {
+  display: none;
 }
 
 #ocr-stats {

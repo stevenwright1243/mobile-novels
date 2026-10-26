@@ -29,17 +29,17 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Known gaps:**
 
-- `npm run package` doesn't include koffi yet. Forge's Vite plugin only packages `.vite/`. `npm start` is fine.
+- `npm run package` doesn't include koffi or tesseract.js yet (and the OCR language data is downloaded on first use rather than bundled). Forge's Vite plugin only packages `.vite/`. `npm start` is fine.
 - No landscape layout for the portrait.
 - A game that was maximized may come back un-maximized after auto-restore.
 
 **Next step: Milestone 5 (real text), OCR first.** Moved ahead of streaming: everything up to streaming can be built and tested on the PC, with the portrait window standing in for the phone.
 
-- 5a (in progress): an OCR test button in the picker reads the text region with `tesseract.js` (in main, `src/ocr.ts`) and shows the image read plus the result. A first check on a screenshot of "YOU and ME and HER" read the line exactly in ~75 ms; the only noise was the ▽ next-line icon.
-- 5b: read automatically: watch the text region, and run OCR once it stops changing (so typewriter animations aren't caught half-way).
-- 5c: a styled HTML text layer in the portrait's text zone (font, size, wrapping), with the image crop kept as a per-game fallback.
+- 5a ✅: an OCR test button in the picker reads the text region with `tesseract.js` (in main, `src/ocr.ts`) and shows the image read plus the result. On "YOU and ME and HER" it reads lines exactly in ~75 ms; the only noise is the ▽ next-line icon.
+- 5b ✅: the portrait reads text automatically (`src/text-reader.ts`). It checks a tiny sample of the text box 4 times a second; a big change (a new line) starts OCR, and reading repeats until two reads in a row agree, which means the typewriter animation has finished. Pixel stability alone doesn't work, since the ▽ icon keeps bobbing. The confirmed line goes to main (`set-text-line`), which broadcasts `text-line-changed`; the picker shows it as "Live text". OCR text gets common fixes in `ocr.ts`: `|` and a lone `l` become `I` (telling Tesseract never to output `|` just gives `[` instead).
+- 5c (built, being tested): the portrait's text zone shows the line as real text in a clean reader style (dark panel, large `clamp()` type, wraps to the screen, room for 3 lines so the background doesn't jump). Tapping it clicks the middle of the game's text box. A per-game **text mode** in the profile ("Read text" or "Picture of the text box") keeps the image crop as a fallback. Themes are for later.
 
-Text zone sizing (part of 3b) is done: the text row now takes the text region's shape, so there are no black bars. Still left from 3b: the portrait button row and removing the portrait's menu bar. Then 3c (raw mode), then Milestone 4 (Apollo + Tailscale).
+Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row. Then 3c (raw mode), then Milestone 4 (Apollo + Tailscale).
 
 **Working agreement:** small steps the user can test and commit; explain TypeScript and Electron patterns briefly; when the user suggests something and a better current practice exists, say so and explain before building (see `CLAUDE.md`).
 
