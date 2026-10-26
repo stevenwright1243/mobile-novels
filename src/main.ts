@@ -14,6 +14,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
 import {
+  DEFAULT_BACKGROUND_VIEW,
   DEFAULT_REGIONS,
   deleteProfile,
   listProfiles,
@@ -49,6 +50,9 @@ const DEBUG_OCR = process.argv.includes('--debug-ocr');
 let selectedSource: GameWindow | null = null;
 let portraitWindow: BrowserWindow | null = null;
 
+// The size of the portrait's background zone (see `setBackgroundZoneSize`).
+let backgroundZoneSize: Size | null = null;
+
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
 
@@ -69,6 +73,7 @@ const snapshot = (current: GameProfile) =>
     regions: current.regions,
     clickMethod: current.clickMethod,
     textMode: current.textMode,
+    backgroundView: current.backgroundView,
   });
 
 const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
@@ -325,6 +330,7 @@ app.whenReady().then(() => {
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-mode-changed', profile.textMode);
+    broadcast('background-view-changed', profile.backgroundView);
     // The last game's line no longer applies.
     textLine = '';
     broadcast('text-line-changed', textLine);
@@ -468,6 +474,27 @@ app.whenReady().then(() => {
       broadcast('text-mode-changed', mode, event.sender);
       sendSaveState();
     }
+  });
+
+  // How the background is zoomed and positioned in the portrait, part of the
+  // game's profile. The picker changes it; the portrait redraws.
+  ipcMain.handle(
+    'get-background-view',
+    () => profile?.backgroundView ?? DEFAULT_BACKGROUND_VIEW,
+  );
+  ipcMain.handle('set-background-view', (event, view: ZoneView) => {
+    if (profile) {
+      profile = { ...profile, backgroundView: view };
+      broadcast('background-view-changed', view, event.sender);
+      sendSaveState();
+    }
+  });
+
+  // The portrait's background zone size, passed on to the picker.
+  ipcMain.handle('get-background-zone-size', () => backgroundZoneSize);
+  ipcMain.handle('set-background-zone-size', (event, size: Size) => {
+    backgroundZoneSize = size;
+    broadcast('background-zone-size-changed', size, event.sender);
   });
 
   // The picker changes one region; main keeps the current set, forwards it

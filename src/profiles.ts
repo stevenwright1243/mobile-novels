@@ -11,6 +11,9 @@ export const DEFAULT_REGIONS: Regions = {
   text: { x: 0, y: 0.7, w: 1, h: 0.3 },
 };
 
+// The background fills its zone, trimmed evenly on both sides.
+export const DEFAULT_BACKGROUND_VIEW: ZoneView = { fill: 1, x: 0.5, y: 0.5 };
+
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
 // title, 3 is the full profile keyed by .exe.
@@ -101,6 +104,7 @@ function newProfile(
     title,
     clickMethod: 'message',
     textMode: 'text',
+    backgroundView: DEFAULT_BACKGROUND_VIEW,
     regions: DEFAULT_REGIONS,
     window: null,
     lastPlayed: new Date().toISOString(),

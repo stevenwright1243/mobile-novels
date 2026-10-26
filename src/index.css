@@ -374,6 +374,35 @@ h2 {
   background: var(--color);
 }
 
+/* The part of the background the portrait shows: a solid line inside the
+   background's dashed outline. */
+.visible-area {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #fd5;
+  box-shadow: 0 0 0 1px #000;
+  pointer-events: none;
+}
+
+.visible-area span {
+  top: auto;
+  bottom: 0;
+  background: #fd5;
+}
+
+/* A single row of controls, so flexbox; wraps when narrow. */
+#background-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+
+#background-controls input[type='range'] {
+  width: 7rem;
+  vertical-align: middle;
+}
+
 /* OCR test: the image that was read beside what came back. Stacks on
    narrow windows (`auto-fit` makes as many columns as fit). */
 #ocr-test {

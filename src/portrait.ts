@@ -7,28 +7,40 @@
 import './portrait.css';
 import { getClientArea, playCapture, regionInVideo } from './capture';
 import { startTextReader } from './text-reader';
+import { placeInZone, SHOW_ALL } from './zone-view';
 
-// How a region is scaled into its zone. `cover` fills the zone and trims the
-// edges; `contain` shows the whole region, with bars if the shapes differ.
-type Fit = 'cover' | 'contain';
+// How the background is zoomed and positioned (see `ZoneView`), set in the
+// picker and kept up to date by main.
+let backgroundView: ZoneView = { fill: 1, x: 0.5, y: 0.5 };
+window.vn.onBackgroundViewChanged((view) => {
+  backgroundView = view;
+});
+window.vn.getBackgroundView().then((view) => {
+  backgroundView = view;
+});
 
-// Each zone of the layout: its canvas, which region it shows, and how.
+// Each zone of the layout: its canvas, which region it shows, and how it's
+// zoomed and positioned. `view` is a function so it always gives the latest.
 interface Zone {
   canvas: HTMLCanvasElement;
   region: RegionName;
-  fit: Fit;
+  view: () => ZoneView;
 }
 
+const backgroundCanvas = document.querySelector<HTMLCanvasElement>(
+  '#background-zone canvas',
+)!;
 const zones: Zone[] = [
   {
-    canvas: document.querySelector('#background-zone canvas')!,
+    canvas: backgroundCanvas,
     region: 'background',
-    fit: 'cover',
+    view: () => backgroundView,
   },
   {
+    // The text box picture always shows in full, so no text is cut off.
     canvas: document.querySelector('#text-zone canvas')!,
     region: 'text',
-    fit: 'contain',
+    view: () => SHOW_ALL,
   },
 ];
 
@@ -77,6 +89,14 @@ const resizeObserver = new ResizeObserver((entries) => {
     const size = entry.devicePixelContentBoxSize[0];
     canvas.width = size.inlineSize;
     canvas.height = size.blockSize;
+    // The picker outlines the part of the background that's shown, which
+    // depends on the zone's shape, so let it know.
+    if (canvas === backgroundCanvas) {
+      window.vn.setBackgroundZoneSize({
+        width: canvas.width,
+        height: canvas.height,
+      });
+    }
   }
 });
 for (const zone of zones) {
@@ -87,29 +107,75 @@ for (const zone of zones) {
 // lands on the zone's canvas (`d...`, destination), all in pixels. Used both
 // to draw the zone and to work out where a tap on it points in the game.
 function placeZone(zone: Zone, regions: Regions) {
-  const { canvas, fit } = zone;
+  const { canvas } = zone;
   const region = regions[zone.region];
-
   const { sx, sy, sw, sh } = regionInVideo(video, clientArea, region);
-
-  // Scale to fill (cover) or fit (contain) the canvas, then center it.
-  const scaleX = canvas.width / sw;
-  const scaleY = canvas.height / sh;
-  const scale =
-    fit === 'cover' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
-  const dw = sw * scale;
-  const dh = sh * scale;
-  const dx = (canvas.width - dw) / 2;
-  const dy = (canvas.height - dh) / 2;
-
+  const { dx, dy, dw, dh } = placeInZone(
+    sw,
+    sh,
+    canvas.width,
+    canvas.height,
+    zone.view(),
+  );
   return { sx, sy, sw, sh, dx, dy, dw, dh };
+}
+
+// The backdrop behind a zoomed-out background: the same picture, filling the
+// zone, blurred and darkened. Drawn tiny and then stretched, which blurs it
+// almost for free (a real blur filter on a full-size canvas, every frame,
+// would be slow).
+const BACKDROP_SHRINK = 24;
+const backdrop = document.createElement('canvas');
+const backdropContext = backdrop.getContext('2d')!;
+
+function drawBackdrop(
+  context: CanvasRenderingContext2D,
+  { sx, sy, sw, sh }: { sx: number; sy: number; sw: number; sh: number },
+) {
+  const { width, height } = context.canvas;
+  // Resizing a canvas clears and reallocates it, so only when it changes.
+  const smallWidth = Math.max(1, Math.ceil(width / BACKDROP_SHRINK));
+  const smallHeight = Math.max(1, Math.ceil(height / BACKDROP_SHRINK));
+  if (backdrop.width !== smallWidth || backdrop.height !== smallHeight) {
+    backdrop.width = smallWidth;
+    backdrop.height = smallHeight;
+  }
+  const fill = placeInZone(sw, sh, backdrop.width, backdrop.height, {
+    fill: 1,
+    x: 0.5,
+    y: 0.5,
+  });
+  // A light blur at this tiny size smooths out the blockiness.
+  backdropContext.filter = 'blur(1px)';
+  backdropContext.drawImage(
+    video,
+    sx,
+    sy,
+    sw,
+    sh,
+    fill.dx,
+    fill.dy,
+    fill.dw,
+    fill.dh,
+  );
+  context.drawImage(backdrop, 0, 0, width, height);
+  // Darken it, so the real picture stands out.
+  context.fillStyle = 'rgb(0 0 0 / 55%)';
+  context.fillRect(0, 0, width, height);
 }
 
 function drawZone(zone: Zone, regions: Regions) {
   const { canvas } = zone;
   const context = canvas.getContext('2d')!;
-  const { sx, sy, sw, sh, dx, dy, dw, dh } = placeZone(zone, regions);
+  const place = placeZone(zone, regions);
+  const { sx, sy, sw, sh, dx, dy, dw, dh } = place;
   context.clearRect(0, 0, canvas.width, canvas.height);
+  // Space around the picture: fill it with the backdrop rather than black
+  // (the text box picture keeps plain bars, so the text stands out).
+  const leavesSpace = dw < canvas.width - 1 || dh < canvas.height - 1;
+  if (leavesSpace && zone.region === 'background') {
+    drawBackdrop(context, place);
+  }
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
@@ -150,8 +216,8 @@ requestAnimationFrame(drawFrame);
 // --- Taps ----------------------------------------------------------------------
 
 // Works backwards from a tap on a zone to the spot in the game it shows, as
-// fractions of the game's content. Null if the tap is on the bars around a
-// `contain` zone, which show nothing of the game.
+// fractions of the game's content. Null if the tap is on the space around a
+// zoomed-out picture, which shows nothing of the game.
 function tapToGame(zone: Zone, event: MouseEvent) {
   if (!regions || !video.videoWidth) {
     return null;
