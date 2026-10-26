@@ -10,7 +10,16 @@ import {
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { DEFAULT_REGIONS, loadRegions, saveRegions } from './game-config';
-import { getClientArea, hwndFromSourceId } from './win32';
+import {
+  getClientArea,
+  hwndFromSourceId,
+  isMinimized,
+  postClick,
+  restoreBehind,
+  sendClick,
+  sendToBack,
+  showInTaskbar,
+} from './win32';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -24,6 +33,10 @@ let portraitWindow: BrowserWindow | null = null;
 
 // The regions of the game window the portrait view shows, loaded per game.
 let regions: Regions = DEFAULT_REGIONS;
+
+// How taps in the portrait are delivered to the game (see win32.ts). Chosen
+// in the picker while we find out which one each game accepts.
+let clickMethod: ClickMethod = 'message';
 
 // Tells every window about the current regions, except `skip`: the window
 // that made the change, which already has them.
@@ -80,7 +93,18 @@ const createPortraitWindow = (bounds: Rectangle) => {
       // even when it's covered or not focused.
       backgroundThrottling: false,
     },
+    // Tapping the portrait shouldn't take focus away from the game: some
+    // games pause or ignore input when they aren't the active window. (This
+    // also means keyboard shortcuts like Ctrl+Shift+I don't reach it.)
+    focusable: false,
   });
+  // On Windows, `focusable: false` also hides the window from the taskbar
+  // and Alt+Tab, so it can get lost behind other windows. Put it back in
+  // both. The native handle is the window's HWND, stored as 8 bytes.
+  showInTaskbar(
+    Number(portraitWindow.getNativeWindowHandle().readBigUInt64LE()),
+  );
+  portraitWindow.setSkipTaskbar(false);
   portraitWindow.on('closed', () => {
     portraitWindow = null;
   });
@@ -112,9 +136,15 @@ app.whenReady().then(() => {
   // The renderer can't use desktopCapturer, so it asks for the window list
   // here over IPC (see preload.ts for the other end).
   ipcMain.handle('list-windows', async (): Promise<WindowSource[]> => {
+    // Thumbnails show at roughly 16rem wide; size them in real pixels for the
+    // screen's scaling (e.g. 1.5 at 150%) so they stay sharp.
+    const scale = screen.getPrimaryDisplay().scaleFactor;
     const sources = await desktopCapturer.getSources({
       types: ['window'],
-      thumbnailSize: { width: 320, height: 180 },
+      thumbnailSize: {
+        width: Math.round(256 * scale),
+        height: Math.round(144 * scale),
+      },
     });
     return sources.map((source) => ({
       id: source.id,
@@ -140,6 +170,49 @@ app.whenReady().then(() => {
   ipcMain.handle('get-client-area', () =>
     selectedSource ? getClientArea(hwndFromSourceId(selectedSource.id)) : null,
   );
+
+  // A tap in the portrait, as a point in the game's client area (fractions).
+  ipcMain.handle(
+    'click-game',
+    async (_event, point: { x: number; y: number }) => {
+      if (!selectedSource) {
+        return;
+      }
+      const hwnd = hwndFromSourceId(selectedSource.id);
+      // A minimized game can't be clicked: restore it first, and give it a
+      // moment to start running again so the tap isn't lost.
+      if (isMinimized(hwnd)) {
+        restoreBehind(hwnd);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      return clickMethod === 'mouse'
+        ? sendClick(hwnd, point)
+        : postClick(hwnd, point);
+    },
+  );
+
+  // The way to get the game out of sight without minimizing it.
+  ipcMain.handle('send-game-to-back', () => {
+    if (selectedSource) {
+      sendToBack(hwndFromSourceId(selectedSource.id));
+    }
+  });
+
+  // Minimized games stop drawing and running, so check once a second and
+  // quietly restore the selected game behind other windows if needed.
+  setInterval(() => {
+    if (selectedSource) {
+      const hwnd = hwndFromSourceId(selectedSource.id);
+      if (isMinimized(hwnd)) {
+        restoreBehind(hwnd);
+      }
+    }
+  }, 1000);
+
+  ipcMain.handle('get-click-method', () => clickMethod);
+  ipcMain.handle('set-click-method', (_event, method: ClickMethod) => {
+    clickMethod = method;
+  });
 
   // The picker changes one region; main keeps the current set, forwards it
   // to the other windows, and saves it for this game.

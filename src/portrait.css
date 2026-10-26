@@ -50,6 +50,29 @@ body {
   font-size: clamp(1rem, 5vw, 1.5rem);
 }
 
+/* Tap feedback: a circle that grows and fades where you tapped. */
+.ripple {
+  position: fixed;
+  width: 3rem;
+  height: 3rem;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 80%);
+  pointer-events: none;
+  animation: ripple 0.4s ease-out forwards;
+}
+
+@keyframes ripple {
+  from {
+    scale: 0.3;
+    opacity: 1;
+  }
+  to {
+    scale: 1.5;
+    opacity: 0;
+  }
+}
+
 /* `display: grid` above would otherwise override the `hidden` attribute. */
 #status[hidden] {
   display: none;
