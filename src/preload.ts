@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('vn', {
     );
   },
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
+  isDebug: () => ipcRenderer.invoke('is-debug'),
   readText: (png) => ipcRenderer.invoke('read-text', png),
   getTextLine: () => ipcRenderer.invoke('get-text-line'),
   setTextLine: (line) => ipcRenderer.invoke('set-text-line', line),

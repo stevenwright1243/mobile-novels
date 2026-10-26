@@ -1,11 +1,13 @@
 /**
  * OCR in the picker window. Shows the line read automatically by the
- * portrait (text-reader.ts), and has a test button that reads the text
- * region once and shows the image that was read next to what came back.
+ * portrait (text-reader.ts), and, in debug mode, has a test button that
+ * reads the text region once and shows the image that was read next to what
+ * came back.
  */
 
 import { cropForOcr, getClientArea, pngBytes, regionInVideo } from './capture';
 
+const debugTools = document.querySelector<HTMLElement>('#debug-tools')!;
 const button = document.querySelector<HTMLButtonElement>('#ocr-test-button')!;
 const cleanUp = document.querySelector<HTMLInputElement>('#ocr-clean-up')!;
 const panel = document.querySelector<HTMLElement>('#ocr-test')!;
@@ -58,4 +60,10 @@ button.addEventListener('click', async () => {
 window.vn.onTextLineChanged((line) => {
   liveText.textContent = line || '(waiting for text…)';
   panel.hidden = false;
+});
+
+// The test button and its checkbox are debug tools: only shown when the app
+// was started with `npm run start:debug`.
+window.vn.isDebug().then((debug) => {
+  debugTools.hidden = !debug;
 });
