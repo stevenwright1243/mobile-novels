@@ -6,7 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('vn', {
   listWindows: () => ipcRenderer.invoke('list-windows'),
-  selectSource: (sourceId) => ipcRenderer.invoke('select-source', sourceId),
+  selectSource: (source) => ipcRenderer.invoke('select-source', source),
   getSelectedSource: () => ipcRenderer.invoke('get-selected-source'),
   onSourceSelected: (callback) => {
     // Pass on just the ID, so the page never sees Electron's event object.
@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('vn', {
       callback(sourceId),
     );
   },
+  getClientArea: () => ipcRenderer.invoke('get-client-area'),
   getRegions: () => ipcRenderer.invoke('get-regions'),
   setRegion: (name, region) => ipcRenderer.invoke('set-region', name, region),
   onRegionsChanged: (callback) => {

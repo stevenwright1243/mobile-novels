@@ -5,7 +5,7 @@
  */
 
 import './portrait.css';
-import { playCapture } from './capture';
+import { getClientArea, playCapture } from './capture';
 
 // How a region is scaled into its zone. `cover` fills the zone and trims the
 // edges; `contain` shows the whole region, with bars if the shapes differ.
@@ -46,6 +46,13 @@ const status = document.querySelector<HTMLParagraphElement>('#status')!;
 const video = document.createElement('video');
 video.muted = true;
 
+// Where the game's content is inside the capture (without the title bar).
+// Re-measured whenever the capture changes size, e.g. the game is resized.
+let clientArea: Region = { x: 0, y: 0, w: 1, h: 1 };
+video.addEventListener('resize', async () => {
+  clientArea = await getClientArea();
+});
+
 // CSS stretches each canvas to fill its zone, but the canvas's own pixel grid
 // doesn't follow. Match it to the on-screen size × devicePixelRatio, so the
 // drawing stays sharp on high-resolution screens.
@@ -65,11 +72,14 @@ function drawZone(zone: Zone, regions: Regions) {
   const context = canvas.getContext('2d')!;
   const region = regions[zone.region];
 
-  // The region in the video's actual pixels.
-  const sx = region.x * video.videoWidth;
-  const sy = region.y * video.videoHeight;
-  const sw = region.w * video.videoWidth;
-  const sh = region.h * video.videoHeight;
+  // The region in the video's actual pixels. Regions are fractions of the
+  // game's content, which is itself a part of the capture.
+  const contentWidth = clientArea.w * video.videoWidth;
+  const contentHeight = clientArea.h * video.videoHeight;
+  const sx = clientArea.x * video.videoWidth + region.x * contentWidth;
+  const sy = clientArea.y * video.videoHeight + region.y * contentHeight;
+  const sw = region.w * contentWidth;
+  const sh = region.h * contentHeight;
 
   // Scale to fill (cover) or fit (contain) the canvas, then center it.
   const scaleX = canvas.width / sw;

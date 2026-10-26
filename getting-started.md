@@ -34,10 +34,16 @@ Four separate problems, and it helps to keep them separate:
 - Electron has this built in: `desktopCapturer.getSources({ types: ['window'] })` lists windows, and you feed the chosen one into a `<video>` element with `getUserMedia`. Then draw regions of that video onto `<canvas>` elements. No native code needed.
 - This captures **the app window itself**, not an area of the screen: it follows the game when it moves and still works when other windows cover it. (Minimized windows go black, so keep the game open.)
 - On Windows the source ID looks like `window:<number>:0`, where the number is the window's handle (HWND). Keep it: the input bridge can use it to target the same window.
+- **The capture includes the window's title bar and borders.** To leave them out, the app asks Windows (through koffi) where the game's *client area* is: the window minus title bar, borders and menu bar. Regions are measured against that. How it varies between games:
+  - Normal windowed games: the title bar is removed exactly.
+  - Borderless or fullscreen-windowed games: there's no title bar, so nothing is removed, which is correct.
+  - Games that draw their *own* title bar inside the window (like VS Code or Discord do): Windows counts it as content, so it stays. Draw your regions to leave it out.
+  - Exclusive-fullscreen games may not capture at all. Switch them to windowed or borderless.
 
 ### Reformat
 - A "calibration" screen where you drag rectangles over a screenshot of the game: *background area*, *text box*, *name box*, *menu buttons*. Save those per game as a small JSON file.
-- **Regions are stored as fractions of the game window (0 to 1), not pixels.** For example, `{ "x": 0.05, "y": 0.72, "w": 0.9, "h": 0.25 }`. That way they still line up if the game window is moved, resized, or run at another resolution.
+- **Drawing snaps** to the game picture's sides and to the other regions' edges, so regions can sit flush against each other. Hold Alt to place freely.
+- **Regions are stored as fractions of the game's content (0 to 1), not pixels.** For example, `{ "x": 0.05, "y": 0.72, "w": 0.9, "h": 0.25 }`. That way they still line up if the game window is moved, resized, or run at another resolution.
 - **"Set text zone" setting (the first calibration tool).** A button in the main window turns the live game preview into a drawing surface. You click and drag a rectangle over the game's text box, and that rectangle becomes the region the portrait view shows in its text zone:
   - While dragging, an outline follows the mouse. After you let go it stays visible, so you can see what's being captured, and dragging again replaces it.
   - The mouse position is converted to fractions of the *game frame*, not of the preview element. The preview is letterboxed (`object-fit: contain`), so the black bars have to be subtracted first. The video's `videoWidth`/`videoHeight` give the real frame size.
@@ -76,8 +82,8 @@ Four separate problems, and it helps to keep them separate:
 |---|------|-----------|
 | 0 | Setup | Forge app opens a window from VS Code; repo on GitHub |
 | 1 | **Capture + layout** | 1a: pick the VN window from a list and see it live. 1b: a responsive portrait window (Grid zones, canvases sized with `ResizeObserver`) shows the cropped background on top and the text box enlarged below, live, and still fits when you resize the window. 1c: a "Set text zone" button lets you drag a rectangle over the live preview, and the portrait's text zone switches to that crop live |
-| 2 | Calibration | Reuse the 1c drag tool for the other regions (background, name box, buttons) and save them per game as JSON (fractions of the window, not pixels), loaded automatically when you pick that game again |
-| 3 | Input bridge | Clicking "Advance" or a mapped region in your window makes the game advance/click. Raw mode works |
+| 2 | Calibration | Reuse the 1c drag tool for the background too. Regions save automatically per game as JSON (fractions of the window, not pixels) and load when you pick that game again. Games are identified by window title for now. Name box and button regions are deferred: the name box only when a game needs it, buttons to Milestone 3 |
+| 3 | Input bridge | Clicking "Advance" or a mapped region in your window makes the game advance/click. Raw mode works. Add button regions here. Once koffi is in, identify games by their `.exe` instead of window title (titles can change per chapter) |
 | 4 | Streaming | Apollo + Tailscale: play from your phone on mobile data |
 | 5 | Real text | Textractor → WebSocket → nicely styled text in the app; OCR fallback |
 | 6+ | Creative | Sprite extraction, themes, per-game presets, history log |
