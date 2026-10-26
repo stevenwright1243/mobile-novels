@@ -14,8 +14,9 @@ body {
     'header'
     'games'
     'list'
+    'ocr'
     'preview';
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto 1fr;
   gap: 0.5rem;
 }
 
@@ -311,4 +312,36 @@ h2 {
   font-size: 0.75rem;
   color: #000;
   background: var(--color);
+}
+
+/* OCR test: the image that was read beside what came back. Stacks on
+   narrow windows (`auto-fit` makes as many columns as fit). */
+#ocr-test {
+  grid-area: ocr;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.5rem 1rem;
+  align-items: start;
+}
+
+#ocr-image {
+  width: 100%;
+  background: #000;
+}
+
+#ocr-stats {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+#ocr-output {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  font-size: 1rem;
+}
+
+/* `display: grid` above would otherwise override the `hidden` attribute. */
+#ocr-test[hidden] {
+  display: none;
 }

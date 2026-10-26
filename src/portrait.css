@@ -6,22 +6,30 @@ body {
 }
 
 /* The zones. To rearrange the layout, change the area map and row sizes
-   here; the HTML stays the same. `fr` = a share of the available space. */
+   here; the HTML stays the same. `fr` = a share of the available space.
+   The text row is `auto`: as tall as the text zone needs to be (see below),
+   and the background takes whatever is left. */
 .portrait {
   height: 100dvh;
   display: grid;
   grid-template-areas:
     'background'
     'text';
-  grid-template-rows: 3fr 2fr;
+  grid-template-rows: 1fr auto;
 }
 
 #background-zone {
   grid-area: background;
 }
 
+/* The text zone takes the text region's shape, so the crop fills it with no
+   black bars. `--text-aspect` (width / height) is set by portrait.ts from
+   the region; the fallback is only used before the first frame. The height
+   cap stops a tall text region from pushing the background off screen. */
 #text-zone {
   grid-area: text;
+  aspect-ratio: var(--text-aspect, 4);
+  max-height: 60dvh;
 }
 
 /* The canvas is pinned to its zone, so the zone's size comes only from the

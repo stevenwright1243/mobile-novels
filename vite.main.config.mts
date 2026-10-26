@@ -6,9 +6,10 @@ export default defineConfig({
     // `rollupOptions` (not the newer `rolldownOptions`) so this list merges
     // with the one Forge's Vite plugin sets under the same key.
     rollupOptions: {
-      // Native modules can't be bundled, so load them from node_modules at
-      // runtime instead.
-      external: ['koffi'],
+      // Load these from node_modules at runtime instead of bundling them:
+      // koffi is a native module, and tesseract.js starts its worker thread
+      // from a script file found by path.
+      external: ['koffi', 'tesseract.js'],
     },
   },
 });

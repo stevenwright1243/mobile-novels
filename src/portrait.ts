@@ -107,10 +107,29 @@ function drawZone(zone: Zone, regions: Regions) {
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
+// Shapes the text zone like the text region (width / height in real pixels),
+// through the `--text-aspect` CSS variable, so its `contain` fit has no bars.
+// Only touches the style when the shape changes, so layout isn't redone
+// every frame.
+const textZone = document.querySelector<HTMLElement>('#text-zone')!;
+let textAspect = '';
+function fitTextZone(regions: Regions) {
+  const { w, h } = regions.text;
+  const aspect = (
+    (w * clientArea.w * video.videoWidth) /
+    (h * clientArea.h * video.videoHeight)
+  ).toFixed(4);
+  if (aspect !== textAspect) {
+    textAspect = aspect;
+    textZone.style.setProperty('--text-aspect', aspect);
+  }
+}
+
 // Redraw every screen refresh. `requestAnimationFrame` calls us just before
 // the browser paints, so drawing stays in step with the display.
 function drawFrame() {
   if (regions && video.videoWidth > 0) {
+    fitTextZone(regions);
     for (const zone of zones) {
       drawZone(zone, regions);
     }

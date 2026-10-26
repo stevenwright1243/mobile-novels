@@ -42,4 +42,5 @@ contextBridge.exposeInMainWorld('vn', {
     );
   },
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
+  readText: (png) => ipcRenderer.invoke('read-text', png),
 } satisfies Window['vn']);
