@@ -97,11 +97,29 @@ h1 {
   cursor: crosshair;
 }
 
-#text-outline {
+.outline {
   position: absolute;
   box-sizing: border-box;
-  border: 2px dashed #4af;
-  background: rgb(68 170 255 / 15%);
+  border: 2px dashed var(--color);
   /* Let pointer events pass through to the frame underneath. */
   pointer-events: none;
+}
+
+/* Each region gets its own color through the `--color` custom property. */
+.outline[data-region='background'] {
+  --color: #f90;
+}
+
+.outline[data-region='text'] {
+  --color: #4af;
+}
+
+.outline span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  color: #000;
+  background: var(--color);
 }

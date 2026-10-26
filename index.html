@@ -8,14 +8,18 @@
     <header>
       <h1>Pick a window</h1>
       <button id="refresh">Refresh</button>
-      <button id="set-text-zone" disabled>Set text zone</button>
+      <button data-region="background" disabled>Set background</button>
+      <button data-region="text" disabled>Set text zone</button>
     </header>
     <ul id="window-list"></ul>
     <div id="preview-area">
       <video id="preview" autoplay muted></video>
       <!-- Sized by renderer.ts to sit exactly over the game picture. -->
       <div id="frame">
-        <div id="text-outline"></div>
+        <div class="outline" data-region="background">
+          <span>Background</span>
+        </div>
+        <div class="outline" data-region="text"><span>Text zone</span></div>
       </div>
     </div>
     <script type="module" src="/src/renderer.ts"></script>

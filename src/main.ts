@@ -5,25 +5,46 @@ import {
   ipcMain,
   screen,
   type Rectangle,
+  type WebContents,
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { DEFAULT_REGIONS, loadRegions, saveRegions } from './game-config';
+import { getClientArea, hwndFromSourceId } from './win32';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
-// The game window the user picked, so the portrait window can capture it too.
-let selectedSourceId: string | null = null;
+// The game window the user picked. Its ID lets the portrait window capture it
+// too; its title identifies the game for saving settings.
+let selectedSource: GameWindow | null = null;
 let portraitWindow: BrowserWindow | null = null;
 
-// The regions of the game window the portrait view shows. These defaults are
-// used until you set them (the text zone in the picker now; per-game saving
-// comes in milestone 2).
-const regions: Regions = {
-  background: { x: 0, y: 0, w: 1, h: 0.7 },
-  text: { x: 0, y: 0.7, w: 1, h: 0.3 },
+// The regions of the game window the portrait view shows, loaded per game.
+let regions: Regions = DEFAULT_REGIONS;
+
+// Tells every window about the current regions, except `skip`: the window
+// that made the change, which already has them.
+const sendRegions = (skip?: WebContents) => {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.webContents !== skip) {
+      window.webContents.send('regions-changed', regions);
+    }
+  }
+};
+
+// A drag sends many updates, so wait until they've stopped for half a second,
+// then write the file once.
+let saveTimer: NodeJS.Timeout | undefined;
+const scheduleSave = (title: string, regionsToSave: Regions) => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveRegions(title, regionsToSave).catch((error) =>
+      console.error('Saving regions failed:', error),
+    );
+  }, 500);
 };
 
 // Loads one of the renderer's HTML pages: from the Vite dev server in
@@ -102,23 +123,35 @@ app.whenReady().then(() => {
     }));
   });
 
-  // The main window reports which game window was picked; pass it on to the
-  // portrait window. `handle` + `invoke` is a request/response pair, while
-  // `webContents.send` is a one-way message from main to a page.
-  ipcMain.handle('select-source', (_event, sourceId: string) => {
-    selectedSourceId = sourceId;
-    portraitWindow?.webContents.send('source-selected', sourceId);
+  // The main window reports which game window was picked: load that game's
+  // saved regions and pass both on. `handle` + `invoke` is a request/response
+  // pair, while `webContents.send` is a one-way message from main to a page.
+  ipcMain.handle('select-source', async (_event, source: GameWindow) => {
+    selectedSource = source;
+    regions = await loadRegions(source.name);
+    portraitWindow?.webContents.send('source-selected', source.id);
+    sendRegions();
   });
 
   // Lets a portrait window that (re)loads later catch up on the current pick.
-  ipcMain.handle('get-selected-source', () => selectedSourceId);
+  ipcMain.handle('get-selected-source', () => selectedSource?.id ?? null);
 
-  // Same pattern for regions: the picker changes one, main keeps the
-  // current set and forwards it to the portrait window.
+  // Where the game's content is inside the capture (without the title bar).
+  ipcMain.handle('get-client-area', () =>
+    selectedSource ? getClientArea(hwndFromSourceId(selectedSource.id)) : null,
+  );
+
+  // The picker changes one region; main keeps the current set, forwards it
+  // to the other windows, and saves it for this game.
   ipcMain.handle('get-regions', () => regions);
-  ipcMain.handle('set-region', (_event, name: RegionName, region: Region) => {
-    regions[name] = region;
-    portraitWindow?.webContents.send('regions-changed', regions);
+  ipcMain.handle('set-region', (event, name: RegionName, region: Region) => {
+    // A new object rather than changing the old one, so a save that's still
+    // waiting keeps the regions it was given.
+    regions = { ...regions, [name]: region };
+    sendRegions(event.sender);
+    if (selectedSource) {
+      scheduleSave(selectedSource.name, regions);
+    }
   });
 
   createWindows();

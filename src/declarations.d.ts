@@ -9,7 +9,12 @@ interface WindowSource {
   thumbnail: string;
 }
 
-// A rectangle inside the game window, as fractions (0 to 1) of its size.
+// The picked game window: just the ID and title, without the thumbnail.
+// `Pick<T, K>` makes a type with only the listed properties of T.
+type GameWindow = Pick<WindowSource, 'id' | 'name'>;
+
+// A rectangle as fractions (0 to 1) of what it's inside. Saved regions are
+// fractions of the game's content (its client area, without the title bar).
 interface Region {
   x: number;
   y: number;
@@ -26,10 +31,14 @@ type Regions = Record<RegionName, Region>;
 interface Window {
   vn: {
     listWindows(): Promise<WindowSource[]>;
-    // Tells main which game window was picked, so the portrait window follows.
-    selectSource(sourceId: string): Promise<void>;
+    // Tells main which game window was picked, so the portrait window follows
+    // and that game's saved regions are loaded.
+    selectSource(source: GameWindow): Promise<void>;
     getSelectedSource(): Promise<string | null>;
     onSourceSelected(callback: (sourceId: string) => void): void;
+    // Where the game's content is, as fractions of the capture; null if the
+    // window can't be measured.
+    getClientArea(): Promise<Region | null>;
     getRegions(): Promise<Regions>;
     setRegion(name: RegionName, region: Region): Promise<void>;
     onRegionsChanged(callback: (regions: Regions) => void): void;

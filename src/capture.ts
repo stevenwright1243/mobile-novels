@@ -1,5 +1,14 @@
 // Shared by both pages: live capture of a game window into a <video>.
 
+// The whole capture: used when the game's content can't be measured.
+const FULL_FRAME: Region = { x: 0, y: 0, w: 1, h: 1 };
+
+// Where the game's own content is inside the capture, leaving out the
+// window's title bar and borders.
+export async function getClientArea() {
+  return (await window.vn.getClientArea()) ?? FULL_FRAME;
+}
+
 // Starts playing a live capture of a window in `video`, replacing (and
 // stopping) whatever it was showing before.
 export async function playCapture(video: HTMLVideoElement, sourceId: string) {
