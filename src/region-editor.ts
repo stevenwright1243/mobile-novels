@@ -443,7 +443,9 @@ function fromEdges(left: number, top: number, right: number, bottom: number) {
 // Listening on the whole preview area (not just the picture) lets drags start
 // in the black bars.
 previewArea.addEventListener('pointerdown', (event) => {
-  if (!editing || !regions) {
+  // Only the main button edits; the middle one moves around when zoomed in
+  // (see preview-zoom.ts).
+  if (!editing || !regions || event.button !== 0) {
     return;
   }
   const target = event.target as HTMLElement;

@@ -6,11 +6,14 @@
 import './index.css';
 import { playCapture } from './capture';
 import { enableOcrTest } from './ocr-test';
+import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
 
 // The `!` tells TypeScript "this element definitely exists", since
 // querySelector would otherwise be typed as possibly null.
 const refreshButton = document.querySelector<HTMLButtonElement>('#refresh')!;
+const windowsSection = document.querySelector<HTMLDetailsElement>('#windows')!;
+const windowsSummary = windowsSection.querySelector('summary')!;
 const windowList = document.querySelector<HTMLUListElement>('#window-list')!;
 const gamesSection = document.querySelector<HTMLElement>('#games')!;
 const gameList = document.querySelector<HTMLUListElement>('#game-list')!;
@@ -30,6 +33,8 @@ async function pickWindow(source: GameWindow) {
   playCapture(preview, source.id);
   enableRegionEditing();
   enableOcrTest(preview);
+  // Fold the window list away; its summary line still opens it again.
+  windowsSection.open = false;
   sendToBackButton.disabled = false;
   clickMethodSelect.disabled = false;
   textModeSelect.disabled = false;
@@ -37,6 +42,7 @@ async function pickWindow(source: GameWindow) {
 
 async function showWindowList() {
   const sources = await window.vn.listWindows();
+  windowsSummary.textContent = `Open windows (${sources.length})`;
   windowList.replaceChildren(
     ...sources.map((source) => {
       const img = document.createElement('img');
