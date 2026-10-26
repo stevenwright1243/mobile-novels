@@ -464,14 +464,7 @@ h2 {
   background: #fd5;
 }
 
-/* A single row of controls, so flexbox; wraps when narrow. */
-#background-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1rem;
-}
-
+/* A slider with its percent box (the text size settings). */
 .slider-field input[type='range'] {
   width: 7rem;
   vertical-align: middle;

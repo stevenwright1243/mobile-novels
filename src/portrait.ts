@@ -15,17 +15,7 @@ import {
 } from './capture';
 import './history-log';
 import { startTextReader } from './text-reader';
-import { placeInZone, SHOW_ALL } from './zone-view';
-
-// How the background is zoomed and positioned (see `ZoneView`), set in the
-// picker and kept up to date by main.
-let backgroundView: ZoneView = { fill: 1, x: 0.5, y: 0.5 };
-window.vn.onBackgroundViewChanged((view) => {
-  backgroundView = view;
-});
-window.vn.getBackgroundView().then((view) => {
-  backgroundView = view;
-});
+import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
 // Each zone of the layout: its canvas, which region it shows, and how it's
 // zoomed and positioned. `view` is a function so it always gives the latest.
@@ -42,7 +32,7 @@ const zones: Zone[] = [
   {
     canvas: backgroundCanvas,
     region: 'background',
-    view: () => backgroundView,
+    view: () => BACKGROUND_VIEW,
   },
   {
     // The text box picture always shows in full, so no text is cut off.

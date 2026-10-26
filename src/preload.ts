@@ -54,13 +54,6 @@ contextBridge.exposeInMainWorld('vn', {
       callback(mode),
     );
   },
-  getBackgroundView: () => ipcRenderer.invoke('get-background-view'),
-  setBackgroundView: (view) => ipcRenderer.invoke('set-background-view', view),
-  onBackgroundViewChanged: (callback) => {
-    ipcRenderer.on('background-view-changed', (_event, view: ZoneView) =>
-      callback(view),
-    );
-  },
   getBackgroundZoneSize: () => ipcRenderer.invoke('get-background-zone-size'),
   setBackgroundZoneSize: (size) =>
     ipcRenderer.invoke('set-background-zone-size', size),

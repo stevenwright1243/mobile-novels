@@ -4,6 +4,13 @@
  * back through it, and the picker, which outlines the part that's shown.
  */
 
+// How the background is zoomed and positioned in the portrait, for every
+// game: 20% of the way from "show all" to "fill", centered left to right, and
+// 20% of the way down. Fixed on purpose (the user's chosen layout, which the
+// text box is tuned against; see portrait-layout.md), so there are no
+// settings for it. Used by the portrait and the picker's "Shown in portrait".
+export const BACKGROUND_VIEW: ZoneView = { fill: 0.2, x: 0.5, y: 0.2 };
+
 // The whole region fits, centered, with space around it if the shapes
 // differ. Used for the text box picture, where no text may be cut off.
 export const SHOW_ALL: ZoneView = { fill: 0, x: 0.5, y: 0.5 };

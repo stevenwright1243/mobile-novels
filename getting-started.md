@@ -45,13 +45,15 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Live window list:** the picker's window list and game cards update by themselves when windows open or close; closing the picked game clears the portrait (with a message) and unfolds the window list.
 
-**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** per-game sliders (Show all ↔ Fill, Left ↔ Right, Top ↔ Bottom) zoom and position the background in its zone, live; a "Shown in portrait" box in the preview marks the part that's visible; space around a zoomed-out background shows a blurred copy instead of black bars. In text mode the text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
+**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** zoom and position are fixed for every game (Zoom 20%, Left↔Right 50%, Top↔Bottom 20%; `BACKGROUND_VIEW` in `src/zone-view.ts`), with no sliders; a "Shown in portrait" box in the preview marks the part that's visible; space around the zoomed-out background shows a blurred copy instead of black bars. In text mode the text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
 
 **Text size:** a per-game slider (60–200%, with an exact percent field). Bigger text makes the message window's resting height (3 lines) taller, over the background picture (the picture never moves because of the text: it fills the portrait, and the window lies on top); a line too long for the window's resting height is shrunk to fit (just that line; the next one goes back to the chosen size, never below 60%), and the picker shows a "Long line: shown at N%" note. A **Long lines** slider sets a fixed size for such lines instead ("Auto" = shrink each just enough); at a fixed size the window grows over the picture as needed. The background sliders and the text settings never affect each other.
 
 **Look:** a styling sweep in the spirit of Aokana: shared sky-blue and white theme (`src/theme.css`), bundled Nunito font, frosted-glass message window with a sky ribbon and bobbing arrow, pill buttons and white cards in the picker.
 
 Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done. Next: Milestone 4 (Apollo + Tailscale).
+
+**Layout reference:** `portrait-layout.md` holds the portrait's sizes and positions. The background's zoom and position are fixed for every game: Zoom 20%, Left↔Right 50%, Top↔Bottom 20% (`BACKGROUND_VIEW` in `src/zone-view.ts`).
 
 **Working agreement:** small steps the user can test and commit; explain TypeScript and Electron patterns briefly; when the user suggests something and a better current practice exists, say so and explain before building (see `CLAUDE.md`).
 

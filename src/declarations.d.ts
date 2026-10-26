@@ -82,8 +82,6 @@ interface GameProfile {
   clickMethod: ClickMethod;
   textMode: TextMode;
   textStyle: TextStyle;
-  // How the background region is zoomed and positioned in the portrait.
-  backgroundView: ZoneView;
   regions: Regions;
   // The game's content size in pixels when last played.
   window: Size | null;
@@ -95,7 +93,7 @@ interface GameProfile {
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
 type ProfileSummary = Omit<
   GameProfile,
-  'version' | 'regions' | 'textMode' | 'textStyle' | 'backgroundView'
+  'version' | 'regions' | 'textMode' | 'textStyle'
 > & {
   isOpen: boolean;
   sourceId?: string;
@@ -145,9 +143,6 @@ interface Window {
     getTextShrink(): Promise<number | null>;
     setTextShrink(size: number | null): Promise<void>;
     onTextShrinkChanged(callback: (size: number | null) => void): void;
-    getBackgroundView(): Promise<ZoneView>;
-    setBackgroundView(view: ZoneView): Promise<void>;
-    onBackgroundViewChanged(callback: (view: ZoneView) => void): void;
     // The size of the portrait's background zone, sent by the portrait so
     // the picker can outline the part of the background that's shown.
     getBackgroundZoneSize(): Promise<Size | null>;
