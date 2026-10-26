@@ -5,6 +5,7 @@
 
 import './index.css';
 import { playCapture } from './capture';
+import { enableBackgroundControls } from './background-view';
 import { enableOcrTest } from './ocr-test';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
@@ -33,6 +34,7 @@ async function pickWindow(source: GameWindow) {
   playCapture(preview, source.id);
   enableRegionEditing();
   enableOcrTest(preview);
+  enableBackgroundControls();
   // Fold the window list away; its summary line still opens it again.
   windowsSection.open = false;
   sendToBackButton.disabled = false;

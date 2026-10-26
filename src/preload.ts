@@ -37,6 +37,21 @@ contextBridge.exposeInMainWorld('vn', {
       callback(mode),
     );
   },
+  getBackgroundView: () => ipcRenderer.invoke('get-background-view'),
+  setBackgroundView: (view) => ipcRenderer.invoke('set-background-view', view),
+  onBackgroundViewChanged: (callback) => {
+    ipcRenderer.on('background-view-changed', (_event, view: ZoneView) =>
+      callback(view),
+    );
+  },
+  getBackgroundZoneSize: () => ipcRenderer.invoke('get-background-zone-size'),
+  setBackgroundZoneSize: (size) =>
+    ipcRenderer.invoke('set-background-zone-size', size),
+  onBackgroundZoneSizeChanged: (callback) => {
+    ipcRenderer.on('background-zone-size-changed', (_event, size: Size) =>
+      callback(size),
+    );
+  },
   listProfiles: () => ipcRenderer.invoke('list-profiles'),
   onProfilesChanged: (callback) => {
     ipcRenderer.on('profiles-changed', () => callback());

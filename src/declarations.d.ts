@@ -36,6 +36,22 @@ type ClickMethod = 'message' | 'mouse';
 // box (the fallback for games OCR reads badly).
 type TextMode = 'text' | 'image';
 
+// How a region sits in its portrait zone (zone-view.ts). `fill` zooms from 0
+// (the whole region fits, with space around it) to 1 (it fills the zone,
+// with its edges trimmed). When it's trimmed, `x` and `y` choose which part
+// shows: 0 = the left / top edge, 0.5 = the middle, 1 = the right / bottom.
+interface ZoneView {
+  fill: number;
+  x: number;
+  y: number;
+}
+
+// A size in pixels.
+interface Size {
+  width: number;
+  height: number;
+}
+
 // What OCR read from an image (ocr.ts).
 interface OcrResult {
   text: string;
@@ -55,16 +71,21 @@ interface GameProfile {
   title: string;
   clickMethod: ClickMethod;
   textMode: TextMode;
+  // How the background region is zoomed and positioned in the portrait.
+  backgroundView: ZoneView;
   regions: Regions;
   // The game's content size in pixels when last played.
-  window: { width: number; height: number } | null;
+  window: Size | null;
   // When last picked, as an ISO date string.
   lastPlayed: string;
 }
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
-type ProfileSummary = Omit<GameProfile, 'version' | 'regions' | 'textMode'> & {
+type ProfileSummary = Omit<
+  GameProfile,
+  'version' | 'regions' | 'textMode' | 'backgroundView'
+> & {
   isOpen: boolean;
   sourceId?: string;
 };
@@ -101,6 +122,14 @@ interface Window {
     getTextMode(): Promise<TextMode>;
     setTextMode(mode: TextMode): Promise<void>;
     onTextModeChanged(callback: (mode: TextMode) => void): void;
+    getBackgroundView(): Promise<ZoneView>;
+    setBackgroundView(view: ZoneView): Promise<void>;
+    onBackgroundViewChanged(callback: (view: ZoneView) => void): void;
+    // The size of the portrait's background zone, sent by the portrait so
+    // the picker can outline the part of the background that's shown.
+    getBackgroundZoneSize(): Promise<Size | null>;
+    setBackgroundZoneSize(size: Size): Promise<void>;
+    onBackgroundZoneSizeChanged(callback: (size: Size) => void): void;
     // Saved game profiles, marked with whether each game is running now.
     listProfiles(): Promise<ProfileSummary[]>;
     onProfilesChanged(callback: () => void): void;
