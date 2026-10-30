@@ -130,7 +130,14 @@ game's name box (the `name` region, per game).
 
 - The page (`#page-view`) replaces the message window and name tag, in the
   same place and with the same glass and border, growing upward with the
-  text as far as the corner buttons' row, then scrolling.
+  text as far as the background picture's bottom edge (a 3vw gap above
+  it), so the picture stays in view, then scrolling. Where the picture
+  leaves less room than that, it still gets **45%** of the height, and it
+  never goes past the corner buttons' row.
+- It scrolls by dragging, with a finger or the mouse (taps from the phone
+  may arrive as mouse input); a drag doesn't move the game on. Once
+  scrolled, its top edge fades out over 1.5em; the arrow hides while it's
+  scrolled back from the end.
 - Text: **85%** of the chosen text size, line height 1.5, `0.6em` between
   paragraphs, the same padding as the message window; at least 3 lines tall.
 - Paragraphs already read are dimmed to 55% of `--ink`; new ones are full

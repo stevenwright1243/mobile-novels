@@ -295,13 +295,31 @@ function drawZone(zone: Zone, regions: Regions) {
     drawBackdrop(context, place);
   }
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
+  return place;
+}
+
+// Where the background picture ends, from the portrait's top, in CSS pixels,
+// passed to portrait.css as `--picture-bottom`: the page of full-screen text
+// stops growing there and scrolls instead, so it doesn't cover the picture.
+let pictureBottom = '';
+function reportPictureBottom({ dy, dh }: { dy: number; dh: number }) {
+  const { height, clientHeight } = backgroundCanvas;
+  const bottom = `${Math.round(((dy + dh) * clientHeight) / height)}px`;
+  if (bottom !== pictureBottom) {
+    pictureBottom = bottom;
+    portrait.style.setProperty('--picture-bottom', bottom);
+  }
 }
 
 // Redraw every screen refresh. `requestAnimationFrame` calls us just before
 // the browser paints, so drawing stays in step with the display.
 function drawFrame() {
   if (regions && video.videoWidth > 0) {
-    drawZone(backgroundZone, regions);
+    const place = drawZone(backgroundZone, regions);
+    // In Menus mode the picture is the whole game, placed elsewhere.
+    if (!rawMode) {
+      reportPictureBottom(place);
+    }
   }
   requestAnimationFrame(drawFrame);
 }

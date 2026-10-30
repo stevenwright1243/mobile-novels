@@ -1002,7 +1002,19 @@ body {
     flex-direction: column;
     position: relative;
     box-sizing: border-box;
-    max-height: calc(100dvh - var(--buttons-height) - var(--gap-bottom));
+    /* It grows up to the background picture's bottom edge
+       (`--picture-bottom`, set by portrait.ts), then scrolls, so the
+       picture stays in view. Where the picture leaves too little room, it
+       still gets `--page-min-share` of the height, and it never goes past
+       the corner buttons. */
+    --page-min-share: 45dvh;
+    max-height: min(
+      100dvh - var(--buttons-height) - var(--gap-bottom),
+      max(
+        var(--page-min-share),
+        100dvh - var(--picture-bottom, 0px) - var(--gap-bottom) - var(--gap)
+      )
+    );
   }
 
   /* Room for 3 lines while it's empty or short, like the message window. */
@@ -1026,6 +1038,14 @@ body {
     text-wrap: pretty;
     cursor: pointer;
     user-select: none;
+    /* A finger drags it up and down (page-view.ts does the same for the
+       mouse, which is how taps arrive from the phone). */
+    touch-action: pan-y;
+  }
+
+  /* Once scrolled down, the top edge fades, to show there's more above. */
+  #page-text.scrolled {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.5em);
   }
 
   #page-text p {
@@ -1056,7 +1076,8 @@ body {
     display: block;
   }
 
-  #text-zone:has(#page-text:empty) #next-arrow {
+  #text-zone:has(#page-text:empty) #next-arrow,
+  #text-zone.reading-back #next-arrow {
     display: none;
   }
 }
