@@ -31,6 +31,7 @@ const sendToBackButton =
   document.querySelector<HTMLButtonElement>('#send-to-back')!;
 const clickMethodSelect =
   document.querySelector<HTMLSelectElement>('#click-method')!;
+const gameNameInput = document.querySelector<HTMLInputElement>('#game-name')!;
 
 // Picks a window as the game: from its thumbnail, or from its profile card.
 // Main may ask about unsaved edits first; if the pick goes ahead, it sends
@@ -50,6 +51,7 @@ function showPicked(sourceId: string) {
   windowsSection.open = false;
   sendToBackButton.disabled = false;
   clickMethodSelect.disabled = false;
+  gameNameInput.disabled = false;
 }
 
 async function showWindowList() {
@@ -243,4 +245,13 @@ window.vn.onClickMethodChanged((method) => {
 });
 clickMethodSelect.addEventListener('change', () => {
   window.vn.setClickMethod(clickMethodSelect.value as ClickMethod);
+});
+
+// The game's short name for the portrait's Visual Novels, part of its
+// profile like the click method: empty shows the window title.
+window.vn.onGameNameChanged((name) => {
+  gameNameInput.value = name;
+});
+gameNameInput.addEventListener('input', () => {
+  window.vn.setGameName(gameNameInput.value);
 });

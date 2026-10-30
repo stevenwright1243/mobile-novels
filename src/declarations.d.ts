@@ -155,8 +155,8 @@ interface GameProfile {
   title: string;
   // A shorter name to show for the game in the Menus sheet's Visual Novels
   // (e.g. "YOU and ME and HER" for "YOU and ME and HER: A Love Story
-  // ver1.00"), if set; otherwise the title shows. Only set by hand in the
-  // profile's file for now.
+  // ver1.00"), if set; otherwise the title shows. Set in the picker's Name
+  // box.
   name?: string;
   clickMethod: ClickMethod;
   textStyle: TextStyle;
@@ -229,6 +229,10 @@ interface Window {
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
     onClickMethodChanged(callback: (method: ClickMethod) => void): void;
+    // The picked game's short name ('' for none), part of its profile.
+    getGameName(): Promise<string>;
+    setGameName(name: string): Promise<void>;
+    onGameNameChanged(callback: (name: string) => void): void;
     getTextStyle(): Promise<TextStyle>;
     setTextStyle(style: TextStyle): Promise<void>;
     onTextStyleChanged(callback: (style: TextStyle) => void): void;

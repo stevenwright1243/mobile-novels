@@ -130,6 +130,8 @@ let savedSnapshot = '';
 const snapshot = (current: GameProfile) =>
   JSON.stringify({
     regions: current.regions,
+    // `null` for no name, since JSON leaves out `undefined`.
+    name: current.name ?? null,
     clickMethod: current.clickMethod,
     textStyle: current.textStyle,
     backgroundY: current.backgroundY,
@@ -218,10 +220,15 @@ const revertButtonSize = () => {
 const revertEdits = () => {
   if (profile) {
     // The saved parts (see `snapshot`) laid back over the profile.
-    const saved: Partial<GameProfile> = JSON.parse(savedSnapshot);
-    const reverted = { ...profile, ...saved };
+    const saved = JSON.parse(savedSnapshot);
+    const reverted: GameProfile = {
+      ...profile,
+      ...saved,
+      name: saved.name ?? undefined,
+    };
     profile = reverted;
     broadcast('regions-changed', reverted.regions);
+    broadcast('game-name-changed', reverted.name ?? '');
     broadcast('click-method-changed', reverted.clickMethod);
     broadcast('text-style-changed', reverted.textStyle);
     broadcast('background-y-changed', reverted.backgroundY);
@@ -523,6 +530,7 @@ app.whenReady().then(async () => {
     broadcast('source-selected', source.id);
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
+    broadcast('game-name-changed', profile.name ?? '');
     broadcast('text-style-changed', profile.textStyle);
     broadcast('background-y-changed', profile.backgroundY);
     broadcast('background-width-changed', profile.backgroundWidth);
@@ -751,6 +759,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-click-method', (_event, method: ClickMethod) => {
     if (profile) {
       profile = { ...profile, clickMethod: method };
+      sendSaveState();
+    }
+  });
+
+  // The game's short name, shown in the Menus sheet's Visual Novels; part
+  // of its profile. An empty name clears it, so the title shows again.
+  ipcMain.handle('get-game-name', () => profile?.name ?? '');
+  ipcMain.handle('set-game-name', (_event, name: string) => {
+    if (profile) {
+      profile = { ...profile, name: name.trim() || undefined };
       sendSaveState();
     }
   });

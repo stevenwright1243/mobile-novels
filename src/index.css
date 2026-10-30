@@ -114,7 +114,8 @@ button:disabled {
 }
 
 select,
-input[type='number'] {
+input[type='number'],
+input[type='text'] {
   padding: 0.15rem 0.4rem;
   border: 1px solid var(--line);
   border-radius: 0.4rem;

@@ -33,6 +33,13 @@ contextBridge.exposeInMainWorld('vn', {
       callback(method),
     );
   },
+  getGameName: () => ipcRenderer.invoke('get-game-name'),
+  setGameName: (name) => ipcRenderer.invoke('set-game-name', name),
+  onGameNameChanged: (callback) => {
+    ipcRenderer.on('game-name-changed', (_event, name: string) =>
+      callback(name),
+    );
+  },
   getTextStyle: () => ipcRenderer.invoke('get-text-style'),
   setTextStyle: (style) => ipcRenderer.invoke('set-text-style', style),
   onTextStyleChanged: (callback) => {
