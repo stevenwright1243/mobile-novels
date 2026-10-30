@@ -140,7 +140,9 @@ button.primary {
   gap: 0.25rem;
   min-height: 0;
   padding: 0.9rem 0.6rem 0.75rem;
-  overflow-y: auto;
+  /* Scrolls up and down when it's too short, never sideways: everything in
+     it wraps instead. */
+  overflow: hidden auto;
   background: color-mix(in srgb, var(--accent-pale) 45%, var(--surface));
   border-right: 1px solid var(--line);
   /* The status dots' cut-out ring matches this. */
@@ -378,8 +380,11 @@ details[open] > summary.side-heading > span::before {
   border-top: 1px solid var(--line);
 }
 
+/* "Portrait on" and the switch; the switch goes under it when the sidebar
+   is too narrow for both. */
 .footer-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
@@ -396,6 +401,7 @@ details[open] > summary.side-heading > span::before {
 
   &::before {
     content: '';
+    flex: none;
     width: 0.55rem;
     height: 0.55rem;
     border-radius: 50%;
@@ -474,7 +480,11 @@ details[open] > summary.side-heading > span::before {
 #theme-button {
   anchor-name: --theme-button;
   display: flex;
+  /* Its padding and border inside the width, so it never pokes past the
+     sidebar. */
+  box-sizing: border-box;
   width: 100%;
+  text-align: left;
   align-items: center;
   gap: 0.5rem;
   padding-inline: 0.8rem 1rem;
@@ -495,11 +505,10 @@ details[open] > summary.side-heading > span::before {
   }
 }
 
+/* A long name ("Doki Doki Literature Club!") wraps onto a second line. */
 #theme-name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .theme-swatch {
