@@ -123,7 +123,21 @@ const snapshot = (current: GameProfile) =>
     backgroundY: current.backgroundY,
   });
 
-const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
+// The corner buttons' size is an app setting, the same for every game, but
+// it's saved with the Save button like the game's sizes (the user's
+// choice), so it's tracked the same way: `settings.buttonSize` is the size
+// in use, this the one in the settings file.
+let savedButtonSize = 1;
+const buttonSizeEdited = () => settings.buttonSize !== savedButtonSize;
+
+// The settings as they're saved: everything as it is, except an unsaved
+// button size.
+const persistSettings = () =>
+  saveSettings({ ...settings, buttonSize: savedButtonSize });
+
+const hasEdits = () =>
+  (profile !== null && snapshot(profile) !== savedSnapshot) ||
+  buttonSizeEdited();
 
 // Sends a message to every window, except `skip`: the window that made the
 // change, which already knows.
@@ -145,21 +159,47 @@ const saveState = (): SaveState => ({
 const sendSaveState = () => broadcast('save-state-changed', saveState());
 
 const saveCurrentProfile = async () => {
-  if (!profile) {
-    return;
+  if (buttonSizeEdited()) {
+    savedButtonSize = settings.buttonSize;
+    await persistSettings();
   }
-  await saveProfile(profile, legacyFile);
-  profileSaved = true;
-  legacyFile = null;
-  savedSnapshot = snapshot(profile);
+  if (profile) {
+    await saveProfile(profile, legacyFile);
+    profileSaved = true;
+    legacyFile = null;
+    savedSnapshot = snapshot(profile);
+    broadcast('profiles-changed');
+  }
   sendSaveState();
-  broadcast('profiles-changed');
+};
+
+// Puts back the button size as last saved, and tells every window.
+const revertButtonSize = () => {
+  settings = { ...settings, buttonSize: savedButtonSize };
+  broadcast('button-size-changed', settings.buttonSize);
+};
+
+// Undoes the unsaved edits: the game's settings and the button size go back
+// to how they were last saved (or loaded), in every window.
+const revertEdits = () => {
+  if (profile) {
+    // The saved parts (see `snapshot`) laid back over the profile.
+    const saved: Partial<GameProfile> = JSON.parse(savedSnapshot);
+    const reverted = { ...profile, ...saved };
+    profile = reverted;
+    broadcast('regions-changed', reverted.regions);
+    broadcast('click-method-changed', reverted.clickMethod);
+    broadcast('text-style-changed', reverted.textStyle);
+    broadcast('background-y-changed', reverted.backgroundY);
+  }
+  revertButtonSize();
+  sendSaveState();
 };
 
 // If there are unsaved edits, asks whether to save them before they'd be
 // lost. Returns false if the user picks Cancel.
 const resolveUnsavedEdits = async (parent: BrowserWindow | null) => {
-  if (!profile || !hasEdits()) {
+  if (!hasEdits()) {
     return true;
   }
   const options: Electron.MessageBoxOptions = {
@@ -167,8 +207,12 @@ const resolveUnsavedEdits = async (parent: BrowserWindow | null) => {
     buttons: ['Save', "Don't save", 'Cancel'],
     defaultId: 0,
     cancelId: 2,
-    message: `Save changes to ${profile.title}?`,
-    detail: "This game's region and click settings have unsaved changes.",
+    message: profile
+      ? `Save changes to ${profile.title}?`
+      : 'Save the button size?',
+    detail: profile
+      ? "This game's settings or the button size have unsaved changes."
+      : 'The button size has an unsaved change.',
   };
   const { response } = parent
     ? await dialog.showMessageBox(parent, options)
@@ -179,8 +223,13 @@ const resolveUnsavedEdits = async (parent: BrowserWindow | null) => {
   if (response === 0) {
     await saveCurrentProfile();
   } else {
-    // "Don't save": treat the edits as dealt with, so we don't ask again.
-    savedSnapshot = snapshot(profile);
+    // "Don't save": treat the game's edits as dealt with, so we don't ask
+    // again (its profile is replaced or the app closes), and put the
+    // button size back.
+    if (profile) {
+      savedSnapshot = snapshot(profile);
+    }
+    revertButtonSize();
   }
   return true;
 };
@@ -452,6 +501,7 @@ app.whenReady().then(async () => {
   // The picker's "Save profile" button (or Ctrl+S).
   ipcMain.handle('save-profile', saveCurrentProfile);
   ipcMain.handle('get-save-state', saveState);
+  ipcMain.handle('revert-edits', revertEdits);
 
   // Right-clicking a game card shows a native Windows menu. Resolves to
   // 'pick' if the user chose to pick the game (the picker does that part),
@@ -729,18 +779,15 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-portrait-on-phone', async (_event, onPhone: boolean) => {
     settings = { ...settings, portraitOnPhone: onPhone };
     setPortraitOnPhone?.(onPhone);
-    await saveSettings(settings);
+    await persistSettings();
   });
-  // The corner buttons' size. It changes many times a second while the
-  // slider is dragged, so it's saved once the slider has been still for a
-  // moment, instead of on every change.
-  let buttonSizeSaveTimer: NodeJS.Timeout | undefined;
+  // The corner buttons' size: applied live, and saved with the Save button
+  // (see `savedButtonSize`).
   ipcMain.handle('get-button-size', () => settings.buttonSize);
   ipcMain.handle('set-button-size', (event, size: number) => {
     settings = { ...settings, buttonSize: size };
     broadcast('button-size-changed', size, event.sender);
-    clearTimeout(buttonSizeSaveTimer);
-    buttonSizeSaveTimer = setTimeout(() => saveSettings(settings), 500);
+    sendSaveState();
   });
   // The colour scheme, saved straight away. Sent to every window, the
   // picker included, since both are themed.
@@ -757,7 +804,7 @@ app.whenReady().then(async () => {
       };
       broadcast('message-style-changed', settings.messageStyle);
     }
-    await saveSettings(settings);
+    await persistSettings();
   });
   // The message window's border and arrow, saved straight away. Sent back
   // to the sender too: the portrait can change them from its Menus sheet.
@@ -765,10 +812,11 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-message-style', async (_event, style: MessageStyle) => {
     settings = { ...settings, messageStyle: style };
     broadcast('message-style-changed', style);
-    await saveSettings(settings);
+    await persistSettings();
   });
 
   settings = await loadSettings();
+  savedButtonSize = settings.buttonSize;
   createWindows();
 
   // On OS X it's common to re-create a window in the app when the

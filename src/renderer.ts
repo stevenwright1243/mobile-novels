@@ -207,9 +207,10 @@ sendToBackButton.addEventListener('click', () => window.vn.sendGameToBack());
 const saveButton = document.querySelector<HTMLButtonElement>('#save-profile')!;
 
 window.vn.onSaveStateChanged(({ hasGame, edited, saved }) => {
-  // Clickable when there are edits, or when this game has no profile file
-  // yet (to create one, even with the default settings).
-  saveButton.disabled = !hasGame || (!edited && saved);
+  // Clickable when there are edits (the button size can be edited with no
+  // game picked), or when this game has no profile file yet (to create one,
+  // even with the default settings).
+  saveButton.disabled = !edited && (!hasGame || saved);
   saveButton.textContent = edited
     ? 'Save changes'
     : saved

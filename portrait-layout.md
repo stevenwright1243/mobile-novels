@@ -131,7 +131,8 @@ game's name box (the `name` region, per game).
   (50–200%), Portrait height (0–100%) and Button size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
   input is 48px tall, the track 0.45em, the thumb 1.6em. A note says which
-  are the game's, and **Save for this game** shows while they're unsaved.
+  are the game's. While any of the four is unsaved, **Save** (accent) and
+  **Reset** (plain; back to the values as last saved) show side by side.
   Left of the sliders, a live miniature of the reader screen, **33vw** wide
   and the screen's shape (a third of its size each way): the picture at the
   chosen height, the line and name at the chosen sizes, and the corner
@@ -165,8 +166,9 @@ game's name box (the `name` region, per game).
   (no `rem` cap), so they look the same on the PC and the phone; the 7vmin
   ceiling (about 150%) keeps both fitting side by side.
 - **Button size** (picker slider, 50–150%, default 100%): an app setting,
-  the same for every game, saved straight away (`buttonSize` in
-  `settings.json`, `src/settings.ts`; slider in `src/button-size.ts`).
+  the same for every game, saved with the Save button like the game's
+  settings (`buttonSize` in `settings.json`, `src/settings.ts`; slider in
+  `src/button-size.ts`; before 2026-10-30 it saved straight away).
   (Before 2026-10-29: 44px, `clamp(0.5rem, 3vw, 1rem)` from the edges,
   `clamp(0.95rem, 4vw, 1.2rem)`; then `clamp(0.75rem, 4.5vw, 2rem)` and
   `clamp(1.05rem, 4.75vw, 1.75rem)`, whose `rem` cap left them small on the

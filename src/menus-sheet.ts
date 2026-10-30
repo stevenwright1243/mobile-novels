@@ -126,20 +126,26 @@ linkSlider(
   buttonSize.listen,
 );
 
-// The game's sizes are part of its profile, which is only saved when asked
-// (as in the picker), so a Save button shows while there are changes. The
-// game's sliders are disabled while no game is picked.
-const saveButton = document.querySelector<HTMLButtonElement>('#sheet-save')!;
+// The sizes are only saved when asked (as in the picker; the button size
+// too, though it's for every game), so while there are changes, Save and
+// Reset show: Reset puts back the values as last saved. The game's sliders
+// are disabled while no game is picked.
+const actions = document.querySelector<HTMLElement>('#sheet-actions')!;
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
   '#sheet-text-size, #sheet-name-size, #sheet-background-y',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
-  saveButton.hidden = !hasGame || !edited;
+  actions.hidden = !edited;
   for (const slider of gameSliders) {
     slider.disabled = !hasGame;
   }
 }
-saveButton.addEventListener('click', () => window.vn.saveProfile());
+document
+  .querySelector('#sheet-save')!
+  .addEventListener('click', () => window.vn.saveProfile());
+document
+  .querySelector('#sheet-reset')!
+  .addEventListener('click', () => window.vn.revertEdits());
 window.vn.onSaveStateChanged(showSaveState);
 window.vn.getSaveState().then(showSaveState);
 

@@ -177,12 +177,15 @@
             </div>
             <p class="sheet-note">
               Text size, name size and portrait height are this game's; button
-              size is for every game and saves by itself.
+              size is for every game. Changes show at once, and are kept when
+              you save.
             </p>
-            <!-- Shown while the game has unsaved changes. -->
-            <button id="sheet-save" class="chip" hidden>
-              Save for this game
-            </button>
+            <!-- Shown while there are unsaved changes: Save keeps them, Reset
+                 puts back the values as last saved. -->
+            <div id="sheet-actions" hidden>
+              <button id="sheet-save" class="chip">Save</button>
+              <button id="sheet-reset" class="chip">Reset</button>
+            </div>
           </div>
         </details>
       </section>

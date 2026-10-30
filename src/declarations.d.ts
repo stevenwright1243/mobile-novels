@@ -228,6 +228,8 @@ interface Window {
     // Writes the picked game's profile to its file.
     saveProfile(): Promise<void>;
     getSaveState(): Promise<SaveState>;
+    // Undoes the unsaved edits (the game's settings and the button size).
+    revertEdits(): Promise<void>;
     onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;

@@ -965,7 +965,7 @@ body {
     grid-area: note;
   }
 
-  #sheet-save {
+  #sheet-actions {
     grid-area: save;
   }
 }
@@ -1072,17 +1072,25 @@ body {
   cursor: default;
 }
 
-#sheet-save {
-  justify-self: start;
-  padding-inline: 1.2em;
+/* Save and Reset, side by side: Save solid in the accent, Reset plain. */
+#sheet-actions {
+  display: flex;
+  gap: 0.6em;
+}
+
+#sheet-actions[hidden] {
+  display: none;
+}
+
+#sheet-actions .chip {
+  padding-inline: 1.4em;
   font-weight: 700;
+}
+
+#sheet-save {
   color: var(--on-accent);
   background: linear-gradient(var(--accent), var(--accent-deep));
   border-color: var(--accent-deep);
-}
-
-#sheet-save[hidden] {
-  display: none;
 }
 
 #page-mode-chips {
