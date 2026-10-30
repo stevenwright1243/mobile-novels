@@ -261,8 +261,9 @@
 
 /* MiSide: a cute game menu with a dark side. Plum-black and maroon, rows
    of see-through mauve, pink-lavender text with a dark drop shadow, hot
-   pink accents, the faint grid behind the logo, heavy rounded type. Picking
-   it in the picker also picks the two-hearts arrow (message-style.ts). */
+   pink accents, a wallpaper of doodled hearts, flowers and stars, heavy
+   rounded type. Picking it in the picker also picks the two-hearts arrow
+   (message-style.ts). */
 :root[data-theme='miside'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
@@ -279,18 +280,10 @@
   --stage-top: #3b1230;
   --backdrop-tint: rgb(40 10 32 / 45%);
   --rim-light: #ffd6f5;
-  /* The grid behind the logo. */
-  --glass-pattern:
-    repeating-linear-gradient(
-      to right,
-      rgb(247 127 208 / 7%) 0 1px,
-      transparent 1px 1.4rem
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      rgb(247 127 208 / 7%) 0 1px,
-      transparent 1px 1.4rem
-    );
+  /* Doodles of hearts, flowers, stars, rings and dots, like the game's
+     wallpaper: one tile drawn as an SVG picture written into the CSS. */
+  --glass-pattern: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='120' fill='none' stroke='%23c25bb5' stroke-opacity='.4' stroke-width='1.6' stroke-linejoin='round'><defs><path id='h' d='M0 4c0-5 7-6 9-1 2-5 9-4 9 1 0 6-9 11-9 11S0 10 0 4z'/><g id='f'><circle cy='-6' r='4'/><circle cx='5.7' cy='-1.9' r='4'/><circle cx='3.5' cy='4.9' r='4'/><circle cx='-3.5' cy='4.9' r='4'/><circle cx='-5.7' cy='-1.9' r='4'/><circle r='2.2' fill='%23c25bb5' fill-opacity='.4' stroke='none'/></g><path id='s' d='M0-9l2.6 5.4 5.9.8-4.3 4.1 1 5.9L0 4.4l-5.3 2.8 1-5.9-4.3-4.1 5.9-.8z'/></defs><use href='%23h' x='12' y='8'/><use href='%23f' x='88' y='28'/><use href='%23s' x='158' y='20'/><circle cx='214' cy='26' r='5'/><use href='%23h' x='186' y='68'/><use href='%23f' x='36' y='84'/><use href='%23s' x='118' y='92'/><circle cx='70' cy='60' r='4'/><g fill='%23c25bb5' fill-opacity='.4' stroke='none'><circle cx='56' cy='18' r='2.5'/><circle cx='130' cy='56' r='3'/><circle cx='228' cy='104' r='2.5'/><circle cx='8' cy='58' r='3'/><circle cx='166' cy='112' r='2'/><circle cx='104' cy='4' r='2'/></g></svg>")
+    0 0 / 24rem 12rem;
   --glass-blur: 6px;
   --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
   --text-weight: 800;
