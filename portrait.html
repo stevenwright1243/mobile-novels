@@ -239,8 +239,8 @@
           </div>
         </details>
         <!-- The saved games (the picker's "Your games"), folded away until
-             opened: tapping a running one makes it the game being played
-             (visual-novels.ts). -->
+             opened: tapping a running one makes it the game being played,
+             tapping one that isn't running starts it (visual-novels.ts). -->
         <details id="visual-novels">
           <summary><h2>Visual Novels</h2></summary>
           <div
@@ -249,7 +249,15 @@
             role="radiogroup"
             aria-label="Visual Novels"
           ></div>
-          <p class="sheet-note">Start a game on the PC to pick it here.</p>
+          <p class="sheet-note">
+            Tap a running game to play it, or one that isn't running to start
+            it.
+          </p>
+          <!-- Force-closes the running game opened first this session
+               (visual-novels.ts). -->
+          <div id="close-game-row">
+            <button id="close-game" class="chip" disabled>Close game</button>
+          </div>
         </details>
       </section>
 

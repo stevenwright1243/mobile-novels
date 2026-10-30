@@ -282,19 +282,24 @@ export function restoreBehind(hwnd: number) {
   sendToBack(hwnd);
 }
 
+// The ID of the process (running program) that owns a window.
+export function processIdOf(hwnd: number) {
+  // Single-element arrays act as "output" variables that Windows fills in.
+  const processId = [0];
+  GetWindowThreadProcessId(hwnd, processId);
+  return processId[0];
+}
+
 /**
  * The full path of the program that owns a window, e.g.
  * "D:\...\totono_Steam.exe". Null if it can't be read, e.g. the game runs as
  * administrator and this app doesn't.
  */
 export function exePathOf(hwnd: number): string | null {
-  // Single-element arrays act as "output" variables that Windows fills in.
-  const processId = [0];
-  GetWindowThreadProcessId(hwnd, processId);
   const process = OpenProcess(
     PROCESS_QUERY_LIMITED_INFORMATION,
     false,
-    processId[0],
+    processIdOf(hwnd),
   );
   if (!process) {
     return null;

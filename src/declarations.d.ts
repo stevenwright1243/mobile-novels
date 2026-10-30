@@ -169,13 +169,15 @@ interface GameProfile {
 }
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
-// properties. `isOpen` and `sourceId` say whether (and where) it's running.
+// properties. `isOpen` and `sourceId` say whether (and where) it's running,
+// `openedAt` when it was first seen running this session (milliseconds).
 type ProfileSummary = Omit<
   GameProfile,
   'version' | 'regions' | 'textStyle' | 'backgroundY' | 'backgroundWidth'
 > & {
   isOpen: boolean;
   sourceId?: string;
+  openedAt?: number;
 };
 
 // The phone's display, added by Apollo while the phone is streaming (see
@@ -246,6 +248,11 @@ interface Window {
     showProfileMenu(
       card: Pick<ProfileSummary, 'id' | 'title' | 'isOpen'>,
     ): Promise<'pick' | null>;
+    // Starts a saved game that isn't running, from its .exe, and picks it
+    // once its window opens. Resolves to false if it has no .exe saved.
+    launchGame(id: string): Promise<boolean>;
+    // Force-closes a running game, without asking it to save.
+    closeGame(id: string): Promise<void>;
     // Writes the picked game's profile to its file.
     saveProfile(): Promise<void>;
     getSaveState(): Promise<SaveState>;

@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld('vn', {
   onProfilesChanged: (callback) => {
     ipcRenderer.on('profiles-changed', () => callback());
   },
+  launchGame: (id) => ipcRenderer.invoke('launch-game', id),
+  closeGame: (id) => ipcRenderer.invoke('close-game', id),
   saveProfile: () => ipcRenderer.invoke('save-profile'),
   getSaveState: () => ipcRenderer.invoke('get-save-state'),
   revertEdits: () => ipcRenderer.invoke('revert-edits'),

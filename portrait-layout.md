@@ -184,9 +184,12 @@ game's name box (the `name` region, per game).
 - Under Sizes, **Visual Novels**, a drop-down like it (closed at first;
   opening it scrolls the sheet to it): a button per saved game
   (`max(9rem, 40vmin)` wide, at least 48px tall), its title over "Open" or
-  "Not running" (75%, in `--accent-deep`); the game being played has the
-  3px ring, and games that aren't running are dimmed to 45% and can't be
-  pressed. A note under them says to start a game on the PC to pick it.
+  "Playing", "Open", "Tap to start" or "Starting…" (75%, in
+  `--accent-deep`); the game being played has the 3px ring, and a game with
+  no saved .exe is dimmed to 45% and can't be pressed. A note under them,
+  then, centered at the drop-down's bottom, **Close <game>** (a plain button
+  in bold, `1.4em` side padding, like the Sizes buttons; dimmed and blurred
+  while no saved game is running).
 
 ## Full-screen text (page mode)
 

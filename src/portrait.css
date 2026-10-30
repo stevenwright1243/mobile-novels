@@ -1274,7 +1274,7 @@ body {
 }
 
 /* Visual Novels: a button per saved game, its title over whether it's
-   running. Games that aren't running are dimmed and can't be picked. */
+   running. Games that can't be started (no .exe saved) are dimmed. */
 #game-chips {
   --chip-width: max(9rem, 40vmin);
 }
@@ -1296,6 +1296,27 @@ body {
     .game-state {
       color: inherit;
     }
+  }
+}
+
+/* At the bottom of Visual Novels, centered: the Close button, dimmed and
+   blurred like the Sizes buttons while no game is running. */
+#close-game-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6em;
+}
+
+#close-game {
+  padding-inline: 1.4em;
+  font-weight: 700;
+  text-wrap: balance;
+
+  &:disabled {
+    opacity: 0.45;
+    filter: blur(1.5px);
+    cursor: default;
+    pointer-events: none;
   }
 }
 

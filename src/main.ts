@@ -10,6 +10,7 @@ import {
   type Rectangle,
   type WebContents,
 } from 'electron';
+import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { THEME_STYLES } from './look-options';
@@ -36,6 +37,7 @@ import {
   hwndFromSourceId,
   isMinimized,
   postClick,
+  processIdOf,
   restoreBehind,
   sendClick,
   sendToBack,
@@ -57,6 +59,15 @@ const DEBUG = process.argv.includes('--vn-debug');
 // The game window the user picked. Its ID lets the portrait window capture it
 // too.
 let selectedSource: GameWindow | null = null;
+
+// When each running game (by profile ID) was first seen open this session,
+// in milliseconds, so the Menus sheet's Close button can close the one opened
+// first. Kept up to date by the windows check below.
+const openedAt = new Map<string, number>();
+// A game launched from the Menus sheet, picked once its window opens, and
+// again if that window closes while another of the game's opens (a splash
+// screen before the game itself), for a minute after launching.
+let pendingLaunch: { id: string; until: number; picked: boolean } | null = null;
 let portraitWindow: BrowserWindow | null = null;
 
 // The size of the portrait's background zone (see `setBackgroundZoneSize`).
@@ -140,6 +151,27 @@ const persistSettings = () =>
 const hasEdits = () =>
   (profile !== null && snapshot(profile) !== savedSnapshot) ||
   buttonSizeEdited();
+
+// The first open window for each profile ID (whether or not that game has a
+// saved profile), from the windows given or, by default, the ones open now.
+// A `Map` is a lookup table: `set(key, value)` stores, `get(key)` finds.
+async function openWindowsByProfile(
+  sources?: Electron.DesktopCapturerSource[],
+) {
+  sources ??= await desktopCapturer.getSources({
+    types: ['window'],
+    thumbnailSize: { width: 0, height: 0 },
+  });
+  const openWindows = new Map<string, GameWindow>();
+  for (const source of sources) {
+    const exePath = exePathOf(hwndFromSourceId(source.id));
+    const id = profileId(exePath, source.name);
+    if (!openWindows.has(id)) {
+      openWindows.set(id, { id: source.id, name: source.name });
+    }
+  }
+  return openWindows;
+}
 
 // Sends a message to every window, except `skip`: the window that made the
 // change, which already knows.
@@ -450,16 +482,17 @@ app.whenReady().then(async () => {
     }));
   });
 
-  // The main window reports which game window was picked: load that game's
-  // profile and pass it on. `handle` + `invoke` is a request/response pair,
-  // while `webContents.send` is a one-way message from main to a page.
-  // Returns false if the user cancelled (when asked about unsaved edits).
-  ipcMain.handle('select-source', async (event, source: GameWindow) => {
+  // Makes a window the game: loads that game's profile and passes it on.
+  // Returns false if the user cancelled (when asked about unsaved edits,
+  // in a dialog over `parent`).
+  const selectGame = async (
+    source: GameWindow,
+    parent: BrowserWindow | null,
+  ) => {
     if (source.id === selectedSource?.id) {
       // Already picked: keep the profile (and any unsaved edits) as is.
       return true;
     }
-    const parent = BrowserWindow.fromWebContents(event.sender);
     if (!(await resolveUnsavedEdits(parent))) {
       return false;
     }
@@ -502,7 +535,15 @@ app.whenReady().then(async () => {
     broadcast('speaker-changed', speaker);
     sendSaveState();
     return true;
-  });
+  };
+
+  // A page reports which game window was picked (the picker's window list
+  // and cards, the Menus sheet's Visual Novels). `handle` + `invoke` is a
+  // request/response pair, while `webContents.send` is a one-way message
+  // from main to a page.
+  ipcMain.handle('select-source', (event, source: GameWindow) =>
+    selectGame(source, BrowserWindow.fromWebContents(event.sender)),
+  );
 
   // The picker's "Save profile" button (or Ctrl+S).
   ipcMain.handle('save-profile', saveCurrentProfile);
@@ -546,23 +587,10 @@ app.whenReady().then(async () => {
   // The saved profiles for the picker's "Your games" list, each marked with
   // whether that game is running now (matched by .exe against open windows).
   ipcMain.handle('list-profiles', async (): Promise<ProfileSummary[]> => {
-    const [profiles, sources] = await Promise.all([
+    const [profiles, openWindows] = await Promise.all([
       listProfiles(),
-      desktopCapturer.getSources({
-        types: ['window'],
-        thumbnailSize: { width: 0, height: 0 },
-      }),
+      openWindowsByProfile(),
     ]);
-    // The first open window for each profile ID. A `Map` is a lookup table:
-    // `set(key, value)` stores, `get(key)` finds.
-    const openWindows = new Map<string, GameWindow>();
-    for (const source of sources) {
-      const exePath = exePathOf(hwndFromSourceId(source.id));
-      const id = profileId(exePath, source.name);
-      if (!openWindows.has(id)) {
-        openWindows.set(id, { id: source.id, name: source.name });
-      }
-    }
     return profiles.map((saved) => {
       const open = openWindows.get(saved.id);
       return {
@@ -575,8 +603,40 @@ app.whenReady().then(async () => {
         lastPlayed: saved.lastPlayed,
         isOpen: open !== undefined,
         sourceId: open?.id,
+        openedAt: openedAt.get(saved.id),
       };
     });
+  });
+
+  // The Menus sheet's Visual Novels: start a game that isn't running, from
+  // its saved .exe (in its own folder, as games expect), and pick it once
+  // its window opens. `detached` and `unref()` let it keep running on its
+  // own, even after this app closes.
+  ipcMain.handle('launch-game', async (_event, id: string) => {
+    const saved = (await listProfiles()).find((game) => game.id === id);
+    if (!saved?.exePath) {
+      return false;
+    }
+    const game = spawn(saved.exePath, [], {
+      cwd: path.dirname(saved.exePath),
+      detached: true,
+      stdio: 'ignore',
+    });
+    // Without a listener, a failed start (a moved .exe) would crash main.
+    game.on('error', (error) => console.error('Launch failed:', error));
+    game.unref();
+    pendingLaunch = { id, until: Date.now() + 60_000, picked: false };
+    return true;
+  });
+
+  // The Menus sheet's Close button: force-closes a running game, with
+  // anything it started (`/T`), without asking it first (`/F`).
+  ipcMain.handle('close-game', async (_event, id: string) => {
+    const open = (await openWindowsByProfile()).get(id);
+    if (open) {
+      const processId = processIdOf(hwndFromSourceId(open.id));
+      execFile('taskkill', ['/PID', String(processId), '/T', '/F']);
+    }
   });
 
   // Lets a portrait window that (re)loads later catch up on the current pick.
@@ -652,10 +712,37 @@ app.whenReady().then(async () => {
       .map((source) => source.id)
       .sort()
       .join(' ');
-    if (windowIds && ids !== windowIds) {
+    if (ids === windowIds) {
+      return;
+    }
+    const firstCheck = windowIds === '';
+    windowIds = ids;
+
+    // Which games are open now, for `openedAt`, and to pick a game launched
+    // from the Menus sheet once its window appears.
+    const openWindows = await openWindowsByProfile(sources);
+    const now = Date.now();
+    for (const id of openWindows.keys()) {
+      if (!openedAt.has(id)) {
+        openedAt.set(id, now);
+      }
+    }
+    for (const id of openedAt.keys()) {
+      if (!openWindows.has(id)) {
+        openedAt.delete(id);
+      }
+    }
+    if (pendingLaunch && now > pendingLaunch.until) {
+      pendingLaunch = null;
+    }
+    const launched = pendingLaunch && openWindows.get(pendingLaunch.id);
+    if (launched && (!pendingLaunch!.picked || !selectedSource)) {
+      pendingLaunch!.picked = true;
+      selectGame(launched, portraitWindow);
+    }
+    if (!firstCheck) {
       broadcast('windows-changed');
     }
-    windowIds = ids;
   }, 2000);
 
   // How taps reach the game (see win32.ts), part of the game's profile.
