@@ -434,8 +434,13 @@ const findRegion = (name: RegionName) => () =>
   regions && video.videoWidth > 0
     ? regionInVideo(video, clientArea, regions[name])
     : null;
-startTextReader(video, findRegion('text'), (line) =>
-  window.vn.setTextLine(line),
+// A line of just "..." can't be read by OCR, so the text box also looks for
+// dots.
+startTextReader(
+  video,
+  findRegion('text'),
+  (line) => window.vn.setTextLine(line),
+  { spotDots: true },
 );
 // Names are often light text on a shaded plate, so they get a second try
 // with the background removed.
