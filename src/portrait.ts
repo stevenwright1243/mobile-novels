@@ -187,8 +187,8 @@ function placeZone(zone: Zone, regions: Regions) {
   return { sx, sy, sw, sh, dx, dy, dw, dh };
 }
 
-// The backdrop behind a zoomed-out background: the same picture, filling the
-// zone, blurred and darkened. Drawn tiny and then stretched, which blurs it
+// The backdrop behind a zoomed-out background: the whole game screen (not
+// just the background region), filling the zone, blurred and tinted. Drawn tiny and then stretched, which blurs it
 // almost for free (a real blur filter on a full-size canvas, every frame,
 // would be slow).
 const BACKDROP_SHRINK = 24;
@@ -206,11 +206,9 @@ onThemeApplied(() => {
   backdropTint = readBackdropTint();
 });
 
-function drawBackdrop(
-  context: CanvasRenderingContext2D,
-  { sx, sy, sw, sh }: { sx: number; sy: number; sw: number; sh: number },
-) {
+function drawBackdrop(context: CanvasRenderingContext2D) {
   const { width, height } = context.canvas;
+  const { sx, sy, sw, sh } = regionInVideo(video, clientArea, WHOLE_GAME);
   // Resizing a canvas clears and reallocates it, so only when it changes.
   const smallWidth = Math.max(1, Math.ceil(width / BACKDROP_SHRINK));
   const smallHeight = Math.max(1, Math.ceil(height / BACKDROP_SHRINK));
@@ -245,14 +243,13 @@ function drawBackdrop(
 function drawZone(zone: Zone, regions: Regions) {
   const { canvas } = zone;
   const context = canvas.getContext('2d')!;
-  const place = placeZone(zone, regions);
-  const { sx, sy, sw, sh, dx, dy, dw, dh } = place;
+  const { sx, sy, sw, sh, dx, dy, dw, dh } = placeZone(zone, regions);
   context.clearRect(0, 0, canvas.width, canvas.height);
   // Space around the picture: fill it with the backdrop rather than black
   // (the text box picture keeps plain bars, so the text stands out).
   const leavesSpace = dw < canvas.width - 1 || dh < canvas.height - 1;
   if (leavesSpace && zone.region === 'background') {
-    drawBackdrop(context, place);
+    drawBackdrop(context);
   }
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
 }
