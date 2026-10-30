@@ -100,11 +100,13 @@ function zoneView(zone: Zone) {
   return rawMode && zone.region === 'background' ? SHOW_ALL : zone.view();
 }
 
-// The text size (see `TextStyle`), passed to portrait.css as `--text-size`.
+// The text and name sizes (see `TextStyle`), passed to portrait.css as
+// `--text-size` and `--name-size`.
 function setTextStyle(style: TextStyle) {
   chosenSize = style.size;
   oversizedSize = style.oversizedSize ?? null;
   portrait.style.setProperty('--text-size', String(style.size));
+  portrait.style.setProperty('--name-size', String(style.nameSize ?? 1));
   layoutChanged();
 }
 window.vn.onTextStyleChanged(setTextStyle);

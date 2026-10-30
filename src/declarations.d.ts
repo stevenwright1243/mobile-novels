@@ -40,10 +40,13 @@ type TextMode = 'text' | 'image';
 // How the text is styled in the portrait's message window. `size` scales
 // the text (1 = normal, 1.5 = half as big again); the window grows with it.
 // `oversizedSize` is the size for lines too long to fit at `size`, or null
-// to shrink each such line just enough to fit ("Auto").
+// to shrink each such line just enough to fit ("Auto"). `nameSize` scales
+// the speaker's name tag the same way (1 = normal, which is a little smaller
+// than the text); it's relative to `size`, so it follows the text.
 interface TextStyle {
   size: number;
   oversizedSize: number | null;
+  nameSize: number;
 }
 
 // The colour scheme of both windows (the picker's Style settings, an app

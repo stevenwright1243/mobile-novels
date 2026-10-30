@@ -80,13 +80,15 @@ body {
 
 /* The name tag, on the text box's top-left corner. In image mode it's the
    name box's picture (its canvas), shaped like the name region through
-   `--name-aspect` (set by portrait.ts), sitting just above the text box. */
+   `--name-aspect` (set by portrait.ts), sitting just above the text box.
+   `--name-size` is the picker's Name size slider (1 = normal), in both
+   modes. */
 #name-tag {
   position: absolute;
   z-index: 1;
   left: clamp(0.5rem, 3vw, 1rem);
   bottom: 100%;
-  height: calc(var(--base-font-size) * 1.5);
+  height: calc(var(--base-font-size) * 1.5 * var(--name-size, 1));
   max-width: 70%;
   aspect-ratio: var(--name-aspect, 4);
   overflow: hidden;
@@ -198,7 +200,9 @@ body {
     box-sizing: border-box;
     /* Overlaps the window by about half its height. */
     margin: 0 0 -0.6em clamp(0.75rem, 4vw, 1.5rem);
-    font-size: calc(var(--chosen-font-size) * 0.72);
+    /* 72% of the chosen text size at Name size 100%. In `em`s from here on
+       (padding, the overlap, the dot), so the whole tag scales with it. */
+    font-size: calc(var(--chosen-font-size) * 0.72 * var(--name-size, 1));
     cursor: pointer;
   }
 
@@ -674,7 +678,9 @@ body {
   max-width: 100%;
   box-sizing: border-box;
   margin: 0 0 0.6em;
-  font-size: calc(var(--base-font-size) * var(--text-size, 1) * 0.72);
+  font-size: calc(
+    var(--base-font-size) * var(--text-size, 1) * 0.72 * var(--name-size, 1)
+  );
 }
 
 #log-speaker:empty {

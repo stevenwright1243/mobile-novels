@@ -14,7 +14,11 @@ export const DEFAULT_REGIONS: Regions = {
 };
 
 // Normal-sized text.
-export const DEFAULT_TEXT_STYLE: TextStyle = { size: 1, oversizedSize: null };
+export const DEFAULT_TEXT_STYLE: TextStyle = {
+  size: 1,
+  oversizedSize: null,
+  nameSize: 1,
+};
 
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window

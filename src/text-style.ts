@@ -1,7 +1,7 @@
 /**
  * Text style settings (picker window): the size of the text in the
- * portrait's message window, and the size for lines too long to fit at it
- * (see `TextStyle`). Each is a slider with an exact percent field. Changes
+ * portrait's message window, the size for lines too long to fit at it, and
+ * the size of the speaker's name tag (see `TextStyle`). Each is a slider with an exact percent field. Changes
  * go to main, which passes them on to the portrait. Bigger text makes the
  * window taller, over the background picture; the picture itself never
  * moves because of the text.
@@ -17,15 +17,17 @@ const oversizedField = document.querySelector<HTMLInputElement>(
 )!;
 const oversizedAuto =
   document.querySelector<HTMLInputElement>('#oversized-auto')!;
+const nameSlider = document.querySelector<HTMLInputElement>('#name-size')!;
+const nameField =
+  document.querySelector<HTMLInputElement>('#name-size-percent')!;
 const shrinkNote = document.querySelector<HTMLElement>('#text-shrink-note')!;
 
-// The size limits, matching the sliders' `min` and `max`.
-const MIN_SIZE = Number(sizeSlider.min);
-const MAX_SIZE = Number(sizeSlider.max);
-const clampSize = (size: number) =>
-  Math.min(MAX_SIZE, Math.max(MIN_SIZE, size));
+// Keeps a size within a slider's limits (its `min` and `max`).
+const clampTo = (slider: HTMLInputElement, size: number) =>
+  Math.min(Number(slider.max), Math.max(Number(slider.min), size));
+const clampSize = (size: number) => clampTo(sizeSlider, size);
 
-let style: TextStyle = { size: 1, oversizedSize: null };
+let style: TextStyle = { size: 1, oversizedSize: null, nameSize: 1 };
 // The long-line size to go back to when "Auto" is unticked.
 let lastOversizedSize = 0.8;
 // Whether a game is picked, so there's something to adjust.
@@ -42,8 +44,12 @@ function showStyle(except?: HTMLInputElement) {
   const oversized = style.oversizedSize ?? lastOversizedSize;
   sizeSlider.value = String(style.size);
   oversizedSlider.value = String(oversized);
+  nameSlider.value = String(style.nameSize);
   if (sizeField !== except) {
     sizeField.value = String(Math.round(style.size * 100));
+  }
+  if (nameField !== except) {
+    nameField.value = String(Math.round(style.nameSize * 100));
   }
   if (oversizedField !== except) {
     oversizedField.value = String(Math.round(oversized * 100));
@@ -52,6 +58,8 @@ function showStyle(except?: HTMLInputElement) {
 
   sizeSlider.disabled = !enabled;
   sizeField.disabled = !enabled;
+  nameSlider.disabled = !enabled;
+  nameField.disabled = !enabled;
   oversizedAuto.disabled = !enabled;
   // With "Auto" ticked, the long-line size isn't used.
   oversizedSlider.disabled = !enabled || oversizedAuto.checked;
@@ -79,7 +87,7 @@ function linkSizeControls(
   slider.addEventListener('input', () => apply(slider.valueAsNumber));
   field.addEventListener('input', () => {
     const size = field.valueAsNumber / 100;
-    if (size >= MIN_SIZE && size <= MAX_SIZE) {
+    if (size >= Number(slider.min) && size <= Number(slider.max)) {
       apply(size, field);
     }
   });
@@ -98,6 +106,10 @@ linkSizeControls(oversizedSlider, oversizedField, (size, except) => {
   lastOversizedSize = clampSize(size);
   applyStyle({ ...style, oversizedSize: lastOversizedSize }, except);
 });
+
+linkSizeControls(nameSlider, nameField, (size, except) =>
+  applyStyle({ ...style, nameSize: clampTo(nameSlider, size) }, except),
+);
 
 oversizedAuto.addEventListener('change', () => {
   applyStyle({

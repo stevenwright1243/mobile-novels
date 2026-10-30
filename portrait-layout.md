@@ -41,6 +41,7 @@ bottom, and never moves it.
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Text size  | 100%    | 60–200% | Multiplies the base size below                                                                                                                                           |
 | Long lines | Auto    | 60–200% | Size for a line too long for the window's resting height. Auto = shrink just enough (never below 60%). A set size is used exactly, and the window grows over the picture |
+| Name size  | 100%    | 50–200% | Multiplies the name tag's size (both modes). Relative to the text size, so it grows and shrinks with it                                                                  |
 
 - **Base size (100%):** `clamp(1.6875rem, 7.5vw, 3rem)` = `--base-font-size` at
   the top of `portrait.css`. Raised by half from the original
@@ -96,15 +97,15 @@ game's name box (the `name` region, per game).
 - **Text mode:** a solid accent pill (`--accent` → `--accent-deep`, text in
   `--on-accent`, corners `--pill`) with a small dot before the name, inset
   `clamp(0.75rem, 4vw, 1.5rem)` from the window's left edge and overlapping
-  its top edge by `0.6em`. Text **72%** of the chosen text size, bold,
+  its top edge by `0.6em`. Text **72%** of the chosen text size × Name size, bold (padding, overlap and dot are in `em`, so they scale with it),
   padding `0.15em 1.1em 0.2em 0.9em`, at most 80% of the width (longer names
-  end in "…"). It pops in with a short slide from the left on each new
+  end in "…"), all times the **Name size** slider. It pops in with a short slide from the left on each new
   speaker, and is hidden while the name box is empty (narration), so the
   window doesn't move either way (the text zone grows upwards).
   - You and Me and Her: plain accent-coloured text on the haze, no pill.
   - Miyuki's Realm: the same bevelled frame as its glass panels.
 - **Image mode:** the name box's picture, shaped like the name region,
-  `1.5 ×` the base text size tall (at most 70% of the width), sitting on the
+  `1.5 ×` the base text size × Name size tall (at most 70% of the width), sitting on the
   text box's top edge, `clamp(0.5rem, 3vw, 1rem)` from the left.
 - Tapping it (text mode) clicks the game's text box, like the message window.
 
