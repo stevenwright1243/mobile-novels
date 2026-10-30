@@ -333,6 +333,9 @@ interface Window {
     saveOcrTest(png: Uint8Array, test: Omit<OcrTest, 'game'>): Promise<string>;
     // Opens the folder of OCR test cases in Explorer.
     showOcrTests(): Promise<void>;
+    // Whether text OCR read is the game's story text, found in its memory
+    // (memory-text.ts); null when its memory can't tell.
+    isGameText(text: string): Promise<boolean | null>;
     // Whether each OCR read is printed in the terminal in debug mode (on
     // until switched off; not saved).
     getLogOcr(): Promise<boolean>;

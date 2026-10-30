@@ -722,6 +722,48 @@ function checkBuffer(memory: GameMemory) {
   }
 }
 
+// --- Telling the game's text from other text ---------------------------------
+
+// The fewest letters a paragraph needs to be checked, and the most
+// paragraphs checked: short bits (a menu's "Save", "Load") are in memory too
+// as the game's own words, so only sentence-sized text counts.
+const MIN_CHECKED_LETTERS = 25;
+const MAX_CHECKED_PARAGRAPHS = 3;
+
+/**
+ * Whether text OCR read is the game's story text: one of its sentence-sized
+ * paragraphs is in the game's memory (a menu's or the art's isn't). Null
+ * when that can't be told: the game's memory isn't read (switched off, or
+ * its text isn't kept as UTF-16 or UTF-8, like Steins;Gate's).
+ */
+export async function isGameText(
+  processId: number,
+  text: string,
+): Promise<boolean | null> {
+  const memory = memoryOf(processId);
+  if (!memory || status === 'not-found' || status === 'off') {
+    return null;
+  }
+  const paragraphs = text
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => letters(paragraph).length >= MIN_CHECKED_LETTERS)
+    .slice(0, MAX_CHECKED_PARAGRAPHS);
+  for (const paragraph of paragraphs) {
+    const needles = needlesFrom(paragraph);
+    if (needles.length === 0) {
+      continue;
+    }
+    const copies = await findSpots(memory, needles);
+    if (bestCopy(copies, paragraph, needles) !== null) {
+      log(`game text: "${paragraph}"`);
+      return true;
+    }
+  }
+  log(`not game text: "${text.replace(/\s+/g, ' ')}"`);
+  return false;
+}
+
 // --- Speakers ------------------------------------------------------------------
 //
 // The game keeps the speaker's name in memory too, written over at each new

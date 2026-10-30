@@ -10,7 +10,11 @@
 
 import { ARROW_SHAPES } from './arrow-shapes';
 import { ARROWS, BORDERS, THEMES } from './look-options';
-import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
+import {
+  onPageModeChoiceChanged,
+  pageModeChoice,
+  setPageModeChoice,
+} from './page-mode';
 // The Sizes drop-down (sizes-panel.ts, via sizes-sample.ts, which draws its
 // sample; portrait.ts sets the sample up).
 import './sizes-sample';
@@ -54,21 +58,21 @@ function makeChips<T extends string>(
   };
 }
 
-// Full-screen text: off or on.
+// Full-screen text: off, on, or Auto (auto-page.ts), the default.
 const showPageMode = makeChips(
   document.querySelector('#page-mode-chips')!,
   [
     ['off', 'Off'],
+    ['auto', 'Auto'],
     ['on', 'On'],
   ] as const,
   (button, _value, label) => {
     button.textContent = label;
   },
-  (value) => setPageMode(value === 'on'),
+  setPageModeChoice,
 );
-const pageModeChanged = (on: boolean) => showPageMode(on ? 'on' : 'off');
-onPageModeChanged(pageModeChanged);
-pageModeChanged(isPageMode());
+onPageModeChoiceChanged(showPageMode);
+showPageMode(pageModeChoice());
 
 // Screenshot: Steam takes it, on its screenshot key (F12) pressed in the
 // game. The button says "Taken" for a moment after.

@@ -111,6 +111,7 @@ contextBridge.exposeInMainWorld('vn', {
   readText: (png) => ipcRenderer.invoke('read-text', png),
   saveOcrTest: (png, test) => ipcRenderer.invoke('save-ocr-test', png, test),
   showOcrTests: () => ipcRenderer.invoke('show-ocr-tests'),
+  isGameText: (text) => ipcRenderer.invoke('is-game-text', text),
   getLogOcr: () => ipcRenderer.invoke('get-log-ocr'),
   setLogOcr: (on) => ipcRenderer.invoke('set-log-ocr', on),
   getTextLine: () => ipcRenderer.invoke('get-text-line'),

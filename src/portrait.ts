@@ -20,6 +20,13 @@ import './visual-novels';
 import './input-settings';
 import './zoom-pad';
 import './quick-save';
+import {
+  boxRead,
+  latestPage,
+  pageRead,
+  probesBox,
+  probesPage,
+} from './auto-page';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';
@@ -459,6 +466,10 @@ onPageModeChanged((on) => {
   portrait.classList.toggle('page-mode', on);
   if (on) {
     window.vn.setSpeaker('');
+    // Auto switched to the page on a read the page reader won't send again.
+    if (latestPage()) {
+      showPage(latestPage());
+    }
     redrawPage();
   }
 });
@@ -616,13 +627,18 @@ const findRegion = (name: RegionName) => () =>
     : null;
 // The text box is also checked by its picture: for short lines OCR isn't
 // sure of, and lines of only dots (see text-reader.ts).
-// Both rest in full-screen text mode, when the page is read instead.
+// Both rest in full-screen text mode, when the page is read instead, except
+// that Auto still glances at the text box then (auto-page.ts).
 const boxesActive = () => !isPageMode();
 startTextReader(
   video,
   findRegion('text'),
-  (line) => window.vn.setTextLine(line),
-  { textBox: true, active: boxesActive },
+  (line) => {
+    if (boxRead(line)) {
+      window.vn.setTextLine(line);
+    }
+  },
+  { textBox: true, active: () => boxesActive() || probesBox() },
 );
 // Names are often light text on a shaded plate, so they get a second try
 // with the background removed.
@@ -632,11 +648,19 @@ startTextReader(
   (name) => window.vn.setSpeaker(tidyName(name)),
   { retryFlattened: true, active: boxesActive },
 );
-// The page of full-screen text, read with its paragraphs (page-view.ts).
-startTextReader(video, findRegion('page'), showPage, {
-  page: true,
-  active: isPageMode,
-});
+// The page of full-screen text, read with its paragraphs (page-view.ts);
+// with Auto, also while the text box has been empty a moment, to see if
+// the game has switched to full-screen text (auto-page.ts).
+startTextReader(
+  video,
+  findRegion('page'),
+  (text) => {
+    if (pageRead(text)) {
+      showPage(text);
+    }
+  },
+  { page: true, active: () => isPageMode() || probesPage() },
+);
 
 window.vn.onSourceSelected(showSource);
 window.vn.getSelectedSource().then((sourceId) => {

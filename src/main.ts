@@ -18,6 +18,7 @@ import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
 import {
   forgetGame,
+  isGameText,
   lineForRead,
   memoryTextStatus,
   nameForRead,
@@ -929,6 +930,13 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle('get-memory-text-status', () => memoryTextStatus());
+  // Whether text OCR read is the game's own (for Auto full-screen text,
+  // auto-page.ts), or null if its memory isn't read.
+  ipcMain.handle('is-game-text', (_event, text: string) =>
+    profile?.textFromMemory && selectedSource
+      ? isGameText(processIdOf(hwndFromSourceId(selectedSource.id)), text)
+      : null,
+  );
 
   // The game's short name, shown in the Menus sheet's Visual Novels; part
   // of its profile. An empty name clears it, so the title shows again.
