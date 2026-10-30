@@ -92,18 +92,23 @@ function fixCommonMistakes(text: string) {
 //
 // Marks in the art or the box's frame can be read as "words". Judging each
 // word on its own beats judging the whole line: one stray word no longer
-// costs the whole line, and the real words keep it. Height is the test, not
-// confidence: real words share a height, while junk is a sliver (a frame
-// edge, 2-3 px) or a blob of art (2-4 times as tall). Confidence can't tell
-// them apart: Katawa Shoujo's "Hi..." was read right at 20%.
+// costs the whole line, and the real words keep it. Height is the main test:
+// real words share a height, while junk is a sliver (a frame edge, 2-3 px)
+// or a blob of art (2-4 times as tall). Confidence alone can't tell them
+// apart (Katawa Shoujo's "Hi..." was read right at 20%), but it helps: blobs
+// of art read at 0-34%, while a real word made taller by something touching
+// it (the mouse pointer under "the") stays sure.
 
 // Words at least this sure set the line's usual height (if there are any),
-// so a junk word can't shift it.
+// so a junk word can't shift it. A word this sure is never too tall.
 const SURE_WORD = 50;
 // How much shorter or taller than the usual height a word can be. Words with
 // no tall letters ("one") are about half the height of ones with them.
 const MIN_WORD_HEIGHT = 0.35;
 const MAX_WORD_HEIGHT = 1.8;
+// A line of its own made only of unsure words this short is a mark, not
+// text: the box's "next" arrow (▼ read as "wv"), the mouse pointer.
+const MAX_MARK_HEIGHT = 0.6;
 // A word of only punctuation ("...", "—") can be tiny, so it's only checked
 // for being too tall.
 const PUNCTUATION_ONLY = /^[\p{P}\p{S}]+$/u;
@@ -140,22 +145,27 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
   const words = lines.flat();
   const sure = words.filter((word) => word.confidence >= SURE_WORD);
   const usual = median((sure.length > 0 ? sure : words).map((w) => w.height));
-  const fits = ({ text, height }: Word) =>
-    height <= MAX_WORD_HEIGHT * usual &&
+  const fits = ({ text, height, confidence }: Word) =>
+    (height <= MAX_WORD_HEIGHT * usual || confidence >= SURE_WORD) &&
     (PUNCTUATION_ONLY.test(text) || height >= MIN_WORD_HEIGHT * usual);
+  const isMark = (line: Word[]) =>
+    lines.length > 1 &&
+    line.every(
+      (word) =>
+        word.confidence < SURE_WORD && word.height < MAX_MARK_HEIGHT * usual,
+    );
+  // The words kept, line by line.
+  const keptLines = lines.map((line) =>
+    isMark(line) ? [] : line.filter(fits),
+  );
 
-  const kept = words.filter(fits);
-  const dropped = words.filter((word) => !fits(word));
+  const kept = keptLines.flat();
+  const dropped = words.filter((word) => !kept.includes(word));
   const letters = (list: Word[]) =>
     list.reduce((sum, word) => sum + word.text.length, 0);
   const tooMuchDropped = letters(dropped) > MAX_DROPPED_SHARE * letters(words);
-  const text = lines
-    .map((line) =>
-      line
-        .filter(fits)
-        .map((word) => word.text)
-        .join(' '),
-    )
+  const text = keptLines
+    .map((line) => line.map((word) => word.text).join(' '))
     .filter((line) => line !== '')
     .join('\n');
   // Tesseract's own score for a read is the average of its words' scores, so

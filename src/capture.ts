@@ -67,7 +67,7 @@ export function regionInVideo(
 // OCR reads small text better when it's enlarged first. Tesseract reads best
 // when a line of letters (top of a "k" to the bottom of a "g") is about this
 // many pixels tall, so each crop is enlarged to bring its text to that size.
-const TARGET_LETTER_HEIGHT = 40;
+const TARGET_LETTER_HEIGHT = 55;
 // The most and least a crop is enlarged.
 const MIN_OCR_SCALE = 1;
 const MAX_OCR_SCALE = 4;
