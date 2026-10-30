@@ -7,7 +7,7 @@
 import { app } from 'electron';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { createWorker, type Worker } from 'tesseract.js';
+import { createWorker, PSM, type Worker } from 'tesseract.js';
 
 // Started on the first read and reused after that, since starting one
 // (loading the English language data) takes a second or two.
@@ -20,7 +20,16 @@ function getWorker() {
     // is a TODO for packaged builds.
     const cachePath = path.join(app.getPath('userData'), 'tessdata');
     await mkdir(cachePath, { recursive: true });
-    return createWorker('eng', undefined, { cachePath });
+    const ocr = await createWorker('eng', undefined, { cachePath });
+    // By default Tesseract expects a scanned page and looks for columns and
+    // paragraphs. A text box or name box is one block of text, so it's told
+    // so. It's also told the resolution, instead of guessing it each read.
+    // Both boxes share this worker, so these stay the same for every read.
+    await ocr.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      user_defined_dpi: '300',
+    });
+    return ocr;
   })();
   return worker;
 }

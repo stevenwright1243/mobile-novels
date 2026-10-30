@@ -64,8 +64,95 @@ export function regionInVideo(
   };
 }
 
-// OCR reads small text better when it's enlarged first.
+// OCR reads small text better when it's enlarged first. Tesseract reads best
+// when a line of letters (top of a "k" to the bottom of a "g") is about this
+// many pixels tall, so each crop is enlarged to bring its text to that size.
+const TARGET_LETTER_HEIGHT = 40;
+// The most and least a crop is enlarged.
+const MIN_OCR_SCALE = 1;
+const MAX_OCR_SCALE = 4;
+// Used when the text's height can't be measured (an empty box, just dots).
 const OCR_SCALE = 2;
+// Letters shorter than this in the capture are probably a pixel font (old
+// games): they're enlarged by a whole number with hard edges, keeping each
+// pixel square, instead of being smoothed into a blur. A first guess.
+const PIXEL_FONT_HEIGHT = 14;
+// A pixel is part of the writing when its brightness is this far from the
+// box's usual brightness, lighter or darker (0 to 255).
+const TEXT_CONTRAST = 60;
+// Rows of writing need this many such pixels, so stray specks don't count.
+const MIN_ROW_INK = 2;
+// Runs of writing rows shorter than this are lines or specks, not letters.
+const MIN_LETTER_HEIGHT = 3;
+
+// How a crop is enlarged for OCR: by `scale`, with or without smoothing.
+// `letterHeight` is the measured height of its lines of text in the capture's
+// pixels (null if none were found), shown by the picker's OCR test.
+export interface OcrScale {
+  scale: number;
+  hardEdges: boolean;
+  letterHeight: number | null;
+}
+
+const scaleCanvas = document.createElement('canvas');
+const scaleContext = scaleCanvas.getContext('2d', {
+  willReadFrequently: true,
+})!;
+
+// Measures how tall the text in a box is, and from that how much to enlarge
+// it. Rows with writing in them come in runs, one run per line of text; the
+// middle run height (the "median") is the letter height, which one odd run
+// (a border, a stray mark) can't shift.
+export function ocrScale(
+  video: HTMLVideoElement,
+  { sx, sy, sw, sh }: VideoRect,
+): OcrScale {
+  scaleCanvas.width = Math.max(1, Math.round(sw));
+  scaleCanvas.height = Math.max(1, Math.round(sh));
+  const { width, height } = scaleCanvas;
+  scaleContext.drawImage(video, sx, sy, sw, sh, 0, 0, width, height);
+  const { data } = scaleContext.getImageData(0, 0, width, height);
+  // Each pixel's brightness, weighted the way eyes see colour.
+  const brightness = new Uint8Array(width * height);
+  for (let i = 0; i < brightness.length; i++) {
+    brightness[i] =
+      data[i * 4] * 0.3 + data[i * 4 + 1] * 0.59 + data[i * 4 + 2] * 0.11;
+  }
+  const median = brightness.slice().sort()[brightness.length >> 1];
+
+  // The height of each run of rows with writing in them.
+  const runs: number[] = [];
+  let run = 0;
+  for (let y = 0; y <= height; y++) {
+    let ink = 0;
+    for (let x = 0; y < height && x < width; x++) {
+      if (Math.abs(brightness[y * width + x] - median) > TEXT_CONTRAST) {
+        ink++;
+      }
+    }
+    if (ink >= MIN_ROW_INK) {
+      run++;
+    } else {
+      if (run >= MIN_LETTER_HEIGHT) {
+        runs.push(run);
+      }
+      run = 0;
+    }
+  }
+  if (runs.length === 0) {
+    return { scale: OCR_SCALE, hardEdges: false, letterHeight: null };
+  }
+  const letterHeight = runs.sort((a, b) => a - b)[runs.length >> 1];
+  let scale = Math.min(
+    MAX_OCR_SCALE,
+    Math.max(MIN_OCR_SCALE, TARGET_LETTER_HEIGHT / letterHeight),
+  );
+  const hardEdges = letterHeight < PIXEL_FONT_HEIGHT;
+  if (hardEdges) {
+    scale = Math.round(scale);
+  }
+  return { scale, hardEdges, letterHeight };
+}
 
 // How a crop is prepared for OCR:
 //  - 'none': as it is.
@@ -76,18 +163,21 @@ const OCR_SCALE = 2;
 //    text worse, though, so it's a second try (see text-reader.ts).
 export type OcrPrep = 'none' | 'clean' | 'flatten';
 
-// Copies part of the video into a PNG for OCR, enlarged, prepared as `prep`
-// says.
+// Copies part of the video into a PNG for OCR, enlarged to suit its text
+// (`ocrScale()`, unless given), prepared as `prep` says.
 export async function cropForOcr(
   video: HTMLVideoElement,
   box: VideoRect,
   prep: OcrPrep = 'clean',
+  { scale, hardEdges } = ocrScale(video, box),
 ) {
   const { sx, sy, sw, sh } = box;
   let canvas = document.createElement('canvas');
-  canvas.width = Math.round(sw * OCR_SCALE);
-  canvas.height = Math.round(sh * OCR_SCALE);
+  canvas.width = Math.round(sw * scale);
+  canvas.height = Math.round(sh * scale);
   const context = canvas.getContext('2d')!;
+  context.imageSmoothingEnabled = !hardEdges;
+  context.imageSmoothingQuality = 'high';
   // `filter` works like the CSS property, applied to whatever is drawn next.
   context.filter = prep === 'clean' ? 'grayscale(1) contrast(1.5)' : 'none';
   if (prep === 'flatten') {
@@ -95,7 +185,7 @@ export async function cropForOcr(
   }
   context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   if (prep === 'flatten') {
-    canvas = flatten(video, box, canvas);
+    canvas = flatten(video, box, canvas, scale);
   }
 
   // `toBlob` hands over the PNG through a callback; wrapping it in a Promise
@@ -108,7 +198,8 @@ export async function cropForOcr(
   );
 }
 
-// Removes the background from a greyscale crop (`canvas`, of `box`): it's
+// Removes the background from a greyscale crop (`canvas`, of `box`, enlarged
+// by `scale`): it's
 // compared with a blurred copy of itself (the local background shade), and
 // only what differs from it is kept. That works whatever the background's
 // shade, and for light text as well as dark. The difference is then
@@ -117,6 +208,7 @@ function flatten(
   video: HTMLVideoElement,
   { sx, sy, sw, sh }: VideoRect,
   canvas: HTMLCanvasElement,
+  scale: number,
 ) {
   const context = canvas.getContext('2d')!;
   // About the size of a letter's strokes and gaps.
@@ -128,7 +220,7 @@ function flatten(
   // real pixels, not empty space (which left stray marks there). A blur
   // reaches about 3 times its radius. In canvas pixels, then video pixels.
   const margin = 3 * blur;
-  const videoMargin = margin / OCR_SCALE;
+  const videoMargin = margin / scale;
   context.drawImage(
     video,
     sx - videoMargin,

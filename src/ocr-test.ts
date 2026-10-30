@@ -5,7 +5,13 @@
  * came back.
  */
 
-import { cropForOcr, getClientArea, pngBytes, regionInVideo } from './capture';
+import {
+  cropForOcr,
+  getClientArea,
+  ocrScale,
+  pngBytes,
+  regionInVideo,
+} from './capture';
 
 const debugTools = document.querySelector<HTMLElement>('#debug-tools')!;
 const button = document.querySelector<HTMLButtonElement>('#ocr-test-button')!;
@@ -17,15 +23,15 @@ const output = document.querySelector<HTMLElement>('#ocr-output')!;
 const liveName = document.querySelector<HTMLElement>('#live-name span')!;
 const liveText = document.querySelector<HTMLElement>('#live-text span')!;
 
-// Copies the text region out of the preview, ready for OCR.
+// Copies the text region out of the preview, ready for OCR, with how much it
+// was enlarged (see `ocrScale()`).
 async function grabTextRegion(video: HTMLVideoElement, clean: boolean) {
   const clientArea = await getClientArea();
   const { text: region } = await window.vn.getRegions();
-  return cropForOcr(
-    video,
-    regionInVideo(video, clientArea, region),
-    clean ? 'clean' : 'none',
-  );
+  const box = regionInVideo(video, clientArea, region);
+  const scale = ocrScale(video, box);
+  const blob = await cropForOcr(video, box, clean ? 'clean' : 'none', scale);
+  return { blob, scale };
 }
 
 // The live preview to read from; set once a game is picked.
@@ -44,11 +50,16 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = 'Reading…';
   try {
-    const blob = await grabTextRegion(video, cleanUp.checked);
+    const { blob, scale } = await grabTextRegion(video, cleanUp.checked);
     URL.revokeObjectURL(image.src);
     image.src = URL.createObjectURL(blob);
     const result = await window.vn.readText(await pngBytes(blob));
-    stats.textContent = `Confidence ${result.confidence}% · ${result.ms} ms`;
+    // e.g. "3× hard edges (letters 11 px)".
+    const letters = scale.letterHeight
+      ? `letters ${scale.letterHeight} px`
+      : 'no text measured';
+    const enlarged = `${+scale.scale.toFixed(2)}×${scale.hardEdges ? ' hard edges' : ''} (${letters})`;
+    stats.textContent = `Confidence ${result.confidence}% · ${result.ms} ms · ${enlarged}`;
     output.textContent = result.text || '(no text found)';
     console.log('OCR result:', result);
   } catch (error) {
