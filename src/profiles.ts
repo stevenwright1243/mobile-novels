@@ -21,6 +21,7 @@ export const DEFAULT_REGIONS: Regions = {
 export const DEFAULT_TEXT_STYLE: TextStyle = {
   size: 1,
   nameSize: 1,
+  position: 'bottom',
 };
 
 // The background sits 20% of the way down (see `BACKGROUND_VIEW`).

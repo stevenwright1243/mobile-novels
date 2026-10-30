@@ -48,7 +48,7 @@ function shared<T>(
 }
 
 export const textStyle = shared<TextStyle>(
-  { size: 1, nameSize: 1 },
+  { size: 1, nameSize: 1, position: 'bottom' },
   () => window.vn.getTextStyle(),
   (callback) => window.vn.onTextStyleChanged(callback),
   (style) => window.vn.setTextStyle(style),

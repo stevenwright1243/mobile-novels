@@ -52,6 +52,13 @@ bottom, and never moves it.
 
 ## Message window
 
+- **Position** (per game, the Menus sheet's Text position): **Bottom**
+  (default) puts it at the bottom of the screen, growing upward as the text
+  gets longer or bigger. **Top** hangs it just under the picture's bottom
+  edge, a `clamp(0.5rem, 3vw, 1rem)` gap below it, growing downward; never
+  above the corner buttons' row, and at most 60% of the way down, so there's
+  room for it when the picture is tall.
+
 - **Height:** room for **3 lines** at the chosen text size, plus padding.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right.
@@ -130,7 +137,9 @@ game's name box (the `name` region, per game).
   it): Text size (60–200%), Name size
   (50–200%), Portrait height (0–100%) and Button size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
-  input is 48px tall, the track 0.45em, the thumb 1.6em. A note says which
+  input is 48px tall, the track 0.45em, the thumb 1.6em. Under them, **Text
+  position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
+  filled with the accent for Top), "Top". A note says which
   are the game's. While any of the four is unsaved, **Save** (accent) and
   **Reset** (plain; back to the values as last saved) show side by side.
   Left of the sliders, a live miniature of the reader screen, **33vw** wide

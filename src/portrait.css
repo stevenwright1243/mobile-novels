@@ -201,6 +201,19 @@ body {
   opacity: 0.75;
 }
 
+/* Text position "top" (the game's text style): the text zone hangs just
+   under the picture's bottom edge (`--picture-bottom`, from portrait.ts),
+   a small gap below it, and grows downward with the text. Never above the
+   corner buttons' row, and never so low there's no room for the window:
+   at most 60% of the way down. */
+.portrait[data-text-position='top'] :is(#text-zone, .text-zone) {
+  align-self: start;
+  margin-top: min(
+    max(var(--picture-bottom, 0px) + var(--gap), var(--buttons-height)),
+    60dvh
+  );
+}
+
 /* --- Message window styles ------------------------------------------------------
    Picked in the picker's Style settings (an app setting): portrait.ts sets
    `data-border` and `data-arrow` on .portrait. The default is the halo
@@ -1068,6 +1081,74 @@ body {
 }
 
 .slider input:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Text position: "Bottom", an on/off switch, "Top". The switch is a pill
+   track with a round knob that slides right (and fills with the accent)
+   for Top. */
+.toggle-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 48px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.toggle-side {
+  font-size: 0.85em;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+/* The picked side's word stands out. */
+.toggle:has([aria-checked='false']) .toggle-side:first-child,
+.toggle:has([aria-checked='true']) .toggle-side:last-child {
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+#text-position {
+  position: relative;
+  width: 3.2em;
+  height: 1.8em;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#text-position[aria-checked='true'] {
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  border-color: var(--accent-deep);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 0.15em;
+  left: 0.15em;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0.1em 0.3em color-mix(in srgb, var(--shadow) 35%, transparent);
+  transition: translate 0.2s;
+}
+
+#text-position[aria-checked='true'] .toggle-knob {
+  translate: 1.4em 0;
+}
+
+#text-position:disabled {
   opacity: 0.4;
   cursor: default;
 }

@@ -38,10 +38,15 @@ type ClickMethod = 'message' | 'mouse';
 // `nameSize` scales
 // the speaker's name tag the same way (1 = normal, which is a little smaller
 // than the text); it's relative to `size`, so it follows the text.
+// `position` is where the message window sits: 'bottom' of the screen,
+// growing upward with the text, or 'top', hanging just under the picture,
+// growing downward.
 interface TextStyle {
   size: number;
   nameSize: number;
+  position: TextPosition;
 }
+type TextPosition = 'bottom' | 'top';
 
 // The colour scheme of both windows (the picker's Style settings, an app
 // setting). Each is a block of variables in theme.css.

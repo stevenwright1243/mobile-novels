@@ -126,13 +126,30 @@ linkSlider(
   buttonSize.listen,
 );
 
+// Text position: a switch, on for "top" (see `TextStyle`). Tapping the
+// words beside it works too.
+const positionSwitch =
+  document.querySelector<HTMLButtonElement>('#text-position')!;
+const togglePosition = () =>
+  textStyle.set({
+    ...textStyle.get(),
+    position: textStyle.get().position === 'top' ? 'bottom' : 'top',
+  });
+positionSwitch.addEventListener('click', togglePosition);
+for (const side of document.querySelectorAll('.toggle-side')) {
+  side.addEventListener('click', togglePosition);
+}
+textStyle.listen((style) =>
+  positionSwitch.setAttribute('aria-checked', String(style.position === 'top')),
+);
+
 // The sizes are only saved when asked (as in the picker; the button size
 // too, though it's for every game), so while there are changes, Save and
 // Reset show: Reset puts back the values as last saved. The game's sliders
 // are disabled while no game is picked.
 const actions = document.querySelector<HTMLElement>('#sheet-actions')!;
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y',
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #text-position',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
   actions.hidden = !edited;

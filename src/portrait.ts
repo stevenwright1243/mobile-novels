@@ -88,6 +88,8 @@ function zoneView(zone: Zone) {
 function setTextStyle(style: TextStyle) {
   portrait.style.setProperty('--text-size', String(style.size));
   portrait.style.setProperty('--name-size', String(style.nameSize ?? 1));
+  // Where the message window sits (portrait.css styles by it).
+  portrait.dataset.textPosition = style.position ?? 'bottom';
 }
 textStyle.listen(setTextStyle);
 
@@ -299,15 +301,19 @@ function drawZone(zone: Zone, regions: Regions) {
 
 // Where the background picture ends, from the portrait's top, in CSS pixels,
 // passed to portrait.css as `--picture-bottom`: the page of full-screen text
-// stops growing there and scrolls instead, so it doesn't cover the picture.
+// stops growing there and scrolls instead, so it doesn't cover the picture,
+// and with text position "top" the message window hangs from it.
 let pictureBottom = '';
-function reportPictureBottom({ dy, dh }: { dy: number; dh: number }) {
-  const { height, clientHeight } = backgroundCanvas;
-  const bottom = `${Math.round(((dy + dh) * clientHeight) / height)}px`;
+function setPictureBottom(pixels: number) {
+  const bottom = `${Math.round(pixels)}px`;
   if (bottom !== pictureBottom) {
     pictureBottom = bottom;
     portrait.style.setProperty('--picture-bottom', bottom);
   }
+}
+function reportPictureBottom({ dy, dh }: { dy: number; dh: number }) {
+  const { height, clientHeight } = backgroundCanvas;
+  setPictureBottom(((dy + dh) * clientHeight) / height);
 }
 
 // Redraw every screen refresh. `requestAnimationFrame` calls us just before
@@ -550,6 +556,10 @@ function drawSample(regions: Regions) {
     backgroundZone.view(),
   );
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
+  // The reader places the picture the same way on the full screen, so this
+  // is where it ends there too (in Menus mode the reader's own drawing
+  // doesn't report it), for the sample's message window.
+  setPictureBottom(((dy + dh) / height) * innerHeight);
 }
 
 // A name box often has a decoration beside the name (an icon, brackets, a
