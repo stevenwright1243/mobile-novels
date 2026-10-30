@@ -209,12 +209,22 @@ interface GameMemory {
   // memory copies were last found in, searched first.
   standardFound: boolean;
   alphabetFound: boolean;
+  // Whether `alphabetFound` is only taken on trust (a saved alphabet that
+  // hasn't found text yet this run): an empty search then ends the trust.
+  alphabetAssumed: boolean;
   hotRegions: number[];
   // Where the last line matched one by one starts in memory, to look for
   // the next one right after it (see `nextInScript`).
   lastLine: { codec: Codec; address: number } | null;
 }
 let game: GameMemory | null = null;
+
+// Whether a game's memory is no longer the one read (another game was
+// picked, or the reader switched off): its handle is closed, and Windows
+// may give the same handle to the next process opened, so work still under
+// way for it stops before reading memory or reporting anything (else a
+// search could save its alphabet under the next game's profile).
+const stale = (memory: GameMemory) => game !== memory;
 
 // Stops reading the game's memory (another game was picked, the game
 // closed, or the reader was switched off).
@@ -276,6 +286,7 @@ function memoryOf(processId: number) {
       standardFound: false,
       // A saved alphabet is taken to be the game's, until it finds nothing.
       alphabetFound: savedAlphabet !== null,
+      alphabetAssumed: savedAlphabet !== null,
       hotRegions: [],
       lastLine: null,
     };
@@ -488,6 +499,12 @@ export function lineForRead(processId: number, read: string): string | null {
   const { corrected } = memory;
   if (corrected && alike(read, corrected.read) >= SAME_LINE) {
     return corrected.line;
+  }
+  // Copies from the last search that changed to this line are the game's
+  // line buffer, followed from now on so memory leads (finding the line as
+  // the next in the script instead would never get that far).
+  if (!memory.searching && followChangedCopies(memory, read)) {
+    return (memory.buffer as LineBuffer | null)?.line ?? read;
   }
   // Most often the line after the last one: no search needed, and it works
   // even when OCR reads only the start ("“What!?" with the rest in red).
@@ -855,6 +872,10 @@ const MAX_NAME = 32;
 async function findNameCopies(memory: GameMemory, name: string, end: string) {
   const copies: Spot[] = [];
   for (const region of writableRegions(memory.process)) {
+    // Another game picked meanwhile: its handle is closed (see `stale`).
+    if (stale(memory)) {
+      return [];
+    }
     const bytes = await readMemoryAsync(
       memory.process,
       region.address,
@@ -978,6 +999,37 @@ async function findName(memory: GameMemory, buffer: LineBuffer, read: string) {
   }
 }
 
+// Follows the copies from the last search that changed to this line, if any
+// did: the game's line buffer. Returns whether it found them.
+function followChangedCopies(memory: GameMemory, read: string) {
+  if (memory.candidates.length === 0 || memory.noFollowing) {
+    return false;
+  }
+  // (None changing is no sign of the same line: in engines that make a
+  // new string for every line, none ever changes.)
+  const changed = memory.candidates.filter(
+    (spot) => textAt(memory, spot) !== spot.found,
+  );
+  // Every copy that changed to all of this line is followed (see
+  // `LineBuffer`), UTF-16 ones first: in The Colorful World those are the
+  // ones the game draws from (its UTF-8 one is followed by a stray "A").
+  const holding = changed
+    .filter((spot) => {
+      const text = textAt(memory, spot);
+      const line = text?.slice(0, endFor(text, read)) ?? '';
+      return alike(line, read) >= MATCH && holdsWhole(line, read);
+    })
+    .sort((a, b) => Number(b.codec === UTF16) - Number(a.codec === UTF16));
+  log(
+    `${changed.length} of ${memory.candidates.length} copies changed; ${holding.length} hold "${read}"`,
+  );
+  if (holding.length === 0) {
+    return false;
+  }
+  useBuffer(memory, holding, read);
+  return true;
+}
+
 // Finds the buffer: checks whether a candidate from the last search has
 // changed to this line; if none has, searches for this line instead.
 async function search(memory: GameMemory, read: string) {
@@ -985,29 +1037,8 @@ async function search(memory: GameMemory, read: string) {
     memory.waiting = read;
     return;
   }
-  if (memory.candidates.length > 0 && !memory.noFollowing) {
-    // (None changing is no sign of the same line: in engines that make a
-    // new string for every line, none ever changes.)
-    const changed = memory.candidates.filter(
-      (spot) => textAt(memory, spot) !== spot.found,
-    );
-    // Every copy that changed to all of this line is followed (see
-    // `LineBuffer`), UTF-16 ones first: in The Colorful World those are the
-    // ones the game draws from (its UTF-8 one is followed by a stray "A").
-    const holding = changed
-      .filter((spot) => {
-        const text = textAt(memory, spot);
-        const line = text?.slice(0, endFor(text, read)) ?? '';
-        return alike(line, read) >= MATCH && holdsWhole(line, read);
-      })
-      .sort((a, b) => Number(b.codec === UTF16) - Number(a.codec === UTF16));
-    log(
-      `${changed.length} of ${memory.candidates.length} copies changed; ${holding.length} hold "${read}"`,
-    );
-    if (holding.length > 0) {
-      useBuffer(memory, holding, read);
-      return;
-    }
+  if (followChangedCopies(memory, read)) {
+    return;
   }
   // The same line again (read a little differently): searching for it
   // would find the same copies.
@@ -1029,6 +1060,9 @@ async function search(memory: GameMemory, read: string) {
     // straight away: in engines where every line is a new string (Unity,
     // Ren'Py), none is ever rewritten for the next line.
     const found = await copiesOf(memory, read, needles);
+    if (stale(memory)) {
+      return;
+    }
     let exact = found.match?.line ?? null;
     memory.candidates = found.copies;
     memory.searchedFor = read;
@@ -1056,8 +1090,11 @@ async function search(memory: GameMemory, read: string) {
     );
     if (exact === null) {
       memory.emptySearches++;
-      if (memory.alphabetFound && !memory.standardFound) {
+      // (Only a saved alphabet not yet proven this run: one that has found
+      // text keeps its quick searches through a line OCR garbled.)
+      if (memory.alphabetAssumed) {
         memory.alphabetFound = false;
+        memory.alphabetAssumed = false;
       }
       // Not in UTF-16 or UTF-8: maybe in the game's own alphabet.
       if (memory.emptySearches >= EMPTY_SEARCHES_TO_LEARN) {
@@ -1090,7 +1127,13 @@ async function search(memory: GameMemory, read: string) {
 function catchUp(memory: GameMemory, searched: string) {
   const read = memory.waiting;
   memory.waiting = null;
-  if (read === null || alike(read, searched) >= SAME_LINE) {
+  if (read === null || stale(memory) || alike(read, searched) >= SAME_LINE) {
+    return;
+  }
+  if (followChangedCopies(memory, read)) {
+    if (memory.buffer) {
+      correctionListener(read, memory.buffer.line);
+    }
     return;
   }
   const next = nextInScript(memory, read);
@@ -1245,16 +1288,19 @@ function nextInScript(memory: GameMemory, read: string) {
     if (!ended) {
       raw = raw.slice(0, endFor(raw, read));
     }
-    if (isNextLine(polish(raw, read), read, ended)) {
+    // The last line itself only when it's clearly the same line (a new line
+    // can be much like the last: "Is that true?" after "Is that so?").
+    const matches =
+      i === 0
+        ? alike(polish(raw, read), read) >= SAME_LINE
+        : isNextLine(polish(raw, read), read, ended);
+    if (matches) {
       memory.lastLine = { codec, address: last.address + at };
       // OCR's read of it (even just its start) can teach a game's own
-      // alphabet codes it didn't know yet ("“What!?").
+      // alphabet codes it didn't know yet ("“What!?"), from the string's
+      // own codes (markup left out, nothing past its end).
       if (raw.includes('\uFFFD') && codec instanceof AlphabetCodec) {
-        const codes = [...read].map((_, i) =>
-          at + (i + 1) * codec.width <= bytes.length
-            ? codec.codeAt(bytes, at + i * codec.width)
-            : -1,
-        );
+        const codes = codec.textCodes(bytes, at, end);
         let learned = learnFromLine(codec, codes, read);
         raw = codec.decode(bytes, at, end).split('\0')[0];
         learned = learnClosingQuote(codec, bytes, end, raw) || learned;
@@ -1283,8 +1329,10 @@ const CLOSING_QUOTE: Record<string, string> = {
 };
 
 // Learns a closing quote mark OCR didn't read (it read only the line's
-// start): a line that opens a quote and ends on a code not known yet ends
-// with the closing mark. Returns whether it was new.
+// start): a line that opens a quote and ends a sentence, then a code not
+// known yet, ends with the closing mark. (Not after a letter or a mark that
+// trails off: "“Wait, I—" ends on its dash, learned the wrong way for good.)
+// Returns whether it was new.
 function learnClosingQuote(
   codec: AlphabetCodec,
   bytes: Buffer,
@@ -1295,6 +1343,7 @@ function learnClosingQuote(
   if (
     closing === undefined ||
     raw.slice(1).includes(closing) ||
+    !/[.!?…]/u.test(raw.at(-2) ?? '') ||
     !raw.endsWith('\uFFFD') ||
     end < codec.width
   ) {
@@ -1476,6 +1525,9 @@ async function learnAlphabet(memory: GameMemory, read: string) {
     for (const layout of LAYOUTS) {
       for (const word of words) {
         const found = await relativeSearch(memory, read, word, layout);
+        if (stale(memory)) {
+          return;
+        }
         if (found) {
           memory.alphabet = new AlphabetCodec(found);
           log(
@@ -1509,13 +1561,16 @@ async function relativeSearch(
   const steps = [...word].map((c) => c.charCodeAt(0) - word.charCodeAt(0));
   const length = steps.length * layout.width;
   for (const region of writableRegions(memory.process)) {
+    if (stale(memory)) {
+      return null;
+    }
     const bytes = await readMemoryAsync(
       memory.process,
       region.address,
       region.size,
     );
     await breather();
-    if (!bytes || memory !== game) {
+    if (!bytes || stale(memory)) {
       continue;
     }
     const last = bytes.length - length;
@@ -1632,24 +1687,27 @@ function refineAlphabet(
     if (spot.codec !== codec || !spot.found.includes('\uFFFD')) {
       continue;
     }
+    // The copy's codes, one per character of `found` (markup left out, so
+    // a coloured word before the line doesn't put them out of step).
+    const bytes = readMemory(
+      memory.process,
+      spot.address,
+      MAX_LINE * codec.width,
+    );
+    if (!bytes) {
+      continue;
+    }
+    const stringCodes = codec.textCodes(
+      bytes,
+      0,
+      codec.stringEnd(bytes, 0, MAX_LINE),
+    );
     for (const word of words) {
       const start = spot.found.indexOf(word) - read.indexOf(word);
       if (spot.found.indexOf(word) === -1 || start < 0) {
         continue;
       }
-      const bytes = readMemory(
-        memory.process,
-        spot.address + start * codec.width,
-        read.length * codec.width,
-      );
-      if (!bytes) {
-        continue;
-      }
-      const codes = [...read].map((_, i) =>
-        i * codec.width < bytes.length
-          ? codec.codeAt(bytes, i * codec.width)
-          : -1,
-      );
+      const codes = [...read].map((_, i) => stringCodes[start + i] ?? -1);
       // Only lined up right if most of the read's lowercase letters fit.
       const lowercase = [...read]
         .map((character, i) => ({ character, code: codes[i] }))
@@ -1691,6 +1749,13 @@ async function findSpots(
     if (only && !only.includes(region.address)) {
       continue;
     }
+    // Enough copies, or another game picked meanwhile (see `stale`).
+    if (spots.size >= MAX_CANDIDATES) {
+      break;
+    }
+    if (stale(memory)) {
+      return [];
+    }
     const bytes = await readMemoryAsync(
       memory.process,
       region.address,
@@ -1716,9 +1781,13 @@ async function findSpots(
           memory.standardFound = true;
         } else {
           memory.alphabetFound = true;
+          memory.alphabetAssumed = false;
         }
       }
     }
+  }
+  if (stale(memory)) {
+    return [];
   }
   if (hot.size > 0) {
     memory.hotRegions = [...hot];
@@ -1748,11 +1817,27 @@ async function copiesOf(memory: GameMemory, read: string, needles: string[]) {
   // line (each run is a pass over all of it), then the rest if they don't.
   if (matchingOnly && needles.length > FIRST_NEEDLES) {
     const first = needles.slice(0, FIRST_NEEDLES);
-    const copies = await findSpots(memory, first);
-    const match = bestCopy(copies, read, first);
+    const firstCopies = await findSpots(memory, first);
+    const match = bestCopy(firstCopies, read, first);
     if (match !== null) {
-      return { copies, match };
+      return { copies: firstCopies, match };
     }
+    // The rest only (the first ones' copies are at hand), keeping where
+    // both found copies as the stretches to search first.
+    const firstHot = firstCopies.length > 0 ? memory.hotRegions : [];
+    const rest = await findSpots(memory, needles.slice(FIRST_NEEDLES));
+    if (rest.length > 0) {
+      memory.hotRegions = [...new Set([...firstHot, ...memory.hotRegions])];
+    }
+    const copies = [
+      ...new Map(
+        [...firstCopies, ...rest].map((spot) => [
+          `${spot.codec.name}:${spot.address}`,
+          spot,
+        ]),
+      ).values(),
+    ].slice(0, MAX_CANDIDATES);
+    return { copies, match: bestCopy(copies, read, needles) };
   }
   const copies = await findSpots(memory, needles);
   return { copies, match: bestCopy(copies, read, needles) };

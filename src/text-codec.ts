@@ -60,7 +60,9 @@ export interface Alphabet {
   extra: [number, string][];
 }
 
-// The most codes in a run of markup inside a line (see `markupEnd`).
+// The fewest and most codes in a run of markup inside a line (see
+// `markupEnd`).
+const MIN_MARKUP = 2;
 const MAX_MARKUP = 3;
 
 const isLower = (c: string) => c >= 'a' && c <= 'z';
@@ -177,8 +179,11 @@ export class AlphabetCodec implements Codec {
   // markup inside a line, or null if it ends the line. Engines put codes in
   // a line to change how part of it looks (Steins;Gate colours a word with
   // 0x0482 0x0000 before it and 0x0480 0x0000 after). Markup is a short run
-  // (`MAX_MARKUP` codes) between text, after a letter, digit, space or
-  // comma: a line's end comes after its closing mark ("…move!?”" 0x03ff).
+  // (`MIN_MARKUP` to `MAX_MARKUP` codes) between text, after a letter,
+  // digit, space or comma: a line's end usually comes after its closing
+  // mark ("…move!?”" 0x03ff), and a lone code is a line's end too, so a
+  // line ending in a letter or comma ("…and I," 0x03ff "…") isn't joined
+  // to the next.
   markupEnd(bytes: Buffer, at: number, end = bytes.length) {
     const before =
       at - this.width >= 0
@@ -201,7 +206,11 @@ export class AlphabetCodec implements Codec {
       command ||= code !== 0;
       runEnd += this.width;
     }
-    if (runEnd === at || !command || runEnd + this.width > end) {
+    if (
+      runEnd - at < MIN_MARKUP * this.width ||
+      !command ||
+      runEnd + this.width > end
+    ) {
       return null;
     }
     return this.characterOf(this.codeAt(bytes, runEnd)) !== null
@@ -253,6 +262,26 @@ export class AlphabetCodec implements Codec {
       end = runEnd;
     }
     return end;
+  }
+
+  // The text codes from `start` to `end`, markup left out: one per
+  // character `decode` gives, to line a string's codes up with its text.
+  textCodes(bytes: Buffer, start: number, end: number) {
+    const codes: number[] = [];
+    for (let at = start; at + this.width <= end; ) {
+      const code = this.codeAt(bytes, at);
+      if (this.isText(code)) {
+        codes.push(code);
+        at += this.width;
+        continue;
+      }
+      const runEnd = this.markupEnd(bytes, at, end);
+      if (runEnd === null) {
+        break;
+      }
+      at = runEnd;
+    }
+    return codes;
   }
 
   // Learns a character's code (first seen wins: a later, different guess
