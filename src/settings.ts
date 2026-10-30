@@ -35,6 +35,10 @@ const file = () => path.join(app.getPath('userData'), 'settings.json');
 export async function loadSettings(): Promise<Settings> {
   try {
     const saved = JSON.parse(await fs.readFile(file(), 'utf8'));
+    // The "MiSide (bold pattern)" theme was removed: fall back to MiSide.
+    if (saved.theme === 'miside-bold') {
+      saved.theme = 'miside';
+    }
     // `messageStyle` is laid over its defaults too, so parts added to it
     // later get theirs.
     return {

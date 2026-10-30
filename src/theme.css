@@ -263,10 +263,8 @@
    of see-through mauve, pink-lavender text with a dark drop shadow, hot
    pink accents, a wallpaper of doodled hearts, flowers and stars, heavy
    rounded type. Picking it in the picker also picks the two-hearts arrow
-   (message-style.ts). "MiSide (bold pattern)" is the same, with a stronger
-   pattern (below). */
-:root[data-theme='miside'],
-:root[data-theme='miside-bold'] {
+   (message-style.ts). */
+:root[data-theme='miside'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
   --accent: #f77fd0;
@@ -296,8 +294,7 @@
 }
 
 /* MiSide's menu text sits on a dark drop shadow. */
-:root:is([data-theme='miside'], [data-theme='miside-bold'])
-  :is(#text-line, #log-text) {
+:root[data-theme='miside'] :is(#text-line, #log-text) {
   text-shadow: 0 0.06em 0 rgb(0 0 0 / 45%);
 }
 
@@ -339,10 +336,4 @@
     inset 0 0 0 1px var(--accent),
     inset 1px 1px 0 2px color-mix(in srgb, var(--rim-light) 35%, transparent),
     0 0.3rem 1rem color-mix(in srgb, var(--shadow) 30%, transparent);
-}
-
-/* MiSide (bold pattern): MiSide with its doodles twice as strong. */
-:root[data-theme='miside-bold'] {
-  --glass-pattern: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='256' height='128'><defs><path id='h' d='M-9-3c0-5 7-6 9-1 2-5 9-4 9 1 0 6-9 11-9 11s-9-5-9-11z'/><g id='f'><circle cy='-6' r='4'/><circle cx='5.7' cy='-1.9' r='4'/><circle cx='3.5' cy='4.9' r='4'/><circle cx='-3.5' cy='4.9' r='4'/><circle cx='-5.7' cy='-1.9' r='4'/><circle r='2.2' fill='%23c25bb5' fill-opacity='0.8' stroke='none'/></g><path id='s' d='M0-9l2.6 5.4 5.9.8-4.3 4.1 1 5.9L0 4.4l-5.3 2.8 1-5.9-4.3-4.1 5.9-.8z'/><circle id='r' r='5'/></defs><g fill='none' stroke='%23c25bb5' stroke-opacity='0.8' stroke-width='1' stroke-linejoin='round'><use href='%23h' transform='translate(32 32) rotate(30) scale(1.6)'/><use href='%23f' transform='translate(96 32) rotate(-30) scale(1.6)'/><use href='%23s' transform='translate(160 32) rotate(30) scale(1.6)'/><use href='%23r' transform='translate(224 32) rotate(-30) scale(1.6)'/><use href='%23s' transform='translate(32 96) rotate(-30) scale(1.6)'/><use href='%23r' transform='translate(96 96) rotate(30) scale(1.6)'/><use href='%23h' transform='translate(160 96) rotate(-30) scale(1.6)'/><use href='%23f' transform='translate(224 96) rotate(30) scale(1.6)'/></g><g fill='%23c25bb5' fill-opacity='0.8'><circle cx='0' cy='0' r='4'/><circle cx='0' cy='64' r='4'/><circle cx='0' cy='128' r='4'/><circle cx='64' cy='0' r='4'/><circle cx='64' cy='64' r='4'/><circle cx='64' cy='128' r='4'/><circle cx='128' cy='0' r='4'/><circle cx='128' cy='64' r='4'/><circle cx='128' cy='128' r='4'/><circle cx='192' cy='0' r='4'/><circle cx='192' cy='64' r='4'/><circle cx='192' cy='128' r='4'/><circle cx='256' cy='0' r='4'/><circle cx='256' cy='64' r='4'/><circle cx='256' cy='128' r='4'/></g></svg>")
-    0 0 / 16rem 8rem;
 }

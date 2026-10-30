@@ -56,7 +56,6 @@ type ThemeName =
   | 'steins-gate'
   | 'ddlc'
   | 'miside'
-  | 'miside-bold'
   | 'miyuki';
 
 // The look of the portrait's message window (the picker's Style settings,
