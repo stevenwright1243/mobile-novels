@@ -78,6 +78,16 @@
              `aria-live` has screen readers announce it when it appears. -->
         <span id="text-shrink-note" aria-live="polite" hidden></span>
       </span>
+      <!-- The size of the portrait's corner buttons, for every game
+           (button-size.ts). -->
+      <span
+        class="slider-field"
+        title="The size of the Menus and Log buttons in the portrait, for every game. Saved straight away."
+      >
+        <label for="button-size">Button size</label>
+        <input type="range" id="button-size" min="0.5" max="1.5" step="0.05" />
+        <output id="button-size-percent" for="button-size">100%</output>
+      </span>
       <!-- Whether the phone is streaming (phone-status.ts). -->
       <span id="phone-status" aria-live="polite"></span>
       <!-- Whether the portrait goes on the phone's display while there is

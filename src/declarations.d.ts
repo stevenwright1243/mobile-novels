@@ -192,5 +192,10 @@ interface Window {
     // (true) or stays on the PC (false). Saved as an app setting.
     getPortraitOnPhone(): Promise<boolean>;
     setPortraitOnPhone(onPhone: boolean): Promise<void>;
+    // The size of the portrait's corner buttons, as a multiple of normal.
+    // Saved as an app setting.
+    getButtonSize(): Promise<number>;
+    setButtonSize(size: number): Promise<void>;
+    onButtonSizeChanged(callback: (size: number) => void): void;
   };
 }

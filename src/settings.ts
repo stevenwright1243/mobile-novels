@@ -12,9 +12,12 @@ export type Settings = {
   // The picker's PC / Phone switch: whether the portrait goes full screen on
   // the phone's display while there is one.
   portraitOnPhone: boolean;
+  // The size of the portrait's corner buttons, as a multiple of normal (the
+  // picker's "Button size" slider).
+  buttonSize: number;
 };
 
-const DEFAULT_SETTINGS: Settings = { portraitOnPhone: true };
+const DEFAULT_SETTINGS: Settings = { portraitOnPhone: true, buttonSize: 1 };
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');
 

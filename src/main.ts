@@ -662,6 +662,17 @@ app.whenReady().then(async () => {
     setPortraitOnPhone?.(onPhone);
     await saveSettings(settings);
   });
+  // The corner buttons' size. It changes many times a second while the
+  // slider is dragged, so it's saved once the slider has been still for a
+  // moment, instead of on every change.
+  let buttonSizeSaveTimer: NodeJS.Timeout | undefined;
+  ipcMain.handle('get-button-size', () => settings.buttonSize);
+  ipcMain.handle('set-button-size', (event, size: number) => {
+    settings = { ...settings, buttonSize: size };
+    broadcast('button-size-changed', size, event.sender);
+    clearTimeout(buttonSizeSaveTimer);
+    buttonSizeSaveTimer = setTimeout(() => saveSettings(settings), 500);
+  });
 
   settings = await loadSettings();
   createWindows();
