@@ -75,6 +75,58 @@ const SetWindowLongPtr = user32.func(
 const GWL_EXSTYLE = -20;
 const WS_EX_APPWINDOW = 0x00040000;
 
+// For window properties (Windows' per-window settings, kept in a "property
+// store"). The store is a COM object: a pointer to a table of function
+// pointers (its "vtable"), each called with the object itself first.
+const shell32 = koffi.load('shell32.dll');
+const GUID = koffi.struct('GUID', {
+  Data1: 'uint32_t',
+  Data2: 'uint16_t',
+  Data3: 'uint16_t',
+  Data4: koffi.array('uint8_t', 8),
+});
+koffi.struct('PROPERTYKEY', { fmtid: GUID, pid: 'uint32_t' });
+// A value of any type. Only `vt` (the type) and a true/false are used here;
+// the rest pads it to its real size (24 bytes).
+koffi.struct('PROPVARIANT', {
+  vt: 'uint16_t',
+  reserved: koffi.array('uint16_t', 3),
+  boolVal: 'int16_t',
+  padding: koffi.array('uint8_t', 14),
+});
+const SHGetPropertyStoreForWindow = shell32.func(
+  'long __stdcall SHGetPropertyStoreForWindow(intptr_t hwnd, const GUID *riid, _Out_ void **ppv)',
+);
+const PropertyStoreRelease = koffi.proto(
+  'uint32_t __stdcall PropertyStoreRelease(void *self)',
+);
+const PropertyStoreSetValue = koffi.proto(
+  'long __stdcall PropertyStoreSetValue(void *self, const PROPERTYKEY *key, const PROPVARIANT *value)',
+);
+// Positions in the vtable (after IUnknown's QueryInterface, AddRef, Release
+// come GetCount, GetAt, GetValue, SetValue, Commit).
+const RELEASE = 2;
+const SET_VALUE = 6;
+const VT_BOOL = 11;
+const VARIANT_TRUE = -1;
+
+// A GUID from its usual text form, e.g. "886D8EEB-8CF2-...".
+function guid(text: string) {
+  const hex = text.replaceAll('-', '');
+  const byte = (i: number) => parseInt(hex.slice(16 + i * 2, 18 + i * 2), 16);
+  return {
+    Data1: parseInt(hex.slice(0, 8), 16),
+    Data2: parseInt(hex.slice(8, 12), 16),
+    Data3: parseInt(hex.slice(12, 16), 16),
+    Data4: Array.from({ length: 8 }, (_, i) => byte(i)),
+  };
+}
+const IID_IPropertyStore = guid('886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99');
+const PKEY_EdgeGesture_DisableTouchWhenFullscreen = {
+  fmtid: guid('32CE38B2-2C9A-41B1-9BC5-B3784394AA44'),
+  pid: 2,
+};
+
 // For finding which program (.exe) a window belongs to.
 const kernel32 = koffi.load('kernel32.dll');
 const GetWindowThreadProcessId = user32.func(
@@ -159,6 +211,40 @@ interface Rect {
 export function showInTaskbar(hwnd: number) {
   const style = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
   SetWindowLongPtr(hwnd, GWL_EXSTYLE, style | WS_EX_APPWINDOW);
+}
+
+/**
+ * Stops touch swipes in from a screen edge (e.g. up from the bottom, which
+ * shows the taskbar) from reaching Windows while the window is full screen.
+ * They reach the window instead. Returns whether Windows accepted it.
+ */
+export function blockEdgeSwipesWhenFullScreen(hwnd: number) {
+  const store = [null];
+  if (SHGetPropertyStoreForWindow(hwnd, IID_IPropertyStore, store) !== 0) {
+    return false;
+  }
+  const self = store[0];
+  const methods = koffi.decode(
+    koffi.decode(self, 'void *'),
+    koffi.array('void *', 8),
+  );
+  try {
+    const result = koffi.call(
+      methods[SET_VALUE],
+      PropertyStoreSetValue,
+      self,
+      PKEY_EdgeGesture_DisableTouchWhenFullscreen,
+      {
+        vt: VT_BOOL,
+        reserved: [0, 0, 0],
+        boolVal: VARIANT_TRUE,
+        padding: Array.from({ length: 14 }, () => 0),
+      },
+    );
+    return result === 0;
+  } finally {
+    koffi.call(methods[RELEASE], PropertyStoreRelease, self);
+  }
 }
 
 // --- Keeping the game un-minimized -------------------------------------------

@@ -36,6 +36,7 @@ import {
   sendClick,
   sendToBack,
   showInTaskbar,
+  blockEdgeSwipesWhenFullScreen,
   windowExists,
 } from './win32';
 
@@ -289,6 +290,11 @@ const createPortraitWindow = (bounds: Rectangle, picker: BrowserWindow) => {
     portrait.setSkipTaskbar(false);
   };
   keepInTaskbar();
+  // On the phone, swiping up to leave Artemis also reaches the PC as a touch
+  // swipe up from the screen's bottom edge, which would show the taskbar.
+  blockEdgeSwipesWhenFullScreen(
+    Number(portrait.getNativeWindowHandle().readBigUInt64LE()),
+  );
 
   // A non-focusable window's title bar doesn't work on Windows: Chromium
   // answers Windows' "should this click activate the window?" question
