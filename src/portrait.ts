@@ -456,3 +456,10 @@ window.vn.getSelectedSource().then((sourceId) => {
     showSource(sourceId);
   }
 });
+
+// Whether this window is full screen on the phone's display (see
+// phone-display.ts), for styles that only apply there.
+const showOnPhone = (phone: PhoneDisplay | null) =>
+  document.documentElement.classList.toggle('on-phone', phone !== null);
+window.vn.onPhoneDisplayChanged(showOnPhone);
+window.vn.getPhoneDisplay().then(showOnPhone);

@@ -10,6 +10,7 @@ import { playCapture, stopCapture } from './capture';
 // The "Shown in portrait" box in the preview.
 import './background-view';
 import { enableOcrTest } from './ocr-test';
+import './phone-status';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
 import { enableTextStyle } from './text-style';

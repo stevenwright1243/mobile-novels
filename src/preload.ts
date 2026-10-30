@@ -84,4 +84,11 @@ contextBridge.exposeInMainWorld('vn', {
       callback(line),
     );
   },
+  getPhoneDisplay: () => ipcRenderer.invoke('get-phone-display'),
+  onPhoneDisplayChanged: (callback) => {
+    ipcRenderer.on(
+      'phone-display-changed',
+      (_event, phone: PhoneDisplay | null) => callback(phone),
+    );
+  },
 } satisfies Window['vn']);

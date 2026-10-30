@@ -101,6 +101,35 @@ const ShowWindow = user32.func(
 const SetWindowPos = user32.func(
   'bool __stdcall SetWindowPos(intptr_t hWnd, intptr_t hWndInsertAfter, int X, int Y, int cx, int cy, uint32_t uFlags)',
 );
+// For finding which graphics adapter drives a display. Windows names each
+// display output like "\\.\DISPLAY2"; `koffi.array(..., 'String')` turns a
+// fixed-size C text field into a JS string.
+const MONITORINFOEXW = koffi.struct('MONITORINFOEXW', {
+  cbSize: 'uint32_t',
+  rcMonitor: RECT,
+  rcWork: RECT,
+  dwFlags: 'uint32_t',
+  szDevice: koffi.array('char16_t', 32, 'String'),
+});
+const DISPLAY_DEVICEW = koffi.struct('DISPLAY_DEVICEW', {
+  cb: 'uint32_t',
+  DeviceName: koffi.array('char16_t', 32, 'String'),
+  DeviceString: koffi.array('char16_t', 128, 'String'),
+  StateFlags: 'uint32_t',
+  DeviceID: koffi.array('char16_t', 128, 'String'),
+  DeviceKey: koffi.array('char16_t', 128, 'String'),
+});
+const MonitorFromPoint = user32.func(
+  'intptr_t __stdcall MonitorFromPoint(POINT pt, uint32_t dwFlags)',
+);
+const GetMonitorInfo = user32.func(
+  'bool __stdcall GetMonitorInfoW(intptr_t hMonitor, _Inout_ MONITORINFOEXW *lpmi)',
+);
+const EnumDisplayDevices = user32.func(
+  'bool __stdcall EnumDisplayDevicesW(const char16_t *lpDevice, uint32_t iDevNum, _Inout_ DISPLAY_DEVICEW *lpDisplayDevice, uint32_t dwFlags)',
+);
+const MONITOR_DEFAULTTONULL = 0;
+
 const SW_SHOWNOACTIVATE = 4;
 const HWND_BOTTOM = 1;
 const SWP_NOSIZE = 0x0001;
@@ -332,4 +361,39 @@ export async function sendClick(hwnd: number, point: { x: number; y: number }) {
   SendInput(1, [mouseButton(MOUSEEVENTF_LEFTUP)], koffi.sizeof(INPUT));
   await sleep(30);
   SetCursorPos(previousCursor.x, previousCursor.y);
+}
+
+/**
+ * The name of the graphics adapter driving the display at a point on screen
+ * (in real pixels), e.g. "NVIDIA GeForce RTX 5090", or null if there's no
+ * display there. A virtual display is "driven" by its driver's adapter.
+ */
+export function displayAdapterAt(point: { x: number; y: number }) {
+  const monitor = MonitorFromPoint(
+    { x: Math.round(point.x), y: Math.round(point.y) },
+    MONITOR_DEFAULTTONULL,
+  );
+  // Windows reads `cbSize` (or `cb`) to know which version of the struct
+  // it's been given.
+  const info = { cbSize: koffi.sizeof(MONITORINFOEXW) } as {
+    cbSize: number;
+    szDevice?: string;
+  };
+  if (!monitor || !GetMonitorInfo(monitor, info)) {
+    return null;
+  }
+  // List the display outputs until the one with the same device name.
+  for (let i = 0; ; i++) {
+    const device = { cb: koffi.sizeof(DISPLAY_DEVICEW) } as {
+      cb: number;
+      DeviceName?: string;
+      DeviceString?: string;
+    };
+    if (!EnumDisplayDevices(null, i, device, 0)) {
+      return null;
+    }
+    if (device.DeviceName === info.szDevice) {
+      return device.DeviceString ?? null;
+    }
+  }
 }

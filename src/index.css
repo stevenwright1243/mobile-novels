@@ -504,6 +504,22 @@ h2 {
   display: none;
 }
 
+/* "On phone" / "Phone not connected" (phone-status.ts). */
+#phone-status {
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink);
+  opacity: 0.6;
+
+  &.connected {
+    background: var(--sky-pale);
+    color: var(--sky-deep);
+    opacity: 1;
+  }
+}
+
 .slider-field input[type='number'] {
   width: 7ch;
   margin-left: 0.25rem;

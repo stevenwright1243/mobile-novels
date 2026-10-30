@@ -2,7 +2,7 @@
 
 This is the project's planning doc. It assumes a **Windows PC** (where most VNs and Sunshine live).
 
-## Status (as of 2026-10-25)
+## Status (as of 2026-10-26)
 
 **Read this first when picking the project up in a new chat or tool.**
 
@@ -51,7 +51,14 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Look:** a styling sweep in the spirit of Aokana: shared sky-blue and white theme (`src/theme.css`), bundled Nunito font, frosted-glass message window with a sky ribbon and bobbing arrow, pill buttons and white cards in the picker.
 
-Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done. Next: Milestone 4 (Apollo + Tailscale).
+Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done.
+
+**Now: Milestone 4 (streaming to the phone).** The phone is **Android**, so the client is **Artemis** (Apollo's own Moonlight fork), which streams in portrait at the phone's exact resolution.
+
+- 4a (setup, outside the app): install Apollo on the PC and Artemis on the phone, pair them on home Wi-Fi, and stream the Desktop app with "Always use Virtual Display". _As of 2026-10-29:_ Apollo 0.4.6 is installed and running (NVENC encoders found), Parsec's virtual display driver is gone, and the phone (Galaxy S24+, `SM-S926U1`) is paired. Still to do: tick "Always use Virtual Display" on the Desktop app (it's off by default), then the first stream. Leave Apollo's "Device configuration" off "Deactivate other displays" and "make it a primary display", so the game stays on the PC's monitor, and never rotate the virtual display in Windows (Apollo handles portrait).
+- 4b (built, to be tested with the phone): the portrait goes full screen on the phone's display by itself (`src/phone-display.ts`). It recognizes that display by its adapter, Apollo's SudoVDA driver (`displayAdapterAt()` in `win32.ts`), not by shape: this PC's HP 727pq monitor is portrait (1440×2560) too. The picker shows "On phone: W × H" or "Phone not connected", and the portrait hides the mouse pointer there. Verified: the adapter is named "SudoMaker Virtual Display Adapter", which matches `/SudoMaker|SudoVDA/i`. This code isn't committed yet.
+- 4c: taps from the phone reach the portrait (Artemis touch → Apollo → mouse or touch input) and go on to the game; check the virtual display's Windows scaling (the text is tuned for a portrait window about 500 px wide; 200–300% scaling on a 1080-wide phone gives the same proportions).
+- 4d: Tailscale on both, then stream on mobile data.
 
 **Layout reference:** `portrait-layout.md` holds the portrait's sizes and positions. The background's zoom and position are fixed for every game: Zoom 20%, Left↔Right 50%, Top↔Bottom 20% (`BACKGROUND_VIEW` in `src/zone-view.ts`).
 
@@ -128,6 +135,8 @@ Four separate problems, and it helps to keep them separate:
 
 - Sunshine streams a whole **monitor**, not a window. So the trick is a **virtual portrait monitor**: the game sits on your real screen, your Electron view goes fullscreen on the virtual one, and Sunshine streams only that.
 - **Apollo** (a Sunshine fork) creates a virtual display matching the phone's resolution automatically when Moonlight connects, which is exactly this use case. Plain Sunshine plus a virtual display driver also works. Try Apollo first.
+- **Artemis** (Android) is Apollo's companion Moonlight fork: it connects in portrait, and Apollo makes the virtual display the phone's exact size and shape. Moonlight for iPhone has no confirmed portrait support with Apollo.
+- **The app's side:** the portrait window moves onto that virtual display and goes full screen while it exists (`src/phone-display.ts`), and back to its place on the PC when the phone disconnects. Apollo names the display after the phone, so it's recognized by its adapter (SudoVDA) instead.
 
 ### Input and different networks
 
