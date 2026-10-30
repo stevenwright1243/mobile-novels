@@ -118,27 +118,34 @@ function looksLikeText(
 
 // --- Lines of just dots -------------------------------------------------------
 
-// OCR can't read a line that's only "..." (it sees nothing there at all), so
-// such a line is spotted by looking at the box itself: a light box with a few
-// small dark marks on it. Measured in Aokana at full size: the dots are 42
-// dark pixels, an empty box 6, a line of text over 12,000, and the bare art
-// (no text box) is darker overall.
-const DOTS = '…';
+// OCR can't read a line that's only dots, like "..." (it sees nothing there
+// at all), so such a line is spotted by looking at the box itself: a light
+// box with a few small, separate dark marks on it. Each mark is a dot, and
+// the line is shown with as many dots ("…" for each three). Measured in
+// Aokana at full size: three dots are 42 dark pixels, an empty box 6, a line
+// of text over 12,000, and the bare art (no text box) is darker overall.
 // "Dark" is this much darker than the box's usual brightness (0 to 255).
 const INK_CONTRAST = 60;
 // The box must be at least this bright, so dark boxes and bare art don't
 // count.
 const MIN_BOX_BRIGHTNESS = 170;
-// How much dark there must be, and at most may be, measured against the
-// size of a letter's box (a tenth of the box's height, squared), so the
-// limits hold at any resolution. Dots: about 0.09; an empty box: 0.01.
+// Sizes are measured against a letter's box (a tenth of the box's height,
+// squared), so they hold at any resolution. All the dark together must be
+// at least this much (three dots: about 0.09; an empty box: 0.01) and at
+// most this much (about 50 dots).
 const MIN_DOTS_INK = 0.04;
 const MAX_DOTS_INK = 1.5;
+// One dot: big enough not to be a speck, small enough not to be a letter.
+// In Aokana a dot is about 0.03, and a speck near the box's edge, there even
+// when it's empty, about 0.013.
+const MIN_DOT = 0.02;
+const MAX_DOT = 0.2;
 
 const dotsCanvas = document.createElement('canvas');
 const dotsContext = dotsCanvas.getContext('2d', { willReadFrequently: true })!;
 
-function onlyDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
+// The line's dots, e.g. "……" for six, or '' when the box isn't just dots.
+function readDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
   // Full size, since each dot is only a few pixels across.
   dotsCanvas.width = Math.max(1, Math.round(sw));
   dotsCanvas.height = Math.max(1, Math.round(sh));
@@ -155,16 +162,58 @@ function onlyDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
   // few dark dots can't shift.
   const median = brightness.slice().sort()[brightness.length >> 1];
   if (median < MIN_BOX_BRIGHTNESS) {
-    return false;
+    return '';
   }
-  let ink = 0;
-  for (const value of brightness) {
-    if (value < median - INK_CONTRAST) {
-      ink++;
+  // Which pixels are dark ("ink").
+  const ink = new Uint8Array(brightness.length);
+  let inkTotal = 0;
+  for (let i = 0; i < brightness.length; i++) {
+    if (brightness[i] < median - INK_CONTRAST) {
+      ink[i] = 1;
+      inkTotal++;
     }
   }
   const letter = (height / 10) ** 2;
-  return ink >= MIN_DOTS_INK * letter && ink <= MAX_DOTS_INK * letter;
+  if (inkTotal < MIN_DOTS_INK * letter || inkTotal > MAX_DOTS_INK * letter) {
+    return '';
+  }
+  // Count the separate marks: from each dark pixel not counted yet, follow
+  // its dark neighbours (a "flood fill") to find the whole mark and its
+  // size. Specks are skipped; anything letter-sized means it isn't dots.
+  let dots = 0;
+  const stack: number[] = [];
+  for (let start = 0; start < ink.length; start++) {
+    if (ink[start] !== 1) {
+      continue;
+    }
+    ink[start] = 2;
+    stack.push(start);
+    let size = 0;
+    while (stack.length > 0) {
+      const i = stack.pop()!;
+      size++;
+      const x = i % width;
+      const neighbours = [
+        x > 0 ? i - 1 : -1,
+        x < width - 1 ? i + 1 : -1,
+        i - width,
+        i + width,
+      ];
+      for (const n of neighbours) {
+        if (n >= 0 && n < ink.length && ink[n] === 1) {
+          ink[n] = 2;
+          stack.push(n);
+        }
+      }
+    }
+    if (size > MAX_DOT * letter) {
+      return '';
+    }
+    if (size >= MIN_DOT * letter) {
+      dots++;
+    }
+  }
+  return '…'.repeat(Math.floor(dots / 3)) + '.'.repeat(dots % 3);
 }
 
 // Reads a box with OCR, prepared as `prep` says. Garbage counts as an
@@ -187,7 +236,7 @@ async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
 // `retryFlattened`, a box that reads as nothing is read again with its
 // background removed (see `OcrPrep`), for names on shaded plates. With
 // `spotDots`, a box that reads as nothing but has a few dots in it reads as
-// "…" (see `onlyDots`), for the text box.
+// its dots (see `readDots`), for the text box.
 export function startTextReader(
   video: HTMLVideoElement,
   findTextBox: () => VideoRect | null,
@@ -206,7 +255,8 @@ export function startTextReader(
       const sample = takeSample(video, box);
       // Dots are too small to change the sample, so while the box is
       // empty, look for them each time too.
-      const dotsAppeared = spotDots && confirmed === '' && onlyDots(video, box);
+      const dotsAppeared =
+        spotDots && confirmed === '' && readDots(video, box) !== '';
       // Read when a new line has started, or to confirm an unconfirmed read.
       if (
         hasChanged(sample, lastSample) ||
@@ -218,8 +268,8 @@ export function startTextReader(
         if (!read && retryFlattened) {
           read = await readBox(video, box, 'flatten');
         }
-        if (!read && spotDots && onlyDots(video, box)) {
-          read = DOTS;
+        if (!read && spotDots) {
+          read = readDots(video, box);
         }
         if (read === lastRead && read !== confirmed) {
           confirmed = read;
