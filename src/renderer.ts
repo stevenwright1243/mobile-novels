@@ -18,6 +18,7 @@ import './message-style';
 import { enableOcrTest } from './ocr-test';
 import './phone-status';
 import { refreshSizesPage } from './picker-sizes';
+import './theme-picker';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
 

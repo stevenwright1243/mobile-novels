@@ -466,6 +466,83 @@ details[open] > summary.side-heading > span::before {
   color: color-mix(in srgb, var(--ink) 70%, transparent);
 }
 
+/* The Theme button: always in view, with the theme's name beside a swatch
+   of its colours (surface, accent, deep accent). Its menu drops down from
+   it, lined up with its right edge (CSS anchor positioning: the menu is
+   placed against the element named `--theme-button`). */
+#theme-button {
+  anchor-name: --theme-button;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.8rem 1rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+
+  svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.theme-swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: conic-gradient(
+    var(--surface) 0 33%,
+    var(--accent) 0 66%,
+    var(--accent-deep) 0
+  );
+}
+
+#theme-menu {
+  position-anchor: --theme-button;
+  inset: auto;
+  top: anchor(bottom);
+  right: anchor(right);
+  width: min(34rem, 90vw);
+  max-height: 80dvh;
+  box-sizing: border-box;
+  margin: 0.5rem 0 0;
+  padding: 1rem 1.1rem;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: calc(1rem * var(--corner));
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0.6rem 2rem color-mix(in srgb, var(--shadow) 30%, transparent);
+  --picked: var(--accent-deep);
+  --chip-width: 9.5rem;
+
+  h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    color: var(--accent-deep);
+  }
+
+  /* Each theme drawn bigger than in a list, so it reads as a sample. */
+  .chip.theme-sample {
+    min-height: 3.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* The option buttons: a grid that fits as many to a row as it can. */
+#theme-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--chip-width), 1fr));
+  gap: 0.6rem;
+}
+
 /* Tabs: words, the picked one in the accent and underlined. */
 #tabs {
   display: flex;

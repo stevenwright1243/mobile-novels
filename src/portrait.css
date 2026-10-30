@@ -644,22 +644,6 @@ body {
   --chip-width: max(5.5rem, 21vmin);
 }
 
-/* A theme button, in its own theme's colours and font (it carries that
-   theme's variables: `.theme-sample` in theme.css), with a strip of its
-   accent on the left. */
-.chip.theme-sample {
-  padding-left: 1em;
-  font-family: var(--font);
-  font-size: 0.85em;
-  font-weight: var(--text-weight);
-  text-wrap: balance;
-  color: var(--ink);
-  background:
-    var(--glass-pattern), linear-gradient(var(--surface), var(--surface-tint));
-  border-color: var(--accent);
-  box-shadow: inset 0.4em 0 0 var(--accent);
-}
-
 /* An arrow button: the arrow, moving, at a size that reads. */
 .chip .next-arrow {
   display: block;

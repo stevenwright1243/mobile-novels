@@ -1,7 +1,8 @@
 /* The settings controls shared by the portrait's Menus sheet and the
    picker: the Sizes panel (its sample of the reader screen, sliders, the
    Text position switch, and Save, Reset and Default) and Input Settings
-   (sizes-panel.ts, input-settings.ts). Sized in `em`s, from the text size
+   (sizes-panel.ts, input-settings.ts), and the theme buttons (the Menus
+   sheet's Themes and the picker's theme menu). Sized in `em`s, from the text size
    of the box they're in. `--picked` is the colour of the picked chip's
    ring, set by that box. */
 
@@ -33,6 +34,22 @@
 
 .chip:active {
   scale: 0.97;
+}
+
+/* A theme button, in its own theme's colours and font (it carries that
+   theme's variables: `.theme-sample` in theme.css), with a strip of its
+   accent on the left. */
+.chip.theme-sample {
+  padding-left: 1em;
+  font-family: var(--font);
+  font-size: 0.85em;
+  font-weight: var(--text-weight);
+  text-wrap: balance;
+  color: var(--ink);
+  background:
+    var(--glass-pattern), linear-gradient(var(--surface), var(--surface-tint));
+  border-color: var(--accent);
+  box-shadow: inset 0.4em 0 0 var(--accent);
 }
 
 /* Open: the sample beside the sliders, so both stay in view while they're
