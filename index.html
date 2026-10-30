@@ -47,9 +47,37 @@
         <ul id="window-list" class="side-list"></ul>
       </details>
 
-      <!-- Whether the phone is streaming, and where the portrait goes
-           (phone-status.ts). -->
+      <!-- The theme, then whether the phone is streaming and where the
+           portrait goes (phone-status.ts). -->
       <footer class="side-footer">
+        <!-- The colour scheme of both windows: opens a menu of every theme,
+           each drawn in its own colours (theme-picker.ts). `popover` is the
+           browser's own pop-up: it opens and shuts with the button, and
+           shuts on Escape or a click outside it. -->
+        <button
+          id="theme-button"
+          popovertarget="theme-menu"
+          aria-haspopup="true"
+          title="Change the theme"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.4-1.2.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10zM7.5 12.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M10 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2M15 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2"
+            />
+          </svg>
+          <span class="theme-swatch" aria-hidden="true"></span>
+          <span id="theme-name">Theme</span>
+        </button>
+        <div id="theme-menu" popover aria-labelledby="theme-menu-heading">
+          <h2 id="theme-menu-heading">Theme</h2>
+          <div
+            id="theme-chips"
+            class="chips"
+            role="radiogroup"
+            aria-labelledby="theme-menu-heading"
+          ></div>
+          <p class="sheet-note">For both windows and every game.</p>
+        </div>
         <span id="phone-status" aria-live="polite"></span>
         <div class="footer-row">
           <span>Portrait on</span>
@@ -91,34 +119,6 @@
             disabled
           />
         </label>
-        <!-- The colour scheme of both windows: opens a menu of every theme,
-             each drawn in its own colours (theme-picker.ts). `popover` is the
-             browser's own pop-up: it opens and shuts with the button, and
-             shuts on Escape or a click outside it. -->
-        <button
-          id="theme-button"
-          popovertarget="theme-menu"
-          aria-haspopup="true"
-          title="Change the theme"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.4-1.2.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10zM7.5 12.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M10 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2M15 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2"
-            />
-          </svg>
-          <span class="theme-swatch" aria-hidden="true"></span>
-          <span id="theme-name">Theme</span>
-        </button>
-        <div id="theme-menu" popover aria-labelledby="theme-menu-heading">
-          <h2 id="theme-menu-heading">Theme</h2>
-          <div
-            id="theme-chips"
-            class="chips"
-            role="radiogroup"
-            aria-labelledby="theme-menu-heading"
-          ></div>
-          <p class="sheet-note">For both windows and every game.</p>
-        </div>
         <button id="save-profile" class="primary-button" disabled>
           Save profile
         </button>

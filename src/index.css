@@ -466,13 +466,15 @@ details[open] > summary.side-heading > span::before {
   color: color-mix(in srgb, var(--ink) 70%, transparent);
 }
 
-/* The Theme button: always in view, with the theme's name beside a swatch
-   of its colours (surface, accent, deep accent). Its menu drops down from
-   it, lined up with its right edge (CSS anchor positioning: the menu is
-   placed against the element named `--theme-button`). */
+/* The Theme button, at the bottom of the sidebar, always in view: the
+   theme's name beside a swatch of its colours (surface, accent, deep
+   accent). Its menu opens upward from it, lined up with its left edge (CSS
+   anchor positioning: the menu is placed against the element named
+   `--theme-button`). */
 #theme-button {
   anchor-name: --theme-button;
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.5rem;
   padding-inline: 0.8rem 1rem;
@@ -482,6 +484,7 @@ details[open] > summary.side-heading > span::before {
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 
   svg {
+    flex: none;
     width: 1.2rem;
     height: 1.2rem;
     fill: none;
@@ -492,7 +495,15 @@ details[open] > summary.side-heading > span::before {
   }
 }
 
+#theme-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .theme-swatch {
+  flex: none;
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 50%;
@@ -507,12 +518,12 @@ details[open] > summary.side-heading > span::before {
 #theme-menu {
   position-anchor: --theme-button;
   inset: auto;
-  top: anchor(bottom);
-  right: anchor(right);
+  bottom: anchor(top);
+  left: anchor(left);
   width: min(34rem, 90vw);
   max-height: 80dvh;
   box-sizing: border-box;
-  margin: 0.5rem 0 0;
+  margin: 0 0 0.5rem;
   padding: 1rem 1.1rem;
   overflow-y: auto;
   border: 1px solid var(--line);
