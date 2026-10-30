@@ -22,6 +22,7 @@ import { steamAppIdOf } from './steam';
 import {
   DEFAULT_BACKGROUND_WIDTH,
   DEFAULT_BACKGROUND_Y,
+  DEFAULT_POINTS,
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
   deleteProfile,
@@ -139,6 +140,7 @@ let savedSnapshot = '';
 const snapshot = (current: GameProfile) =>
   JSON.stringify({
     regions: current.regions,
+    points: current.points,
     // `null` for no name, since JSON leaves out `undefined`.
     name: current.name ?? null,
     clickMethod: current.clickMethod,
@@ -272,6 +274,7 @@ const revertEdits = () => {
     };
     profile = reverted;
     broadcast('regions-changed', reverted.regions);
+    broadcast('points-changed', reverted.points);
     broadcast('game-name-changed', reverted.name ?? '');
     broadcast('click-method-changed', reverted.clickMethod);
     broadcast('text-style-changed', reverted.textStyle);
@@ -581,6 +584,7 @@ app.whenReady().then(async () => {
     // cards, the Menus sheet's Visual Novels).
     broadcast('source-selected', source.id);
     broadcast('regions-changed', profile.regions);
+    broadcast('points-changed', profile.points);
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('game-name-changed', profile.name ?? '');
     broadcast('text-style-changed', profile.textStyle);
@@ -717,24 +721,21 @@ app.whenReady().then(async () => {
   );
 
   // A tap in the portrait, as a point in the game's client area (fractions).
-  ipcMain.handle(
-    'click-game',
-    async (_event, point: { x: number; y: number }) => {
-      if (!selectedSource) {
-        return;
-      }
-      const hwnd = hwndFromSourceId(selectedSource.id);
-      // A minimized game can't be clicked: restore it first, and give it a
-      // moment to start running again so the tap isn't lost.
-      if (isMinimized(hwnd)) {
-        restoreBehind(hwnd);
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-      return profile?.clickMethod === 'mouse'
-        ? sendClick(hwnd, point)
-        : postClick(hwnd, point);
-    },
-  );
+  ipcMain.handle('click-game', async (_event, point: GamePoint) => {
+    if (!selectedSource) {
+      return;
+    }
+    const hwnd = hwndFromSourceId(selectedSource.id);
+    // A minimized game can't be clicked: restore it first, and give it a
+    // moment to start running again so the tap isn't lost.
+    if (isMinimized(hwnd)) {
+      restoreBehind(hwnd);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return profile?.clickMethod === 'mouse'
+      ? sendClick(hwnd, point)
+      : postClick(hwnd, point);
+  });
 
   // The Menus sheet's Screenshot button. All the games are Steam games for
   // now, so Steam takes it, on its screenshot key (F12, the user's) pressed
@@ -927,6 +928,17 @@ app.whenReady().then(async () => {
     }
     profile = { ...profile, regions: { ...profile.regions, [name]: region } };
     broadcast('regions-changed', profile.regions, event.sender);
+    sendSaveState();
+  });
+
+  // The quick save and quick load spots, kept and saved like the regions.
+  ipcMain.handle('get-points', () => profile?.points ?? DEFAULT_POINTS);
+  ipcMain.handle('set-point', (event, name: PointName, point: GamePoint) => {
+    if (!profile) {
+      return;
+    }
+    profile = { ...profile, points: { ...profile.points, [name]: point } };
+    broadcast('points-changed', profile.points, event.sender);
     sendSaveState();
   });
 

@@ -63,10 +63,29 @@
            top of the sheet. -->
       <div id="game-slot"></div>
       <section id="menus-sheet" class="glass" aria-label="Settings">
-        <!-- Zoom in and out on the left, a d-pad to move around the game on
-             the right, the zoom level in its middle: tap it for the whole
-             game (zoom-pad.ts). -->
-        <div id="zoom-pad" role="group" aria-label="Zoom and move around">
+        <!-- q.Save over q.Load on the left, tapping the game's own quick
+             save and quick load buttons (quick-save.ts). On the right, zoom
+             in and out beside a d-pad to move around the game, the zoom
+             level in its middle: tap it for the whole game (zoom-pad.ts). -->
+        <div
+          id="zoom-pad"
+          role="group"
+          aria-label="Quick save and load, zoom and move around"
+        >
+          <div class="quick-buttons">
+            <button class="chip" data-point="quickSave" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6" />
+              </svg>
+              q.Save
+            </button>
+            <button class="chip" data-point="quickLoad" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4M12 8v4l3 2" />
+              </svg>
+              q.Load
+            </button>
+          </div>
           <div class="zoom-buttons">
             <button id="zoom-in" class="chip" aria-label="Zoom in">
               <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -9,6 +9,10 @@
  * values, use the arrow keys in a field (Shift for steps of 10), or nudge the
  * box with the arrow keys. "Lock size" keeps the width and height fixed so
  * dragging only moves the box.
+ *
+ * The quick save and quick load spots are placed the same way, but are a
+ * point rather than a box: click (or drag) in the preview to put the spot
+ * there, type its X and Y, or nudge it with the arrow keys.
  */
 
 import { getClientArea } from './capture';
@@ -21,6 +25,10 @@ const regionButtons = document.querySelectorAll<HTMLButtonElement>(
   'button[data-region]',
 );
 const outlines = document.querySelectorAll<HTMLDivElement>('.outline');
+// One "Place ..." button and one marker per spot, matched by `data-point`.
+const pointButtons =
+  document.querySelectorAll<HTMLButtonElement>('button[data-point]');
+const markers = document.querySelectorAll<HTMLDivElement>('.marker');
 
 const editPanel = document.querySelector<HTMLDivElement>('#edit-panel')!;
 const snapCheckbox = document.querySelector<HTMLInputElement>('#snap')!;
@@ -43,9 +51,14 @@ const buttonLabels: Record<RegionName, string> = {
   page: 'Edit full-screen text',
 };
 
+const pointLabels: Record<PointName, string> = {
+  quickSave: 'Place q.Save',
+  quickLoad: 'Place q.Load',
+};
+
 // Called once a game window is picked, since there's nothing to edit before.
 export function enableRegionEditing() {
-  for (const button of regionButtons) {
+  for (const button of [...regionButtons, ...pointButtons]) {
     button.disabled = false;
   }
 }
@@ -151,6 +164,38 @@ function placeLabels() {
   }
 }
 
+// --- Showing the spots ---------------------------------------------------------
+
+// The quick save and quick load spots, kept like `regions`.
+let points: Points | null = null;
+
+// Places each marker on its spot (hidden until it's placed), its name on
+// whichever side keeps it on the picture.
+function showMarkers() {
+  if (!points) {
+    return;
+  }
+  for (const marker of markers) {
+    const point = points[marker.dataset.point as PointName];
+    marker.hidden = point === null;
+    if (point) {
+      marker.style.left = `${point.x * 100}%`;
+      marker.style.top = `${point.y * 100}%`;
+      marker.classList.toggle('label-left', point.x > 0.5);
+    }
+  }
+  showFields();
+}
+
+window.vn.onPointsChanged((newPoints) => {
+  points = newPoints;
+  showMarkers();
+});
+window.vn.getPoints().then((initialPoints) => {
+  points ??= initialPoints;
+  showMarkers();
+});
+
 window.vn.onRegionsChanged((newRegions) => {
   regions = newRegions;
   showOutlines();
@@ -224,22 +269,56 @@ function applyRegion(region: Region) {
   window.vn.setRegion(editing, rounded);
 }
 
+// Likewise for the spot being placed, kept on the picture and rounded to a
+// whole game pixel.
+function applyPoint(point: GamePoint) {
+  if (!placing || !points) {
+    return;
+  }
+  const size = gameSize();
+  const rounded = size
+    ? {
+        x:
+          clamp(Math.round(point.x * size.width), 0, size.width - 1) /
+          size.width,
+        y:
+          clamp(Math.round(point.y * size.height), 0, size.height - 1) /
+          size.height,
+      }
+    : point;
+  points = { ...points, [placing]: rounded };
+  showMarkers();
+  window.vn.setPoint(placing, rounded);
+}
+
 // --- Edit mode ---------------------------------------------------------------
 
-// Which region is being edited, or null when not in edit mode.
+// Which region is being edited, or which spot placed: at most one of the
+// two, both null when not in edit mode.
 let editing: RegionName | null = null;
+let placing: PointName | null = null;
 
-function setEditing(region: RegionName | null) {
+function setEditing(region: RegionName | null, point: PointName | null = null) {
   editing = region;
-  previewArea.classList.toggle('editing', region !== null);
+  placing = point;
+  previewArea.classList.toggle('editing', region !== null || point !== null);
   for (const outline of outlines) {
     outline.classList.toggle('editing', outline.dataset.region === region);
+  }
+  for (const marker of markers) {
+    marker.classList.toggle('editing', marker.dataset.point === point);
   }
   for (const button of regionButtons) {
     const name = button.dataset.region as RegionName;
     button.textContent = name === region ? 'Done' : buttonLabels[name];
   }
-  editPanel.hidden = region === null;
+  for (const button of pointButtons) {
+    const name = button.dataset.point as PointName;
+    button.textContent = name === point ? 'Done' : pointLabels[name];
+  }
+  editPanel.hidden = region === null && point === null;
+  // A spot has only X and Y (index.css).
+  editPanel.classList.toggle('placing', point !== null);
   showFields();
 }
 
@@ -251,11 +330,26 @@ for (const button of regionButtons) {
   });
 }
 
+for (const button of pointButtons) {
+  button.addEventListener('click', () => {
+    const name = button.dataset.point as PointName;
+    setEditing(null, placing === name ? null : name);
+  });
+}
+
 // --- Edit panel: exact numbers -----------------------------------------------
 
-// Fills in the X / Y / W / H fields from the region being edited.
+// Fills in the X / Y / W / H fields from the region being edited, or X and
+// Y from the spot being placed (empty until it's placed).
 function showFields() {
   const size = gameSize();
+  if (placing && points && size) {
+    const point = points[placing];
+    fields.x.value = point ? String(Math.round(point.x * size.width)) : '';
+    fields.y.value = point ? String(Math.round(point.y * size.height)) : '';
+    gameSizeLabel.textContent = `of ${size.width} × ${size.height} px`;
+    return;
+  }
   if (!editing || !regions || !size) {
     return;
   }
@@ -271,6 +365,19 @@ function showFields() {
 function applyFields() {
   const size = gameSize();
   if (!size) {
+    return;
+  }
+  if (placing) {
+    // Only X and Y; the spot waits until both are filled in.
+    if (
+      Number.isFinite(fields.x.valueAsNumber) &&
+      Number.isFinite(fields.y.valueAsNumber)
+    ) {
+      applyPoint({
+        x: fields.x.valueAsNumber / size.width,
+        y: fields.y.valueAsNumber / size.height,
+      });
+    }
     return;
   }
   // Empty or invalid fields keep their current value.
@@ -353,14 +460,23 @@ document.addEventListener('keydown', (event) => {
   const arrow = ARROW_KEYS[event.key];
   const size = gameSize();
   // Fields handle their own arrow keys.
-  if (!arrow || !editing || !regions || !size) {
+  if (!arrow || !size || event.target instanceof HTMLInputElement) {
     return;
   }
-  if (event.target instanceof HTMLInputElement) {
+  const step = event.shiftKey ? 10 : 1;
+  const point = placing && points?.[placing];
+  if (point) {
+    event.preventDefault();
+    applyPoint({
+      x: point.x + (arrow[0] * step) / size.width,
+      y: point.y + (arrow[1] * step) / size.height,
+    });
+    return;
+  }
+  if (!editing || !regions) {
     return;
   }
   event.preventDefault();
-  const step = event.shiftKey ? 10 : 1;
   const region = regions[editing];
   applyRegion({
     ...region,
@@ -438,9 +554,10 @@ interface Point {
 }
 
 // What the current drag is doing. Each `kind` carries what it needs; checking
-// `drag.kind` tells TypeScript which of the three shapes it is (a
-// "discriminated union").
+// `drag.kind` tells TypeScript which of the four shapes it is (a
+// "discriminated union"). 'point' places a spot wherever the pointer is.
 type Drag =
+  | { kind: 'point' }
   | { kind: 'draw'; start: Point }
   | { kind: 'move'; grab: Point; original: Region }
   | { kind: 'resize'; handle: Handle; original: Region };
@@ -473,7 +590,17 @@ function fromEdges(left: number, top: number, right: number, bottom: number) {
 previewArea.addEventListener('pointerdown', (event) => {
   // Only the main button edits; the middle one moves around when zoomed in
   // (see preview-zoom.ts).
-  if (!editing || !regions || event.button !== 0) {
+  if (event.button !== 0) {
+    return;
+  }
+  if (placing) {
+    // The spot jumps to the pointer, then follows it until let go.
+    drag = { kind: 'point' };
+    updateDrag(event);
+    previewArea.setPointerCapture(event.pointerId);
+    return;
+  }
+  if (!editing || !regions) {
     return;
   }
   const target = event.target as HTMLElement;
@@ -515,6 +642,10 @@ function updateDrag(event: PointerEvent) {
     return;
   }
   const point = pointerPosition(event);
+  if (drag.kind === 'point') {
+    applyPoint(point);
+    return;
+  }
   let region: Region;
 
   switch (drag.kind) {

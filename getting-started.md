@@ -9,7 +9,7 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 **Done:** milestones 1a–1c, 2, 3a and 3d (see the table in section 3).
 
 - The picker window lists open windows and saved **game profiles**. The portrait window draws the background and text zone live.
-- Regions are edited with handles, snapping (toggle, or hold Alt to flip it), an exact-pixel X/Y/W/H panel, a size lock and arrow-key nudging.
+- Regions are edited with handles, snapping (toggle, or hold Alt to flip it), an exact-pixel X/Y/W/H panel, a size lock and arrow-key nudging. Two **spots** (points, not boxes) mark the game's quick save and quick load buttons, tapped by q.Save and q.Load in the portrait's Menus sheet.
 - The title bar is cropped by measuring the game's client area through Win32 (koffi).
 - Taps in the portrait click the same spot in the game. There are two methods, posted messages or simulated mouse, and the test VN accepts both.
 - The portrait window is non-focusable (so the game keeps focus) but still listed in the taskbar and Alt+Tab.

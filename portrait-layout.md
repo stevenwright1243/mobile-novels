@@ -145,9 +145,11 @@ game's name box (the `name` region, per game).
   own shape, at most **55%** of the portrait's height (`#game-slot`).
   Pinch (or the mouse wheel) zooms into it, up to **4×**, and a drag moves
   around; the game stays inside the slot (`src/game-zoom.ts`).
-- At the top of the sheet, the **zoom pad** (`#zoom-pad`): zoom in over
-  zoom out on the left, a d-pad on the right with the zoom level in its
-  middle, spread across the row; square chips **2.6em** (at least 48px).
+- At the top of the sheet, the **zoom pad** (`#zoom-pad`): **q.Save** over
+  **q.Load** on the left (an icon and the name, both as wide as the wider,
+  `0.6em` side padding); on the right, zoom in over zoom out beside a d-pad
+  with the zoom level in its middle; `0.6em` between the three groups;
+  square chips **2.6em** (at least 48px).
   A zoom tap is ×√2 (1×, 1.4×, 2×, 2.8×, 4×); a move tap is half the view.
 - Below it, the **Menus sheet** (`#menus-sheet`, glass), filling the rest,
   `clamp(0.5rem, 3vw, 1rem)` from the sides, at least 3% of the height from

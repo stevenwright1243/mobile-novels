@@ -25,6 +25,13 @@ contextBridge.exposeInMainWorld('vn', {
       callback(regions),
     );
   },
+  getPoints: () => ipcRenderer.invoke('get-points'),
+  setPoint: (name, point) => ipcRenderer.invoke('set-point', name, point),
+  onPointsChanged: (callback) => {
+    ipcRenderer.on('points-changed', (_event, points: Points) =>
+      callback(points),
+    );
+  },
   clickGame: (point) => ipcRenderer.invoke('click-game', point),
   screenshotGame: () => ipcRenderer.invoke('screenshot-game'),
   getClickMethod: () => ipcRenderer.invoke('get-click-method'),

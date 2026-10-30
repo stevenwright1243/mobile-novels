@@ -20,6 +20,23 @@
       >
         Edit full-screen text
       </button>
+      <!-- Spots rather than boxes: where the game's own quick save and quick
+           load buttons are, tapped by the portrait's q.Save and q.Load
+           (region-editor.ts). -->
+      <button
+        data-point="quickSave"
+        disabled
+        title="Click the game's quick save button in the preview. The portrait's q.Save (in Menus) clicks there."
+      >
+        Place q.Save
+      </button>
+      <button
+        data-point="quickLoad"
+        disabled
+        title="Click the game's quick load button in the preview. The portrait's q.Load (in Menus) clicks there."
+      >
+        Place q.Load
+      </button>
       <!-- A short name for the game, shown in the portrait's Visual Novels
            instead of its window title (renderer.ts). -->
       <label>
@@ -239,15 +256,25 @@
       </dialog>
       <!-- Shown while editing a region (see region-editor.ts). -->
       <div id="edit-panel" role="group" aria-label="Region settings" hidden>
-        <label><input type="checkbox" id="snap" checked /> Snap to edges</label>
+        <!-- `box-only` parts are hidden while placing a spot, which has
+             only a position. -->
+        <label class="box-only">
+          <input type="checkbox" id="snap" checked /> Snap to edges
+        </label>
         <span class="coordinates">
           <label>X <input type="number" id="field-x" min="0" /></label>
           <label>Y <input type="number" id="field-y" min="0" /></label>
-          <label>W <input type="number" id="field-w" min="1" /></label>
-          <label>H <input type="number" id="field-h" min="1" /></label>
+          <label class="box-only">
+            W <input type="number" id="field-w" min="1" />
+          </label>
+          <label class="box-only">
+            H <input type="number" id="field-h" min="1" />
+          </label>
           <span id="game-size"></span>
         </span>
-        <label><input type="checkbox" id="lock-size" /> Lock size</label>
+        <label class="box-only">
+          <input type="checkbox" id="lock-size" /> Lock size
+        </label>
       </div>
     </header>
     <!-- Saved game profiles; filled in by renderer.ts. Folds like the
@@ -303,6 +330,13 @@
             <!-- Shown only while it's being edited, as it covers the rest. -->
             <div class="outline" data-region="page">
               <span>Full-screen text</span>
+            </div>
+            <!-- The quick save and quick load spots, once placed. -->
+            <div class="marker" data-point="quickSave" hidden>
+              <span>q.Save</span>
+            </div>
+            <div class="marker" data-point="quickLoad" hidden>
+              <span>q.Load</span>
             </div>
           </div>
         </div>

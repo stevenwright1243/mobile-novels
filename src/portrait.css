@@ -1277,15 +1277,14 @@ body {
   border-color: var(--accent-deep);
 }
 
-/* The zoom pad, at the sheet's top: zoom in over zoom out on the left, a
-   d-pad of square buttons on the right with the zoom level in its middle,
-   the two spread across the row. A button that would do nothing is
+/* The zoom pad, at the sheet's top: q.Save over q.Load on the left; on
+   the right, zoom in over zoom out beside a d-pad of square buttons with
+   the zoom level in its middle. A button that would do nothing is
    dimmed. */
 #zoom-pad {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  gap: 1em;
+  gap: 0.6em;
 
   .chip {
     width: 2.6em;
@@ -1313,6 +1312,32 @@ body {
 .zoom-buttons {
   display: grid;
   gap: 0.5em;
+}
+
+/* The same height as the zoom buttons beside them, both as wide as the
+   wider, each an icon and its name. `margin-inline-end: auto` pushes the
+   zoom buttons and the d-pad to the row's right. */
+.quick-buttons {
+  display: grid;
+  gap: 0.5em;
+  margin-inline-end: auto;
+}
+
+#zoom-pad .quick-buttons .chip {
+  display: flex;
+  justify-content: center;
+  gap: 0.35em;
+  width: auto;
+  padding-inline: 0.6em;
+  font-weight: 700;
+  white-space: nowrap;
+
+  svg {
+    flex-shrink: 0;
+    width: 1.2em;
+    height: 1.2em;
+    stroke-width: 2.2;
+  }
 }
 
 .move-buttons {

@@ -18,6 +18,7 @@ import './menus-sheet';
 import './visual-novels';
 import './input-settings';
 import './zoom-pad';
+import './quick-save';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';

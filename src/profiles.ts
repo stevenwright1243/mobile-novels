@@ -25,6 +25,9 @@ export const DEFAULT_REGIONS: Regions = {
   page: { x: 0.01, y: 0.02, w: 0.98, h: 0.96 },
 };
 
+// Neither quick save spot is placed until the user places it in the picker.
+export const DEFAULT_POINTS: Points = { quickSave: null, quickLoad: null };
+
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
 // title, 3 is the full profile keyed by .exe.
@@ -88,6 +91,7 @@ export async function loadProfile(
       // Settings made of several values are laid over their defaults too,
       // so a value added since the file was saved gets its default.
       regions: { ...DEFAULT_REGIONS, ...saved.regions },
+      points: { ...DEFAULT_POINTS, ...saved.points },
       textStyle: { ...DEFAULT_TEXT_STYLE, ...saved.textStyle },
     };
     // The background's zoom and position used to be saved per game; only
@@ -128,6 +132,7 @@ function newProfile(
     backgroundY: DEFAULT_BACKGROUND_Y,
     backgroundWidth: DEFAULT_BACKGROUND_WIDTH,
     regions: DEFAULT_REGIONS,
+    points: DEFAULT_POINTS,
     window: null,
     lastPlayed: new Date().toISOString(),
   };

@@ -29,6 +29,19 @@ interface Region {
 type RegionName = 'background' | 'text' | 'name' | 'page';
 type Regions = Record<RegionName, Region>;
 
+// A spot in the game, as fractions (0 to 1) of its client area, like a
+// region's corner.
+interface GamePoint {
+  x: number;
+  y: number;
+}
+
+// The spots the Menus sheet's q.Save and q.Load buttons tap for the player:
+// the game's own quick save and quick load buttons. Each is placed in the
+// picker, and is null until then.
+type PointName = 'quickSave' | 'quickLoad';
+type Points = Record<PointName, GamePoint | null>;
+
 // How a tap is delivered to the game: 'message' posts click messages to its
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
@@ -167,6 +180,7 @@ interface GameProfile {
   // "Portrait width" sliders).
   backgroundWidth: number;
   regions: Regions;
+  points: Points;
   // The game's content size in pixels when last played.
   window: Size | null;
   // When last picked, as an ISO date string.
@@ -179,7 +193,12 @@ interface GameProfile {
 // when it was last picked (milliseconds).
 type ProfileSummary = Omit<
   GameProfile,
-  'version' | 'regions' | 'textStyle' | 'backgroundY' | 'backgroundWidth'
+  | 'version'
+  | 'regions'
+  | 'points'
+  | 'textStyle'
+  | 'backgroundY'
+  | 'backgroundWidth'
 > & {
   isOpen: boolean;
   sourceId?: string;
@@ -226,8 +245,13 @@ interface Window {
     getRegions(): Promise<Regions>;
     setRegion(name: RegionName, region: Region): Promise<void>;
     onRegionsChanged(callback: (regions: Regions) => void): void;
+    // The quick save and quick load spots, part of the game's profile like
+    // its regions.
+    getPoints(): Promise<Points>;
+    setPoint(name: PointName, point: GamePoint): Promise<void>;
+    onPointsChanged(callback: (points: Points) => void): void;
     // Clicks the game at a point given as fractions of its client area.
-    clickGame(point: { x: number; y: number }): Promise<void>;
+    clickGame(point: GamePoint): Promise<void>;
     // Has Steam screenshot the game (presses its F12 key in the game).
     screenshotGame(): Promise<void>;
     getClickMethod(): Promise<ClickMethod>;
