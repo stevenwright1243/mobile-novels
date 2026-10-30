@@ -20,6 +20,7 @@ import {
   forgetGame,
   lineForRead,
   memoryTextStatus,
+  nameForRead,
   onMemoryLine,
   onMemoryTextStatus,
   setMemoryTextDebug,
@@ -1082,7 +1083,13 @@ app.whenReady().then(async () => {
   // belongs to the line on screen. A name read just after the line changed
   // belongs with that line, so it shows at once.
   ipcMain.handle('get-speaker', () => speaker);
-  ipcMain.handle('set-speaker', (_event, name: string) => {
+  ipcMain.handle('set-speaker', (_event, read: string) => {
+    // The game's own spelling of the name, when it's read from its memory
+    // (memory-text.ts); whether a name shows at all stays OCR's call.
+    const name =
+      profile?.textFromMemory && selectedSource
+        ? nameForRead(processIdOf(hwndFromSourceId(selectedSource.id)), read)
+        : read;
     nameRead = name;
     const justChanged = performance.now() - lineChangedAt < SPEAKER_CATCH_UP;
     if (name !== speaker && justChanged) {

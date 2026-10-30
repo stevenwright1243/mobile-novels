@@ -55,9 +55,10 @@ body.innerHTML = `
     </span>
   </div>
   <p class="sheet-note">
-    Reads each line from the game's memory, spelled exactly right, even when
-    OCR can't read it. It's found by matching what OCR reads in the text box
-    (it takes two lines), so menus and other text never show.
+    Reads each line and the speaker's name from the game's memory, spelled
+    exactly right, even lines OCR can't read. They're found by matching what
+    OCR reads (a line takes two lines to find, a name two speakers), so menus
+    and other text never show.
     <span id="memory-text-status"></span>
   </p>
   <div class="sheet-actions">

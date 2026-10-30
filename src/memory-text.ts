@@ -135,9 +135,11 @@ interface LineBuffer {
   copies: Copy[];
   // The mark after each line ('' if none was seen).
   end: string;
-  // The line shown, and when it changed (`performance.now()`).
+  // The line shown, and when it changed (`performance.now()`), and the line
+  // as it is in memory (for finding it in the speakers list).
   line: string;
   changedAt: number;
+  inMemory: string;
   // The writing systems seen in its lines (see `writingSystem`).
   systems: Set<string>;
   timer: ReturnType<typeof setInterval>;
@@ -155,6 +157,13 @@ interface GameMemory {
   misses: number;
   searches: number;
   searching: boolean;
+  // The speaker's name copies (see "Speakers"), and finding them.
+  names: Spot[];
+  nameCandidates: Spot[];
+  nameSearchedFor: string;
+  nameSearches: number;
+  nameMisses: number;
+  findingName: boolean;
 }
 let game: GameMemory | null = null;
 
@@ -191,6 +200,12 @@ function memoryOf(processId: number) {
       misses: 0,
       searches: 0,
       searching: false,
+      names: [],
+      nameCandidates: [],
+      nameSearchedFor: '',
+      nameSearches: 0,
+      nameMisses: 0,
+      findingName: false,
     };
     setStatus('searching');
   }
@@ -391,6 +406,7 @@ function useBuffer(memory: GameMemory, spots: Spot[], read: string) {
     end,
     line,
     changedAt: performance.now(),
+    inMemory: raw.slice(0, stop),
     systems: new Set(writingSystems(line)),
     timer: setInterval(() => checkBuffer(memory), POLL_EVERY),
   };
@@ -470,8 +486,15 @@ async function showWhole(
       log(`lines end with "${last}"`);
     }
     buffer.line = tidy(whole, buffer.end);
+    buffer.inMemory = whole;
     log(`whole line: "${buffer.line}"`);
   }
+  showLine(memory, buffer);
+}
+
+// Passes on the buffer's new line.
+function showLine(memory: GameMemory, buffer: LineBuffer) {
+  memory.misses = 0;
   lineListener(buffer.line);
 }
 
@@ -593,12 +616,154 @@ function checkBuffer(memory: GameMemory) {
   }
   buffer.line = line;
   buffer.changedAt = now;
+  buffer.inMemory = best.piece;
   memory.misses = 0;
   if (best.ended) {
     log(`new line: "${line}"`);
-    lineListener(line);
+    showLine(memory, buffer);
   } else {
     void showWhole(memory, buffer, best.piece);
+  }
+}
+
+// --- Speakers ------------------------------------------------------------------
+//
+// The game keeps the speaker's name in memory too, written over at each new
+// speaker like the line (The Colorful World: "  Kana~" in UTF-16, then
+// "  Yuuma~"). It's found the same way, guided by the name box's OCR read:
+// copies of a name OCR read, then the ones that changed to the next,
+// different name it read. But a name copy keeps the last speaker during
+// narration, so OCR still says whether a name shows (the name box reads
+// nothing during narration, which OCR gets right); memory gives its exact
+// spelling. When the two clearly disagree, OCR's read shows.
+
+// A name as it is in a copy: up to the end mark (its leftovers follow),
+// without the spaces the game pads it with.
+function nameIn(text: string, end: string) {
+  const cut = end ? text.split(end)[0] : text;
+  return cut.replace(/[^\p{L}\p{N}?!)\]]+$/u, '').trim();
+}
+
+// The longest name, in characters.
+const MAX_NAME = 32;
+
+// Every place in memory holding `name` as a whole string (spaces and an
+// end mark allowed around it), with what it holds, at most `MAX_CANDIDATES`.
+async function findNameCopies(memory: GameMemory, name: string, end: string) {
+  const copies: Spot[] = [];
+  for (const region of writableRegions(memory.process)) {
+    const bytes = await readMemoryAsync(
+      memory.process,
+      region.address,
+      region.size,
+    );
+    if (!bytes) {
+      continue;
+    }
+    for (const encoding of ['utf16le', 'utf8'] as const) {
+      const needle = Buffer.from(name, encoding);
+      for (
+        let at = bytes.indexOf(needle);
+        at !== -1 && copies.length < MAX_CANDIDATES;
+        at = bytes.indexOf(needle, at + 1)
+      ) {
+        const start = startOfText(bytes, at, encoding);
+        // Its text, up to the first control character, from the bytes at
+        // hand (reading each of many copies one by one would be slow).
+        let stop = at + needle.length;
+        const step = width(encoding);
+        while (
+          stop + step <= bytes.length &&
+          stop - start < MAX_NAME * 2 * step &&
+          (step === 2 ? bytes.readUInt16LE(stop) : bytes[stop]) >= 0x20
+        ) {
+          stop += step;
+        }
+        const found = bytes.toString(encoding, start, stop);
+        if (nameIn(found, end) === name) {
+          copies.push({ address: region.address + start, encoding, found });
+        }
+      }
+    }
+  }
+  return copies;
+}
+
+/**
+ * The name to show for a name the name box's OCR read: '' when it read
+ * none (narration), the game's own spelling when its name copy is found and
+ * agrees (`MATCH`), OCR's read otherwise. While the copy isn't found, names
+ * read also search for it, in the background.
+ */
+export function nameForRead(processId: number, read: string): string {
+  const memory = memoryOf(processId);
+  const buffer = memory?.buffer;
+  if (!memory || !buffer || letters(read).length < MIN_LETTERS) {
+    return read;
+  }
+  if (memory.names.length > 0) {
+    const names = memory.names
+      .map((spot) => textAt(memory, spot))
+      .map((text) => (text === null ? '' : nameIn(text, buffer.end)))
+      .filter((name) => name && familiar(buffer, name));
+    const name = names.find((candidate) => alike(candidate, read) >= MATCH);
+    if (name !== undefined) {
+      memory.nameMisses = 0;
+      if (name !== read) {
+        log(`name "${read}" → "${name}"`);
+      }
+      return name;
+    }
+    log(`the name box reads "${read}"; memory has "${names[0] ?? ''}"`);
+    memory.nameMisses++;
+    if (memory.nameMisses >= MAX_MISSES) {
+      log('lost the name; searching again');
+      memory.names = [];
+      memory.nameCandidates = [];
+      memory.nameSearches = 0;
+    }
+    return read;
+  }
+  void findName(memory, buffer, read);
+  return read;
+}
+
+// Finds the name copies: the candidates from the last search that changed
+// to this name, or else searches for copies of this name.
+async function findName(memory: GameMemory, buffer: LineBuffer, read: string) {
+  if (memory.findingName) {
+    return;
+  }
+  const changed = memory.nameCandidates.filter((spot) => {
+    const text = textAt(memory, spot);
+    return (
+      text !== null && text !== spot.found && nameIn(text, buffer.end) === read
+    );
+  });
+  if (changed.length > 0) {
+    memory.names = changed;
+    memory.nameCandidates = [];
+    memory.nameMisses = 0;
+    const where = changed
+      .map((spot) => `0x${spot.address.toString(16)} (${spot.encoding})`)
+      .join(', ');
+    log(`found the name at ${where}: "${read}"`);
+    return;
+  }
+  // The same name again, or out of searches.
+  if (read === memory.nameSearchedFor || memory.nameSearches >= MAX_SEARCHES) {
+    return;
+  }
+  memory.findingName = true;
+  memory.nameSearches++;
+  try {
+    memory.nameCandidates = await findNameCopies(memory, read, buffer.end);
+    memory.nameSearchedFor = read;
+    log(
+      `name search ${memory.nameSearches}: ${memory.nameCandidates.length} copies of "${read}"`,
+    );
+  } finally {
+    memory.findingName = false;
   }
 }
 
