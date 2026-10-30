@@ -61,8 +61,18 @@ bottom, and never moves it.
   bar. (Before 2026-10-29: the same as the sides.)
 - **Corners:** rounded `max(0.75rem, 3vmin)` (`.glass`, shared with the
   history log's card).
-- Look: frosted white glass (`.glass`), a sky-blue ribbon on the top edge, a
-  bobbing ▼ in the bottom-right corner.
+- Look: frosted white glass (`.glass`). The edge and the "tap to continue"
+  arrow are picked in the picker's **Style settings** (an app setting, the
+  same for every game):
+  - Border: **Halo** (default; a soft sky glow all round, slowly breathing),
+    **Turning rim** (a 5px gradient ring that turns once every 6s), or
+    **Ribbon** (the original 3px sky ribbon on the top edge).
+  - Arrow: **Chevron** (default; a rounded ⌄ that bobs), **Dots** (three dots
+    hopping in turn), or **Triangle** (the original bobbing ▼).
+  - The arrow (`#next-arrow`) is sized in `em` of the chosen text size and
+    sits `clamp(0.75rem, 3.5vw, 1.25rem)` in from the window's right edge,
+    `clamp(0.5rem, 2.5vw, 0.9rem)` up from its bottom.
+  - Set in the "Message window styles" section of `src/portrait.css`.
 
 ## Corner buttons
 

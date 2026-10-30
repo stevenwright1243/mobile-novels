@@ -15,9 +15,15 @@ export type Settings = {
   // The size of the portrait's corner buttons, as a multiple of normal (the
   // picker's "Button size" slider).
   buttonSize: number;
+  // The message window's border and arrow (the picker's Style settings).
+  messageStyle: MessageStyle;
 };
 
-const DEFAULT_SETTINGS: Settings = { portraitOnPhone: true, buttonSize: 1 };
+const DEFAULT_SETTINGS: Settings = {
+  portraitOnPhone: true,
+  buttonSize: 1,
+  messageStyle: { border: 'halo', arrow: 'chevron' },
+};
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');
 
@@ -26,7 +32,13 @@ const file = () => path.join(app.getPath('userData'), 'settings.json');
 export async function loadSettings(): Promise<Settings> {
   try {
     const saved = JSON.parse(await fs.readFile(file(), 'utf8'));
-    return { ...DEFAULT_SETTINGS, ...saved };
+    // `messageStyle` is laid over its defaults too, so parts added to it
+    // later get theirs.
+    return {
+      ...DEFAULT_SETTINGS,
+      ...saved,
+      messageStyle: { ...DEFAULT_SETTINGS.messageStyle, ...saved.messageStyle },
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

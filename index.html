@@ -88,6 +88,32 @@
         <input type="range" id="button-size" min="0.5" max="1.5" step="0.05" />
         <output id="button-size-percent" for="button-size">100%</output>
       </span>
+      <!-- The look of the portrait's message window, for every game
+           (message-style.ts). -->
+      <span
+        id="message-style"
+        role="group"
+        aria-label="Style settings"
+        title="The look of the portrait's message window, for every game. Saved straight away."
+      >
+        Style settings:
+        <label>
+          Border
+          <select id="message-border">
+            <option value="halo">Halo</option>
+            <option value="rim">Turning rim</option>
+            <option value="ribbon">Ribbon</option>
+          </select>
+        </label>
+        <label>
+          Arrow
+          <select id="message-arrow">
+            <option value="chevron">Chevron</option>
+            <option value="dots">Dots</option>
+            <option value="triangle">Triangle</option>
+          </select>
+        </label>
+      </span>
       <!-- Whether the phone is streaming (phone-status.ts). -->
       <span id="phone-status" aria-live="polite"></span>
       <!-- Whether the portrait goes on the phone's display while there is

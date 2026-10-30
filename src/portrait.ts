@@ -112,6 +112,15 @@ function setButtonSize(size: number) {
 window.vn.onButtonSizeChanged(setButtonSize);
 window.vn.getButtonSize().then(setButtonSize);
 
+// The message window's border and arrow (an app setting), set as
+// `data-border` and `data-arrow` attributes that portrait.css styles by.
+function setMessageStyle(style: MessageStyle) {
+  portrait.dataset.border = style.border;
+  portrait.dataset.arrow = style.arrow;
+}
+window.vn.onMessageStyleChanged(setMessageStyle);
+window.vn.getMessageStyle().then(setMessageStyle);
+
 // --- Keeping things in step -------------------------------------------------------
 
 // Something that affects the message window changed (text mode, text size,

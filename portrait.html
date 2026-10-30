@@ -12,6 +12,17 @@
         <canvas></canvas>
         <!-- The line read by OCR, shown in text mode (see portrait.ts). -->
         <p id="text-line" class="glass"></p>
+        <!-- The "tap to continue" arrow in the message window's corner. It
+             holds every arrow shape; portrait.css shows the one picked in
+             the picker's Style settings. Outside #text-line, because setting
+             the line's text would remove anything inside it. -->
+        <span id="next-arrow" aria-hidden="true">
+          <svg class="chevron" viewBox="0 0 24 24">
+            <path d="M5 9l7 7 7-7" />
+          </svg>
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="triangle"></span>
+        </span>
       </div>
 
       <!-- Switches between the reader layout and the whole game (portrait.ts).

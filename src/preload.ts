@@ -101,4 +101,11 @@ contextBridge.exposeInMainWorld('vn', {
       callback(size),
     );
   },
+  getMessageStyle: () => ipcRenderer.invoke('get-message-style'),
+  setMessageStyle: (style) => ipcRenderer.invoke('set-message-style', style),
+  onMessageStyleChanged: (callback) => {
+    ipcRenderer.on('message-style-changed', (_event, style: MessageStyle) =>
+      callback(style),
+    );
+  },
 } satisfies Window['vn']);

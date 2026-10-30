@@ -45,6 +45,16 @@ interface TextStyle {
   oversizedSize: number | null;
 }
 
+// The look of the portrait's message window (the picker's Style settings,
+// an app setting): the effect around its edge, and the "tap to continue"
+// arrow in its corner.
+type MessageBorder = 'halo' | 'rim' | 'ribbon';
+type NextArrow = 'chevron' | 'dots' | 'triangle';
+interface MessageStyle {
+  border: MessageBorder;
+  arrow: NextArrow;
+}
+
 // How a region sits in its portrait zone (zone-view.ts). `fill` zooms from 0
 // (the whole region fits, with space around it) to 1 (it fills the zone,
 // with its edges trimmed). `x` and `y` line it up: 0 = left / top, 0.5 =
@@ -197,5 +207,9 @@ interface Window {
     getButtonSize(): Promise<number>;
     setButtonSize(size: number): Promise<void>;
     onButtonSizeChanged(callback: (size: number) => void): void;
+    // The message window's border and arrow. Saved as an app setting.
+    getMessageStyle(): Promise<MessageStyle>;
+    setMessageStyle(style: MessageStyle): Promise<void>;
+    onMessageStyleChanged(callback: (style: MessageStyle) => void): void;
   };
 }

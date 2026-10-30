@@ -73,7 +73,8 @@ body {
 
 /* Text mode: the line read by OCR, as real text styled for phones, instead
    of the picture of the game's text box. */
-#text-line {
+#text-line,
+#next-arrow {
   display: none;
 }
 
@@ -98,10 +99,14 @@ body {
     max-height: none;
     background: none;
     --gap: clamp(0.5rem, 3vw, 1rem);
+    /* The text size chosen in the picker: the base size (100%) times the size
+       setting. Set here so the arrow (`#next-arrow`) is sized by it too. */
+    --chosen-font-size: calc(var(--base-font-size) * var(--text-size, 1));
     /* Below it, at least 5% of the portrait's height: up off the bottom
        edge, nearer the thumb and clear of the phone's gesture bar. A share
        of the height, since that's what grows on a tall phone. */
-    padding: 0 var(--gap) max(var(--gap), 5dvh);
+    --gap-bottom: max(var(--gap), 5dvh);
+    padding: 0 var(--gap) var(--gap-bottom);
   }
 
   #text-zone canvas {
@@ -114,9 +119,6 @@ body {
     position: relative;
     box-sizing: border-box;
     margin: 0;
-    /* The text size chosen in the picker: the base size (100%) times the size
-       setting. */
-    --chosen-font-size: calc(var(--base-font-size) * var(--text-size, 1));
     --line-height: 1.55;
     /* Room for 3 lines at the chosen size, so the window stays the same size
        for most lines. It's worked out from the chosen size (not the actual
@@ -142,43 +144,177 @@ body {
     cursor: pointer;
   }
 
-  /* A sky-blue ribbon along the window's top edge, fading out at the ends. */
-  #text-line::before {
-    content: '';
+  /* The "tap to continue" arrow, in the message window's bottom corner.
+     Hidden while there's no line. */
+  #next-arrow {
+    display: block;
     position: absolute;
-    top: 0;
-    left: 8%;
-    right: 8%;
-    height: 3px;
-    border-radius: 0 0 3px 3px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      var(--sky) 20%,
-      var(--sky-deep) 50%,
-      var(--sky) 80%,
-      transparent
-    );
+    z-index: 1;
+    right: calc(var(--gap) + clamp(0.75rem, 3.5vw, 1.25rem));
+    bottom: calc(var(--gap-bottom) + clamp(0.5rem, 2.5vw, 0.9rem));
+    font-size: var(--chosen-font-size);
+    /* Taps go through it to the message window. */
+    pointer-events: none;
   }
 
-  /* The "tap to continue" arrow, gently bobbing in the bottom corner. Hidden
-     while there's no line (`:empty`). */
-  #text-line::after {
-    content: '';
-    position: absolute;
-    right: clamp(0.75rem, 3.5vw, 1.25rem);
-    bottom: clamp(0.5rem, 2.5vw, 0.9rem);
-    width: 0.7em;
-    height: 0.5em;
-    /* A downward triangle, cut out of a plain box. */
-    clip-path: polygon(0 0, 100% 0, 50% 100%);
-    background: linear-gradient(var(--sky), var(--sky-deep));
-    animation: bob 1.2s ease-in-out infinite;
-  }
-
-  #text-line:empty::after {
+  #text-line:empty + #next-arrow {
     display: none;
   }
+}
+
+/* --- Message window styles ------------------------------------------------------
+   Picked in the picker's Style settings (an app setting): portrait.ts sets
+   `data-border` and `data-arrow` on .portrait. The default is the halo
+   with the chevron. */
+
+/* Border "halo": a soft sky glow all the way round, slowly breathing. */
+.portrait[data-border='halo'] #text-line {
+  box-shadow:
+    inset 0 0 0 1px rgb(108 196 245 / 45%),
+    0 0 0 2px rgb(255 255 255 / 70%),
+    0 0 1.2rem 0.3rem rgb(108 196 245 / 55%),
+    0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgb(108 196 245 / 65%),
+      0 0 0 2px rgb(255 255 255 / 90%),
+      0 0 2.4rem 0.8rem rgb(108 196 245 / 75%),
+      0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+  }
+}
+
+/* Border "rim": a thick gradient border that slowly turns around the window.
+   `@property` registers `--rim-angle` as an angle, so it can be animated
+   (plain custom properties can't be). */
+@property --rim-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.portrait[data-border='rim'] #text-line {
+  border-color: transparent;
+}
+
+/* A gradient-filled layer with its middle cut out by a mask, leaving only a
+   5px ring: the "content-box" layer is the middle, and `exclude` keeps only
+   where the two layers don't overlap. */
+.portrait[data-border='rim'] #text-line::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 5px;
+  background: conic-gradient(
+    from var(--rim-angle),
+    var(--sky-deep),
+    var(--sky),
+    #fff,
+    var(--sky),
+    var(--sky-deep)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: turn 6s linear infinite;
+}
+
+@keyframes turn {
+  to {
+    --rim-angle: 360deg;
+  }
+}
+
+/* Border "ribbon": a thin sky ribbon along the top edge, fading out at the
+   ends (the original look). */
+.portrait[data-border='ribbon'] #text-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--sky) 20%,
+    var(--sky-deep) 50%,
+    var(--sky) 80%,
+    transparent
+  );
+}
+
+/* #next-arrow holds every arrow shape; only the picked one shows. */
+#next-arrow > * {
+  display: none;
+}
+
+/* Arrow "chevron": a rounded chevron, bobbing. */
+.portrait[data-arrow='chevron'] #next-arrow .chevron {
+  display: block;
+  width: 0.85em;
+  height: 0.85em;
+  fill: none;
+  stroke: var(--sky-deep);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: bob 1.2s ease-in-out infinite;
+}
+
+/* Arrow "dots": three dots hopping in turn. */
+.portrait[data-arrow='dots'] #next-arrow .dots {
+  display: flex;
+  gap: 0.18em;
+  /* Lined up with where the chevron's point sits. */
+  margin: 0 0.1em 0.2em 0;
+}
+
+#next-arrow .dots i {
+  width: 0.22em;
+  height: 0.22em;
+  border-radius: 50%;
+  background: var(--sky-deep);
+  animation: hop 1.2s ease-in-out infinite;
+}
+
+#next-arrow .dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+#next-arrow .dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes hop {
+  0%,
+  60%,
+  100% {
+    translate: 0 0;
+    opacity: 0.4;
+  }
+  30% {
+    translate: 0 -0.2em;
+    opacity: 1;
+  }
+}
+
+/* Arrow "triangle": a sky triangle, bobbing (the original look). */
+.portrait[data-arrow='triangle'] #next-arrow .triangle {
+  display: block;
+  width: 0.7em;
+  height: 0.5em;
+  /* A downward triangle, cut out of a plain box. */
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: linear-gradient(var(--sky), var(--sky-deep));
+  animation: bob 1.2s ease-in-out infinite;
 }
 
 /* Whole-game mode: the background zone fills the portrait and shows the

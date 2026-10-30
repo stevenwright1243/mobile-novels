@@ -673,6 +673,13 @@ app.whenReady().then(async () => {
     clearTimeout(buttonSizeSaveTimer);
     buttonSizeSaveTimer = setTimeout(() => saveSettings(settings), 500);
   });
+  // The message window's border and arrow, saved straight away.
+  ipcMain.handle('get-message-style', () => settings.messageStyle);
+  ipcMain.handle('set-message-style', async (event, style: MessageStyle) => {
+    settings = { ...settings, messageStyle: style };
+    broadcast('message-style-changed', style, event.sender);
+    await saveSettings(settings);
+  });
 
   settings = await loadSettings();
   createWindows();
