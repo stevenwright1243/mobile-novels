@@ -5,6 +5,8 @@
  * line, so the history log gets it once (see `whatsNew`).
  */
 
+import { dragToScroll, updateScrollState } from './drag-scroll';
+
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
 
 // The paragraphs on the page, as last read, and where the new ones start.
@@ -93,6 +95,7 @@ function draw() {
     return paragraph;
   });
   pageText.replaceChildren(...paragraphs);
+  updateScrollState(pageText);
   const first = paragraphs[newFrom];
   if (!first) {
     return;
@@ -115,70 +118,8 @@ function draw() {
   pageText.scrollTo({ top: Math.min(bottom, newTop), behavior: 'smooth' });
 }
 
-// --- Scrolling by dragging ----------------------------------------------------
-//
-// When the page is taller than its box, it scrolls. A finger can drag it,
-// but on the phone, taps and drags may arrive as mouse input (through
-// Artemis and Apollo), and a mouse can only scroll a box with its wheel, so
-// dragging with the mouse scrolls it too. A drag isn't a tap: its click is
-// cancelled, so it doesn't move the game on.
-
-// How far (in CSS pixels) the pointer must move before it's a drag.
-const DRAG_START = 8;
-let drag: { y: number; top: number; moved: boolean } | null = null;
-let dragged = false;
-
-pageText.addEventListener('pointerdown', (event) => {
-  if (event.pointerType !== 'mouse' || event.button !== 0) {
-    return;
-  }
-  drag = { y: event.clientY, top: pageText.scrollTop, moved: false };
-  // Keeps the moves coming here even if the pointer leaves the page.
-  pageText.setPointerCapture(event.pointerId);
-});
-
-pageText.addEventListener('pointermove', (event) => {
-  if (!drag) {
-    return;
-  }
-  const moved = event.clientY - drag.y;
-  drag.moved ||= Math.abs(moved) > DRAG_START;
-  if (drag.moved) {
-    pageText.scrollTop = drag.top - moved;
-  }
-});
-
-const endDrag = () => {
-  dragged = drag?.moved ?? false;
-  drag = null;
-};
-pageText.addEventListener('pointerup', endDrag);
-pageText.addEventListener('pointercancel', endDrag);
-
-// A click that ends a drag stops here, before the page's tap handler
-// (portrait.ts) sees it. `capture` runs this first.
-pageText.addEventListener(
-  'click',
-  (event) => {
-    if (dragged) {
-      event.stopPropagation();
-      dragged = false;
-    }
-  },
-  { capture: true },
-);
-
-// The fade at the top edge, while there's text above, and no arrow while
-// scrolled back from the end (it would sit over the text; portrait.css).
-const textZone = document.querySelector<HTMLElement>('#text-zone')!;
-pageText.addEventListener('scroll', () => {
-  const { scrollTop, scrollHeight, clientHeight } = pageText;
-  pageText.classList.toggle('scrolled', scrollTop > 1);
-  textZone.classList.toggle(
-    'reading-back',
-    scrollTop < scrollHeight - clientHeight - 1,
-  );
-});
+// It scrolls by dragging too, and marks how it's scrolled (drag-scroll.ts).
+dragToScroll(pageText);
 
 // Drawn again when the page comes into view, as it can't be scrolled while
 // it's hidden.

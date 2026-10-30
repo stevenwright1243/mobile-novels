@@ -63,6 +63,28 @@ export const backgroundWidth = shared<number>(
   (width) => window.vn.setBackgroundWidth(width),
 );
 
+// The most `backgroundY` can be right now (1 = no limit): with text
+// position "top", the picture has to leave room under it for the message
+// window at 3 lines. Worked out by portrait.ts from the sizes on screen; not
+// a setting, so it isn't sent to main. A higher `backgroundY` is held at it.
+let cap = 1;
+const capListeners: ((cap: number) => void)[] = [];
+export const backgroundYCap = {
+  get: () => cap,
+  listen(callback: (cap: number) => void) {
+    capListeners.push(callback);
+    callback(cap);
+  },
+  set(newCap: number) {
+    if (newCap !== cap) {
+      cap = newCap;
+      for (const listener of capListeners) {
+        listener(cap);
+      }
+    }
+  },
+};
+
 // Where the background sits, top to bottom (the game's `backgroundY`).
 export const backgroundY = shared<number>(
   BACKGROUND_VIEW.y,

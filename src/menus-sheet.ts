@@ -13,6 +13,7 @@ import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
 import {
   backgroundWidth,
   backgroundY,
+  backgroundYCap,
   buttonSize,
   textStyle,
 } from './portrait-sizes';
@@ -118,11 +119,16 @@ linkSlider(
   (nameSize) => textStyle.set({ ...textStyle.get(), nameSize }),
   textStyle.listen,
 );
+// Portrait height stops at its cap (see `backgroundYCap`): it shows the
+// height in effect, and can't be dragged past it.
 linkSlider(
   'sheet-background-y',
-  backgroundY.get,
-  backgroundY.set,
-  backgroundY.listen,
+  () => Math.min(backgroundY.get(), backgroundYCap.get()),
+  (y) => backgroundY.set(Math.min(y, backgroundYCap.get())),
+  (callback) => {
+    backgroundY.listen(callback);
+    backgroundYCap.listen(callback);
+  },
 );
 linkSlider(
   'sheet-background-width',

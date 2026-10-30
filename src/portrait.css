@@ -206,16 +206,44 @@ body {
 
 /* Text position "top" (the game's text style): the text zone hangs just
    under the picture's bottom edge (`--picture-bottom`, from portrait.ts),
-   a small gap below it, and grows downward with the text. Never above the
-   corner buttons' row, and never so low it would run off the bottom:
-   `--zone-height` is the zone's own height, measured by portrait.ts, so it
-   stops where its bottom meets the screen's (with the usual gap). */
+   a small gap below it (never above the corner buttons' row), and grows
+   downward with the text, as far as the screen's bottom. Past that, the
+   message window scrolls: it's never shorter than its 3 lines, and
+   portrait.ts keeps the picture high enough to leave room for them (the
+   Portrait height cap). */
 .portrait[data-text-position='top'] :is(#text-zone, .text-zone) {
-  align-self: start;
-  margin-top: min(
-    max(var(--picture-bottom, 0px) + var(--gap), var(--buttons-height)),
-    100dvh - var(--zone-height, 0px)
+  --zone-top: max(
+    var(--picture-bottom, 0px) + var(--gap),
+    var(--buttons-height)
   );
+  align-self: start;
+  margin-top: var(--zone-top);
+  box-sizing: border-box;
+  max-height: calc(100dvh - var(--zone-top));
+  display: flex;
+  flex-direction: column;
+}
+
+.portrait[data-text-position='top'] :is(#name-tag, .text-zone .name-tag) {
+  flex: none;
+}
+
+/* Shrinks to the room left, down to its 3-line `min-height`, then scrolls
+   (by dragging too: drag-scroll.ts). */
+.portrait[data-text-position='top']
+  :is(#text-line, .text-zone .message-window) {
+  flex: 0 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  touch-action: pan-y;
+}
+
+/* No arrow while the window is scrolled back from the end of the line: it
+   would sit over the text. */
+:is(#text-line, .text-zone .message-window).reading-back
+  + :is(#next-arrow, .text-zone .next-arrow) {
+  display: none;
 }
 
 /* There, the name tag's room is kept while there's no name (narration),
@@ -1360,7 +1388,7 @@ body {
   }
 
   #text-zone:has(#page-text:empty) #next-arrow,
-  #text-zone.reading-back #next-arrow {
+  #text-zone:has(#page-text.reading-back) #next-arrow {
     display: none;
   }
 }

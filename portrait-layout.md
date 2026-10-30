@@ -65,11 +65,15 @@ bottom, and never moves it.
   name tag's room above the window is always kept there (invisible during
   narration), so the window's top edge never moves when a name comes or
   goes. Never
-  above the corner buttons' row, and never so low it would leave the
-  screen: it follows the picture down until its own bottom reaches the
-  usual bottom gap, then stays there (measured from its actual height, so
-  a longer line stops it a little higher). Until 2026-10-30 it stopped at
-  60% of the way down.
+  above the corner buttons' row. It grows down to the screen's usual
+  bottom gap; past that, the window scrolls (drag it, by finger or mouse;
+  the arrow hides until you're back at the end, and each new line starts
+  at its top). It's never shorter than 3 lines: with Top, **Portrait
+  height is capped** so the picture always leaves room under it for the
+  name tag and 3 lines (worked out from the screen, picture and text size,
+  so the cap moves with them; the Menus slider stops there). Bottom has no
+  cap. (Before 2026-10-30: it stopped at 60% of the way down, then at the
+  screen's bottom with no scrolling.)
 
 - **Height:** room for **3 lines** at the chosen text size, plus padding.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,

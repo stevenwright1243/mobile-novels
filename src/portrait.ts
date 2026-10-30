@@ -17,9 +17,11 @@ import './history-log';
 import './menus-sheet';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
+import { dragToScroll, updateScrollState } from './drag-scroll';
 import {
   backgroundWidth,
   backgroundY,
+  backgroundYCap,
   buttonSize,
   textStyle,
 } from './portrait-sizes';
@@ -45,11 +47,12 @@ const backgroundZone: Zone = {
   region: 'background',
   // `backgroundY`: where the background sits, top to bottom (the game's
   // own, set in the picker or the Menus sheet; portrait-sizes.ts).
-  // And `backgroundWidth`: how much of its width shows.
+  // And `backgroundWidth`: how much of its width shows. The height is held
+  // at its cap (see `updateBackgroundYCap`).
   view: () => ({
     ...BACKGROUND_VIEW,
     width: backgroundWidth.get(),
-    y: backgroundY.get(),
+    y: Math.min(backgroundY.get(), backgroundYCap.get()),
   }),
 };
 
@@ -330,6 +333,7 @@ function reportPictureBottom({ dy, dh }: { dy: number; dh: number }) {
 // the browser paints, so drawing stays in step with the display.
 function drawFrame() {
   if (regions && video.videoWidth > 0) {
+    updateBackgroundYCap(regions);
     const place = drawZone(backgroundZone, regions);
     // In Menus mode the picture is the whole game, placed elsewhere.
     if (!rawMode) {
@@ -452,6 +456,9 @@ function showTextLine(line: string) {
     return;
   }
   textLine.textContent = line;
+  // A new line starts from its beginning, if it scrolls.
+  textLine.scrollTop = 0;
+  updateScrollState(textLine);
   copyToSample();
   // Fades in while drifting up slightly, like a message window turning a
   // page.
@@ -487,23 +494,69 @@ function showSpeaker(name: string) {
 window.vn.onSpeakerChanged(showSpeaker);
 window.vn.getSpeaker().then(showSpeaker);
 
-// --- Text zone height ----------------------------------------------------------
+// --- Portrait height cap (text position "top") -------------------------------
 
-// Each text zone's height (the reader's and the Sizes sample's), passed to
-// portrait.css as `--zone-height` on the zone itself: with text position
-// "top", it stops following the picture down where it would run off the
-// screen. A ResizeObserver gives the layout size, before the sample's
-// scaling, which is what the CSS works in.
-const zoneHeights = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const zone = entry.target as HTMLElement;
-    const height = entry.borderBoxSize[0].blockSize;
-    zone.style.setProperty('--zone-height', `${Math.ceil(height)}px`);
+// With text position "top", the message window hangs under the picture and
+// scrolls when the text needs more room than is left (portrait.css), so the
+// picture can only go so low: it must leave room under it for the name tag
+// and the window at its 3 lines (its `min-height`). Worked out each frame
+// from the sizes on screen, measured on the reader's text zone, or in Menus
+// mode (where that's hidden) on the Sizes sample's, which has the same
+// layout at full size. The result is `backgroundYCap`.
+const textZone = document.querySelector<HTMLElement>('#text-zone')!;
+const sampleZone = document.querySelector<HTMLElement>(
+  '.sample-screen .text-zone',
+)!;
+const pageText = document.querySelector<HTMLElement>('#page-text')!;
+const sampleNameTag = sample.querySelector<HTMLElement>('.name-tag')!;
+
+function updateBackgroundYCap(regions: Regions) {
+  if (textStyle.get().position !== 'top') {
+    backgroundYCap.set(1);
+    return;
   }
-});
-for (const zone of document.querySelectorAll('#text-zone, .text-zone')) {
-  zoneHeights.observe(zone);
+  const zone = rawMode ? sampleZone : textZone;
+  // The box whose `min-height` is the window's 3 lines, and the name tag.
+  const lines = rawMode ? sampleLine : isPageMode() ? pageText : textLine;
+  const tag = rawMode ? sampleNameTag : nameTag;
+  if (!zone.offsetHeight) {
+    // Not laid out (Menus mode with the sample shut): keep the last cap.
+    return;
+  }
+  // The room the zone needs at 3 lines, from its parts (not the zone's own
+  // height, which is squeezed when the picture is too low): the gap above
+  // it (its side padding is the same `--gap`), its top and bottom padding,
+  // the name tag's room (less its overlap with the window) and the window.
+  const zoneStyle = getComputedStyle(zone);
+  const tagStyle = getComputedStyle(tag);
+  const room =
+    parseFloat(zoneStyle.paddingLeft) +
+    parseFloat(zoneStyle.paddingTop) +
+    parseFloat(zoneStyle.paddingBottom) +
+    tag.offsetHeight +
+    parseFloat(tagStyle.marginTop) +
+    parseFloat(tagStyle.marginBottom) +
+    parseFloat(getComputedStyle(lines).minHeight);
+  // The picture's height on screen (it doesn't depend on its position),
+  // and the height that puts its bottom at the lowest it may go.
+  const { sw, sh } = regionInVideo(video, clientArea, regions.background);
+  const { dh } = placeInZone(sw, sh, innerWidth, innerHeight, {
+    ...BACKGROUND_VIEW,
+    width: backgroundWidth.get(),
+  });
+  const lowest = innerHeight - room;
+  backgroundYCap.set(
+    dh >= innerHeight
+      ? 0
+      : Math.min(1, Math.max(0, (lowest - dh) / (innerHeight - dh))),
+  );
 }
+
+// The window scrolls by dragging (when it scrolls at all), and is marked
+// for being scrolled back (drag-scroll.ts), checked again whenever its
+// size changes.
+dragToScroll(textLine);
+new ResizeObserver(() => updateScrollState(textLine)).observe(textLine);
 
 // --- The Sizes sample ----------------------------------------------------------
 
