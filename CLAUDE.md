@@ -28,7 +28,7 @@ There's no test framework set up yet.
 
 ## Git workflow
 
-Follows the user's git workflow in `~/.claude/CLAUDE.md` (branch per change; once it passes the checks and the user says it works, commit, push, open a pull request and auto-merge with squash), set up by the `solo-git-setup` skill. Here the default branch is `master` and the checks are `npm run typecheck` and `npm run lint`: the **Check** workflow (`.github/workflows/check.yml`) runs both and is required on `master`.
+Follows the light mode of the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck` and `npm run lint`; the **Check** workflow (`.github/workflows/check.yml`) runs both again on GitHub after each push.
 
 ## Architecture
 
