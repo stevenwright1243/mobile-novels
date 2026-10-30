@@ -8,6 +8,7 @@ import { app } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DEFAULT_BUTTON_SIZE } from './default-sizes';
+import type { Alphabet } from './text-codec';
 
 export type Settings = {
   // The picker's PC / Phone switch: whether the portrait goes full screen on
@@ -20,6 +21,10 @@ export type Settings = {
   theme: ThemeName;
   // The message window's border and arrow (the picker's Style settings).
   messageStyle: MessageStyle;
+  // Each game's own text alphabet, by profile ID, for games that don't keep
+  // their text as UTF-16 or UTF-8 (learned from memory, memory-text.ts),
+  // so it's only learned once.
+  alphabets: Record<string, Alphabet>;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -27,6 +32,7 @@ const DEFAULT_SETTINGS: Settings = {
   buttonSize: DEFAULT_BUTTON_SIZE,
   theme: 'aokana',
   messageStyle: { border: 'halo', arrow: 'chevron' },
+  alphabets: {},
 };
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');

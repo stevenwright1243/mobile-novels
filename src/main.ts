@@ -20,6 +20,7 @@ import {
   forgetGame,
   isGameText,
   lineForRead,
+  onAlphabetLearned,
   memoryTextStatus,
   nameForRead,
   onMemoryCorrection,
@@ -264,9 +265,26 @@ const broadcast = (channel: string, value?: unknown, skip?: WebContents) => {
 // (memory-text.ts), or stops. Every window hears how that's going.
 setMemoryTextDebug(DEBUG);
 onMemoryTextStatus((status) => broadcast('memory-text-status-changed', status));
+// A game's own alphabet, once learned from its memory, is saved with the
+// settings straight away (not an edit to save), so it's learned once.
+onAlphabetLearned((alphabet) => {
+  if (profile) {
+    settings = {
+      ...settings,
+      alphabets: {
+        ...settings.alphabets,
+        [profile.id]: structuredClone(alphabet),
+      },
+    };
+    void persistSettings();
+  }
+});
 function readGameMemory() {
   if (profile?.textFromMemory && selectedSource) {
-    startReading(processIdOf(hwndFromSourceId(selectedSource.id)));
+    startReading(
+      processIdOf(hwndFromSourceId(selectedSource.id)),
+      settings.alphabets[profile.id] ?? null,
+    );
   } else {
     forgetGame();
   }

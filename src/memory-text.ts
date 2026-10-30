@@ -27,6 +27,13 @@
  * break ("I think I~finally"), so a space.
  */
 
+import {
+  type Alphabet,
+  AlphabetCodec,
+  type Codec,
+  UTF16,
+  UTF8,
+} from './text-codec';
 import { prefixDistances, similarity } from './text-similarity';
 import {
   closeProcess,
@@ -36,13 +43,11 @@ import {
   writableRegions,
 } from './win32';
 
-type Encoding = 'utf16le' | 'utf8';
-
-// A place in the game's memory that may hold its line, and the text it
-// held when found.
+// A place in the game's memory that may hold its line, how its text is
+// stored there (text-codec.ts), and the text it held when found.
 interface Spot {
   address: number;
-  encoding: Encoding;
+  codec: Codec;
   found: string;
 }
 
@@ -188,6 +193,17 @@ interface GameMemory {
   nameSearches: number;
   nameMisses: number;
   findingName: boolean;
+  // The game's own alphabet, once learned or loaded (see "Learning a game's
+  // own alphabet"), and learning it.
+  alphabet: AlphabetCodec | null;
+  learning: boolean;
+  learnTries: number;
+  // Whether a copy has ever been found in UTF-16 or UTF-8 (if not, a game
+  // with its own alphabet is only searched in that), and the stretches of
+  // memory copies were last found in, searched first.
+  standardFound: boolean;
+  alphabetFound: boolean;
+  hotRegions: number[];
 }
 let game: GameMemory | null = null;
 
@@ -202,9 +218,19 @@ export function forgetGame() {
   setStatus('off');
 }
 
+// The alphabet saved for the game being read, if it has one.
+let savedAlphabet: Alphabet | null = null;
+
 // Starts reading a game's memory (its status shows as searching until the
-// buffer is found). Lines also start it.
-export const startReading = (processId: number) => void memoryOf(processId);
+// buffer is found), with the alphabet saved for it, if any. Lines also
+// start it.
+export function startReading(processId: number, alphabet: Alphabet | null) {
+  savedAlphabet = alphabet;
+  if (game?.processId === processId && !game.alphabet && alphabet) {
+    game.alphabet = new AlphabetCodec(alphabet);
+  }
+  void memoryOf(processId);
+}
 
 function memoryOf(processId: number) {
   if (game?.processId !== processId) {
@@ -234,6 +260,12 @@ function memoryOf(processId: number) {
       nameSearches: 0,
       nameMisses: 0,
       findingName: false,
+      alphabet: savedAlphabet ? new AlphabetCodec(savedAlphabet) : null,
+      learning: false,
+      learnTries: 0,
+      standardFound: false,
+      alphabetFound: false,
+      hotRegions: [],
     };
     setStatus('searching');
   }
@@ -246,8 +278,19 @@ const letters = (text: string) =>
   text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 const alike = (a: string, b: string) => similarity(letters(a), letters(b));
 
-// Bytes per character for searching and reading.
-const width = (encoding: Encoding) => (encoding === 'utf16le' ? 2 : 1);
+// The ways the game's text may be stored: UTF-16, UTF-8, and its own
+// alphabet once learned (see "Learning a game's own alphabet").
+function codecsOf(memory: GameMemory) {
+  if (!memory.alphabet) {
+    return [UTF16, UTF8];
+  }
+  // Only the alphabet once it has found text this run and UTF-16 and UTF-8
+  // haven't (a saved alphabet may belong to another game with the same .exe
+  // name: "Game.exe").
+  return memory.alphabetFound && !memory.standardFound
+    ? [memory.alphabet]
+    : [UTF16, UTF8, memory.alphabet];
+}
 
 // The text at a spot, up to its first control character (a zero ends
 // strings in memory).
@@ -255,12 +298,12 @@ function textAt(memory: GameMemory, spot: Spot) {
   const bytes = readMemory(
     memory.process,
     spot.address,
-    MAX_LINE * width(spot.encoding),
+    MAX_LINE * spot.codec.width,
   );
   if (!bytes) {
     return null;
   }
-  const text = bytes.toString(spot.encoding);
+  const text = spot.codec.decode(bytes);
   let end = 0;
   while (end < text.length && text.charCodeAt(end) >= 0x20) {
     end++;
@@ -510,7 +553,7 @@ function useBuffer(memory: GameMemory, spots: Spot[], read: string) {
   memory.candidates = [];
   memory.misses = 0;
   const where = spots
-    .map((spot) => `0x${spot.address.toString(16)} (${spot.encoding})`)
+    .map((spot) => `0x${spot.address.toString(16)} (${spot.codec.name})`)
     .join(', ');
   log(`found the line at ${where}, lines end with "${end}": "${line}"`);
   setStatus('found');
@@ -754,8 +797,8 @@ export async function isGameText(
     if (needles.length === 0) {
       continue;
     }
-    const copies = await findSpots(memory, needles);
-    if (bestCopy(copies, paragraph, needles) !== null) {
+    const { exact } = await copiesOf(memory, paragraph, needles);
+    if (exact !== null) {
       log(`game text: "${paragraph}"`);
       return true;
     }
@@ -798,29 +841,32 @@ async function findNameCopies(memory: GameMemory, name: string, end: string) {
     if (!bytes) {
       continue;
     }
-    for (const encoding of ['utf16le', 'utf8'] as const) {
+    for (const codec of codecsOf(memory)) {
       await breather();
-      const needle = Buffer.from(name, encoding);
+      const needle = codec.encode(name);
+      if (!needle) {
+        continue;
+      }
       for (
         let at = bytes.indexOf(needle);
         at !== -1 && copies.length < MAX_CANDIDATES;
         at = bytes.indexOf(needle, at + 1)
       ) {
-        const start = startOfText(bytes, at, encoding);
+        const start = startOfText(bytes, at, codec);
         // Its text, up to the first control character, from the bytes at
         // hand (reading each of many copies one by one would be slow).
         let stop = at + needle.length;
-        const step = width(encoding);
+        const step = codec.width;
         while (
           stop + step <= bytes.length &&
           stop - start < MAX_NAME * 2 * step &&
-          (step === 2 ? bytes.readUInt16LE(stop) : bytes[stop]) >= 0x20
+          codec.isText(codec.codeAt(bytes, stop))
         ) {
           stop += step;
         }
-        const found = bytes.toString(encoding, start, stop);
+        const found = codec.decode(bytes, start, stop);
         if (nameIn(found, end) === name) {
-          copies.push({ address: region.address + start, encoding, found });
+          copies.push({ address: region.address + start, codec, found });
         }
       }
     }
@@ -884,7 +930,7 @@ async function findName(memory: GameMemory, buffer: LineBuffer, read: string) {
     memory.nameCandidates = [];
     memory.nameMisses = 0;
     const where = changed
-      .map((spot) => `0x${spot.address.toString(16)} (${spot.encoding})`)
+      .map((spot) => `0x${spot.address.toString(16)} (${spot.codec.name})`)
       .join(', ');
     log(`found the name at ${where}: "${read}"`);
     return;
@@ -927,10 +973,7 @@ async function search(memory: GameMemory, read: string) {
         const line = text?.slice(0, endFor(text, read)) ?? '';
         return alike(line, read) >= MATCH && holdsWhole(line, read);
       })
-      .sort(
-        (a, b) =>
-          Number(b.encoding === 'utf16le') - Number(a.encoding === 'utf16le'),
-      );
+      .sort((a, b) => Number(b.codec === UTF16) - Number(a.codec === UTF16));
     log(
       `${changed.length} of ${memory.candidates.length} copies changed; ${holding.length} hold "${read}"`,
     );
@@ -955,18 +998,39 @@ async function search(memory: GameMemory, read: string) {
   memory.searches++;
   const started = performance.now();
   try {
-    memory.candidates = await findSpots(memory, needles);
-    memory.searchedFor = read;
     // Until a buffer is followed, each line is matched with its copies
     // straight away: in engines where every line is a new string (Unity,
     // Ren'Py), none is ever rewritten for the next line.
-    const exact = bestCopy(memory.candidates, read, needles);
+    const found = await copiesOf(memory, read, needles);
+    let { exact } = found;
+    memory.candidates = found.copies;
+    memory.searchedFor = read;
+    // A line in the game's own alphabet can teach it codes it didn't know
+    // yet ("can't" before its apostrophe was known): then it's decoded again.
+    if (
+      exact !== null &&
+      memory.alphabet &&
+      refineAlphabet(memory, memory.alphabet, read)
+    ) {
+      for (const spot of memory.candidates) {
+        spot.found = textAt(memory, spot) ?? spot.found;
+      }
+      exact = bestCopy(memory.candidates, read, needles) ?? exact;
+    }
     log(
       `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms${exact === null ? '' : `: "${exact}"`}`,
     );
     if (exact === null) {
       memory.emptySearches++;
-      if (memory.emptySearches >= MAX_EMPTY_SEARCHES && !memory.buffer) {
+      // Not in UTF-16 or UTF-8: maybe in the game's own alphabet.
+      if (memory.emptySearches >= EMPTY_SEARCHES_TO_LEARN) {
+        void learnAlphabet(memory, read);
+      }
+      if (
+        memory.emptySearches >= MAX_EMPTY_SEARCHES &&
+        !memory.buffer &&
+        !memory.learning
+      ) {
         log('lines are not found in memory; leaving them to OCR');
         setStatus('not-found');
       }
@@ -1109,17 +1173,297 @@ function runsOf(read: string, minLength: number) {
   );
 }
 
+// --- Learning a game's own alphabet --------------------------------------------
+//
+// Some engines store text in their own codes rather than UTF-16 or UTF-8:
+// Steins;Gate's (MAGES) stores each character as a 2-byte number into its
+// font, "t" as 0x80b7. Fonts keep the letters in order, though, so a word
+// leaves the same pattern of steps between codes however they're numbered
+// ("towards": o is 5 before t, w 3 after it…). A "relative search", as
+// translators of old games call it, looks for that pattern in memory with
+// a long word OCR read, in 1-byte and 2-byte codes, either byte order. Where
+// it's found, the codes around it are lined up with OCR's whole line: if
+// its other lowercase letters fit too, that's the game's text, and the line
+// gives the codes of capitals, digits, spaces and punctuation (more are
+// learned from later lines, `refineAlphabet`). Saved per game, so it's
+// learned once (`onAlphabetLearned`).
+
+// Line searches with no copy found before the alphabet is looked for, and
+// times it's looked for per run of the game (each reads all memory a few
+// times over: about 10 s for Steins;Gate's 839 MB, in the background).
+const EMPTY_SEARCHES_TO_LEARN = 2;
+const MAX_LEARN_TRIES = 3;
+// The shortest word searched for, and how many of the line's lowercase
+// letters must fit for a find to count.
+const MIN_LEARN_WORD = 6;
+const MIN_FIT = 0.85;
+
+let alphabetListener: (alphabet: Alphabet) => void = () => {};
+export const onAlphabetLearned = (listener: (alphabet: Alphabet) => void) =>
+  (alphabetListener = listener);
+
+// The ways codes may be stored, most likely first.
+const LAYOUTS = [
+  { width: 2, bigEndian: true },
+  { width: 2, bigEndian: false },
+  { width: 1, bigEndian: false },
+] as const;
+
+type Layout = (typeof LAYOUTS)[number];
+
+const codeIn = (bytes: Buffer, at: number, layout: Layout) =>
+  layout.width === 1
+    ? bytes[at]
+    : layout.bigEndian
+      ? (bytes[at] << 8) | bytes[at + 1]
+      : bytes[at] | (bytes[at + 1] << 8);
+
+async function learnAlphabet(memory: GameMemory, read: string) {
+  if (
+    memory.alphabet ||
+    memory.learning ||
+    memory.learnTries >= MAX_LEARN_TRIES
+  ) {
+    return;
+  }
+  // Long lowercase words, longest first (OCR may have got one wrong).
+  const words = [
+    ...new Set(
+      read
+        .split(/\s+/)
+        .map((word) => word.replace(/^[^a-z]+|[^a-z]+$/g, ''))
+        .filter(
+          (word) => /^[a-z]+$/.test(word) && word.length >= MIN_LEARN_WORD,
+        ),
+    ),
+  ]
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 3);
+  if (words.length === 0) {
+    return;
+  }
+  memory.learning = true;
+  memory.learnTries++;
+  const started = performance.now();
+  try {
+    for (const layout of LAYOUTS) {
+      for (const word of words) {
+        const found = await relativeSearch(memory, read, word, layout);
+        if (found) {
+          memory.alphabet = new AlphabetCodec(found);
+          log(
+            `learned the game's alphabet in ${Math.round(performance.now() - started)} ms: ${found.width} bytes, ${found.bigEndian ? 'big' : 'little'}-endian, "a" = 0x${(found.lower + 0x61).toString(16)}, ${found.extra.length} other characters`,
+          );
+          alphabetListener(found);
+          memory.emptySearches = 0;
+          memory.searchedFor = '';
+          setStatus('searching');
+          void search(memory, read);
+          return;
+        }
+      }
+    }
+    log(
+      `no alphabet found for "${read}" in ${Math.round(performance.now() - started)} ms`,
+    );
+  } finally {
+    memory.learning = false;
+  }
+}
+
+// Looks through memory for the word's pattern of steps in one layout, and
+// returns the alphabet of the first find that fits the whole line.
+async function relativeSearch(
+  memory: GameMemory,
+  read: string,
+  word: string,
+  layout: Layout,
+) {
+  const steps = [...word].map((c) => c.charCodeAt(0) - word.charCodeAt(0));
+  const length = steps.length * layout.width;
+  for (const region of writableRegions(memory.process)) {
+    const bytes = await readMemoryAsync(
+      memory.process,
+      region.address,
+      region.size,
+    );
+    await breather();
+    if (!bytes || memory !== game) {
+      continue;
+    }
+    const last = bytes.length - length;
+    for (let at = 0; at <= last; at++) {
+      const first = codeIn(bytes, at, layout);
+      let fits = true;
+      for (let i = 1; i < steps.length; i++) {
+        if (codeIn(bytes, at + i * layout.width, layout) - first !== steps[i]) {
+          fits = false;
+          break;
+        }
+      }
+      // Plain text would have been found already.
+      const lower = first - word.charCodeAt(0);
+      if (!fits || lower === 0) {
+        continue;
+      }
+      const alphabet = fitLine(bytes, at, read, word, { ...layout, lower });
+      if (alphabet) {
+        return alphabet;
+      }
+    }
+  }
+  return null;
+}
+
+// Lines the codes around a find up with OCR's line; if most of its
+// lowercase letters fit (`MIN_FIT`), the alphabet, with what the line shows
+// of the other characters.
+function fitLine(
+  bytes: Buffer,
+  at: number,
+  read: string,
+  word: string,
+  { width, bigEndian, lower }: Layout & { lower: number },
+): Alphabet | null {
+  const start = at - read.indexOf(word) * width;
+  if (start < 0 || start + read.length * width > bytes.length) {
+    return null;
+  }
+  const layout = { width, bigEndian } as Layout;
+  const codes = [...read].map((_, i) =>
+    codeIn(bytes, start + i * width, layout),
+  );
+  let lowercase = 0;
+  let fitting = 0;
+  [...read].forEach((character, i) => {
+    if (character >= 'a' && character <= 'z') {
+      lowercase++;
+      if (codes[i] - lower === character.charCodeAt(0)) {
+        fitting++;
+      }
+    }
+  });
+  if (lowercase === 0 || fitting / lowercase < MIN_FIT) {
+    return null;
+  }
+  const alphabet: Alphabet = {
+    width,
+    bigEndian,
+    lower,
+    upper: null,
+    digit: null,
+    extra: [],
+  };
+  learnFromLine(new AlphabetCodec(alphabet), codes, read);
+  return alphabet;
+}
+
+// Learns the codes of the characters in a line lined up with its codes:
+// each one next to a character whose code is already known and fits (so
+// the two are in step). Passes repeat while they learn something, so
+// knowing spreads from the letters to the spaces next to them and on to a
+// lone capital ("I bypass…").
+function learnFromLine(codec: AlphabetCodec, codes: number[], read: string) {
+  const characters = [...read];
+  const fits = (i: number) =>
+    characters[i] !== undefined &&
+    codes[i] !== undefined &&
+    codec.characterOf(codes[i]) === characters[i];
+  let learned = false;
+  for (let pass = 0; pass < 4; pass++) {
+    let learnedNow = false;
+    characters.forEach((character, i) => {
+      if (codes[i] === undefined || codes[i] < 0 || fits(i)) {
+        return;
+      }
+      if (fits(i - 1) || fits(i + 1)) {
+        learnedNow = codec.learn(codes[i], character) || learnedNow;
+      }
+    });
+    learned = learned || learnedNow;
+    if (!learnedNow) {
+      break;
+    }
+  }
+  return learned;
+}
+
+// Learns characters from a later line matched in the game's alphabet whose
+// copy still has codes not known yet ("can\uFFFDt"), and saves the alphabet
+// if any were. Returns whether any were.
+function refineAlphabet(
+  memory: GameMemory,
+  codec: AlphabetCodec,
+  read: string,
+) {
+  // Words to line the copy up with the read by, longest first: any word
+  // OCR got right will do ("that" in "Who was that on the ph0ne?").
+  const words = [...new Set(read.match(/[a-z]{3,}/g) ?? [])].sort(
+    (a, b) => b.length - a.length,
+  );
+  for (const spot of memory.candidates) {
+    if (spot.codec !== codec || !spot.found.includes('\uFFFD')) {
+      continue;
+    }
+    for (const word of words) {
+      const start = spot.found.indexOf(word) - read.indexOf(word);
+      if (spot.found.indexOf(word) === -1 || start < 0) {
+        continue;
+      }
+      const bytes = readMemory(
+        memory.process,
+        spot.address + start * codec.width,
+        read.length * codec.width,
+      );
+      if (!bytes) {
+        continue;
+      }
+      const codes = [...read].map((_, i) =>
+        i * codec.width < bytes.length
+          ? codec.codeAt(bytes, i * codec.width)
+          : -1,
+      );
+      // Only lined up right if most of the read's lowercase letters fit.
+      const lowercase = [...read]
+        .map((character, i) => ({ character, code: codes[i] }))
+        .filter(({ character }) => character >= 'a' && character <= 'z');
+      const fitting = lowercase.filter(
+        ({ character, code }) => codec.characterOf(code) === character,
+      ).length;
+      if (lowercase.length === 0 || fitting / lowercase.length < MIN_FIT) {
+        continue;
+      }
+      if (learnFromLine(codec, codes, read)) {
+        log(`learned more of the alphabet from "${read}"`);
+        alphabetListener(codec.alphabet);
+        return true;
+      }
+      return false;
+    }
+  }
+  return false;
+}
+
 // Every place in the game's memory holding one of the runs, as the start of
 // the text around it.
-async function findSpots(memory: GameMemory, needles: string[]) {
+async function findSpots(
+  memory: GameMemory,
+  needles: string[],
+  // Only these stretches of memory (by address), if given.
+  only?: number[],
+) {
   const searches = needles.flatMap((needle) =>
-    (['utf16le', 'utf8'] as const).map((encoding) => ({
-      encoding,
-      bytes: Buffer.from(needle, encoding),
-    })),
+    codecsOf(memory).flatMap((codec) => {
+      const bytes = codec.encode(needle);
+      return bytes ? [{ codec, bytes }] : [];
+    }),
   );
   const spots = new Map<string, Spot>();
+  const hot = new Set<number>();
   for (const region of writableRegions(memory.process)) {
+    if (only && !only.includes(region.address)) {
+      continue;
+    }
     const bytes = await readMemoryAsync(
       memory.process,
       region.address,
@@ -1128,7 +1472,7 @@ async function findSpots(memory: GameMemory, needles: string[]) {
     if (!bytes) {
       continue;
     }
-    for (const { encoding, bytes: needle } of searches) {
+    for (const { codec, bytes: needle } of searches) {
       // Looking through a big stretch takes a while, so the main process
       // gets a turn between runs (its windows' requests wait meanwhile).
       await breather();
@@ -1137,11 +1481,20 @@ async function findSpots(memory: GameMemory, needles: string[]) {
         at !== -1 && spots.size < MAX_CANDIDATES;
         at = bytes.indexOf(needle, at + 1)
       ) {
-        const start = startOfText(bytes, at, encoding);
+        const start = startOfText(bytes, at, codec);
         const address = region.address + start;
-        spots.set(`${encoding}:${address}`, { address, encoding, found: '' });
+        spots.set(`${codec.name}:${address}`, { address, codec, found: '' });
+        hot.add(region.address);
+        if (codec === UTF16 || codec === UTF8) {
+          memory.standardFound = true;
+        } else {
+          memory.alphabetFound = true;
+        }
       }
     }
+  }
+  if (hot.size > 0) {
+    memory.hotRegions = [...hot];
   }
   // What each holds now, to tell later which ones change.
   for (const spot of spots.values()) {
@@ -1150,18 +1503,34 @@ async function findSpots(memory: GameMemory, needles: string[]) {
   return [...spots.values()];
 }
 
+// The copies of a line OCR read, and the one that matches it (`bestCopy`),
+// if any. Where lines are matched one by one (no buffer will be followed),
+// the stretches of memory copies were last found in are searched first:
+// the game keeps its lines together, so that's usually enough, and far
+// faster in a game with a lot of memory (Steins;Gate: 5 s for all of it).
+async function copiesOf(memory: GameMemory, read: string, needles: string[]) {
+  const matchingOnly = memory.noFollowing || memory.alphabet !== null;
+  if (matchingOnly && memory.hotRegions.length > 0) {
+    const copies = await findSpots(memory, needles, memory.hotRegions);
+    const exact = bestCopy(copies, read, needles);
+    if (exact !== null) {
+      return { copies, exact };
+    }
+  }
+  const copies = await findSpots(memory, needles);
+  return { copies, exact: bestCopy(copies, read, needles) };
+}
+
 // Lets the main process handle what's waiting before going on.
 const breather = () => new Promise((resolve) => setImmediate(resolve));
 
 // Where the text around `at` starts: back to just after a control character
 // (a zero, usually), at most a line's length back.
-function startOfText(bytes: Buffer, at: number, encoding: Encoding) {
-  const step = width(encoding);
+function startOfText(bytes: Buffer, at: number, codec: Codec) {
+  const step = codec.width;
   let start = at;
   for (let i = 0; i < MAX_LINE && start - step >= 0; i++) {
-    const code =
-      step === 2 ? bytes.readUInt16LE(start - step) : bytes[start - step];
-    if (code < 0x20) {
+    if (!codec.isText(codec.codeAt(bytes, start - step))) {
       break;
     }
     start -= step;
