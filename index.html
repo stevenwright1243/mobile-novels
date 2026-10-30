@@ -80,6 +80,22 @@
       </span>
       <!-- Whether the phone is streaming (phone-status.ts). -->
       <span id="phone-status" aria-live="polite"></span>
+      <!-- Whether the portrait goes on the phone's display while there is
+           one: a switch made of two radio buttons (phone-status.ts). -->
+      <span
+        id="portrait-place"
+        class="switch"
+        role="radiogroup"
+        aria-label="Show the portrait on"
+      >
+        <label
+          ><input type="radio" name="portrait-place" value="pc" /> PC</label
+        >
+        <label
+          ><input type="radio" name="portrait-place" value="phone" />
+          Phone</label
+        >
+      </span>
       <!-- Debug tools, only shown with `npm run start:debug` (ocr-test.ts). -->
       <span id="debug-tools" role="group" aria-label="Debug tools" hidden>
         <strong>Debug:</strong>

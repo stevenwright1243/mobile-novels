@@ -91,4 +91,7 @@ contextBridge.exposeInMainWorld('vn', {
       (_event, phone: PhoneDisplay | null) => callback(phone),
     );
   },
+  getPortraitOnPhone: () => ipcRenderer.invoke('get-portrait-on-phone'),
+  setPortraitOnPhone: (onPhone) =>
+    ipcRenderer.invoke('set-portrait-on-phone', onPhone),
 } satisfies Window['vn']);
