@@ -70,6 +70,11 @@ body {
        edge, nearer the thumb and clear of the phone's gesture bar. A share
        of the height, since that's what grows on a tall phone. */
     --gap-bottom: max(var(--gap), 5dvh);
+    /* The message window's side padding, and how far in from its right
+       edge the arrow sits (inside that padding). Named so the text's room
+       for the arrow (`#text-line::after`) can be worked out from them. */
+    --padding-inline: clamp(1.1rem, 5.5vw, 2rem);
+    --arrow-inset: clamp(0.75rem, 3.5vw, 1.25rem);
     padding: 0 var(--gap) var(--gap-bottom);
   }
 
@@ -87,7 +92,7 @@ body {
       3 * var(--line-height) * var(--chosen-font-size) + 2 *
         var(--padding-block)
     );
-    padding: var(--padding-block) clamp(1.1rem, 5.5vw, 2rem);
+    padding: var(--padding-block) var(--padding-inline);
     font-family: var(--font);
     font-size: var(--chosen-font-size);
     font-weight: var(--text-weight);
@@ -104,7 +109,7 @@ body {
     display: block;
     position: absolute;
     z-index: 1;
-    right: calc(var(--gap) + clamp(0.75rem, 3.5vw, 1.25rem));
+    right: calc(var(--gap) + var(--arrow-inset));
     bottom: calc(var(--gap-bottom) + clamp(0.5rem, 2.5vw, 0.9rem));
     font-size: var(--chosen-font-size);
     /* Taps go through it to the message window. */
@@ -113,6 +118,22 @@ body {
 
   #text-line:empty + #next-arrow {
     display: none;
+  }
+
+  /* Room for the arrow at the end of the last line, so the text wraps
+     around it instead of running under it; the lines above keep their full
+     width. Padding on an invisible character after the text: the word
+     joiner (U+2060) keeps it on the same line as the last word, so if the
+     two don't fit, the last word moves down with it. The arrow already
+     sits partly in the window's side padding, so only the rest (plus a
+     small gap) is reserved. `--arrow-width` is set per arrow below. */
+  #text-line:not(:empty)::after {
+    content: '\2060';
+    padding-right: max(
+      0px,
+      var(--arrow-width, 0px) + 0.2em -
+        (var(--padding-inline) - var(--arrow-inset))
+    );
   }
 
   /* The name tag: the speaker's name as a solid accent pill, overlapping
@@ -270,6 +291,10 @@ body {
 }
 
 /* Arrow "chevron": a rounded chevron, bobbing. */
+.portrait[data-arrow='chevron'] {
+  --arrow-width: 0.85em;
+}
+
 .portrait[data-arrow='chevron'] #next-arrow .chevron {
   display: block;
   width: 0.85em;
@@ -283,6 +308,10 @@ body {
 }
 
 /* Arrow "dots": three dots hopping in turn. */
+.portrait[data-arrow='dots'] {
+  --arrow-width: 1.12em;
+}
+
 .portrait[data-arrow='dots'] #next-arrow .dots {
   display: flex;
   gap: 0.18em;
@@ -321,6 +350,10 @@ body {
 
 /* Arrow "hearts": a big heart and a small one (MiSide's menu cursor), pale
    accent with a soft glow, beating gently. */
+.portrait[data-arrow='hearts'] {
+  --arrow-width: 1.3em;
+}
+
 .portrait[data-arrow='hearts'] #next-arrow .hearts {
   display: block;
   width: 1.3em;
@@ -345,6 +378,10 @@ body {
 }
 
 /* Arrow "ember": a glowing dot that pulses, in the theme's accent. */
+.portrait[data-arrow='ember'] {
+  --arrow-width: 0.62em;
+}
+
 .portrait[data-arrow='ember'] #next-arrow .ember {
   display: block;
   width: 0.42em;
@@ -370,6 +407,10 @@ body {
 /* Arrow "drop": a drop that forms, falls a little and fades, over and over.
    It falls only 0.12em below where it rests, so it never leaves the window
    (the arrow sits at least 0.5rem up from the window's bottom edge). */
+.portrait[data-arrow='drop'] {
+  --arrow-width: 0.5em;
+}
+
 .portrait[data-arrow='drop'] #next-arrow .drop {
   display: block;
   width: 0.5em;
@@ -415,6 +456,10 @@ body {
 }
 
 /* Arrow "triangle": an accent triangle, bobbing (the original look). */
+.portrait[data-arrow='triangle'] {
+  --arrow-width: 0.7em;
+}
+
 .portrait[data-arrow='triangle'] #next-arrow .triangle {
   display: block;
   width: 0.7em;
