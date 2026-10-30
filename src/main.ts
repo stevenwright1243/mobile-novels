@@ -73,7 +73,7 @@ let lineChangedAt = 0;
 // The name box and the text box are read separately, so a new speaker can be
 // confirmed a moment after their line. A speaker arriving this soon after a
 // line (in milliseconds) is taken to be that line's.
-const SPEAKER_CATCH_UP = 1000;
+const SPEAKER_CATCH_UP = 2000;
 
 // Shows a new speaker: tells the windows, and if the line was just read, it's
 // that line's speaker, so its history entry is corrected too.
@@ -680,17 +680,16 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('get-text-history', () => textHistory);
 
-  // The speaker's name, read from the name box the same way. A change of name
-  // waits for the text to change (`set-text-line` shows it then), so a name
-  // never switches under the line it belongs to. Two changes show at once:
-  // an empty name box (the name goes), and a name after an empty box (it
-  // comes back). A name read just after the line changed belongs with it,
-  // so it shows at once too.
+  // The speaker's name, read from the name box the same way. Every change,
+  // a name appearing, going or switching, shows along with the text
+  // (`set-text-line` shows the latest read then), so the name always
+  // belongs to the line on screen. A name read just after the line changed
+  // belongs with that line, so it shows at once.
   ipcMain.handle('get-speaker', () => speaker);
   ipcMain.handle('set-speaker', (_event, name: string) => {
     nameRead = name;
     const justChanged = performance.now() - lineChangedAt < SPEAKER_CATCH_UP;
-    if (name !== speaker && (name === '' || speaker === '' || justChanged)) {
+    if (name !== speaker && justChanged) {
       changeSpeaker(name);
     }
   });
