@@ -274,6 +274,8 @@ interface Window {
     onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;
+    // Brings the game in front of all other windows, focused.
+    bringGameToFront(): Promise<void>;
     // Whether the app was started in debug mode (`npm run start:debug`).
     isDebug(): Promise<boolean>;
     // Reads the text in a PNG image with OCR (ocr.ts).

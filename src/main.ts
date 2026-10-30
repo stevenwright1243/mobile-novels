@@ -43,6 +43,7 @@ import {
   restoreBehind,
   sendClick,
   sendToBack,
+  bringToFront,
   setMutes,
   showInTaskbar,
   startTimeOf,
@@ -748,6 +749,13 @@ app.whenReady().then(async () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
     await pressKey(hwnd, VK_F12);
+  });
+
+  // The Menus sheet's "Bring game to front" button.
+  ipcMain.handle('bring-game-to-front', () => {
+    if (selectedSource) {
+      bringToFront(hwndFromSourceId(selectedSource.id));
+    }
   });
 
   // The way to get the game out of sight without minimizing it.

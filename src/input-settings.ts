@@ -5,6 +5,8 @@
  * and `sendClick`), part of the game's profile, so it's an unsaved edit
  * until Save. Its Save and Reset buttons are wired with Sizes' in
  * menus-sheet.ts, which also disables the switch while no game is picked.
+ * Under them, buttons that bring the game's window to the front or send it
+ * to the back.
  */
 
 const inputDropdown =
@@ -30,6 +32,13 @@ for (const side of methodSwitch.parentElement!.querySelectorAll(
     }
   });
 }
+
+document
+  .querySelector('#game-to-front')!
+  .addEventListener('click', () => window.vn.bringGameToFront());
+document
+  .querySelector('#game-to-back')!
+  .addEventListener('click', () => window.vn.sendGameToBack());
 
 window.vn.onClickMethodChanged(showMethod);
 window.vn.getClickMethod().then(showMethod);

@@ -306,6 +306,17 @@
             <button class="chip save-button" disabled>Save</button>
             <button class="chip reset-button" disabled>Reset</button>
           </div>
+          <!-- Moves the game's window on the PC (input-settings.ts): in front
+               of everything (focused), or behind everything, as the picker's
+               "Send game to back" does. -->
+          <div class="sheet-actions" id="game-window-actions">
+            <button id="game-to-front" class="chip" disabled>
+              Bring game to front
+            </button>
+            <button id="game-to-back" class="chip" disabled>
+              Send game to back
+            </button>
+          </div>
         </details>
       </section>
 

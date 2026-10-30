@@ -197,7 +197,7 @@ const actionButtons = document.querySelectorAll<HTMLButtonElement>(
   '.save-button, .reset-button',
 );
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position, #click-method',
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position, #click-method, #game-to-front, #game-to-back',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
   for (const button of actionButtons) {

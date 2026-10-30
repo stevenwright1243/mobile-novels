@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('vn', {
     );
   },
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
+  bringGameToFront: () => ipcRenderer.invoke('bring-game-to-front'),
   isDebug: () => ipcRenderer.invoke('is-debug'),
   readText: (png) => ipcRenderer.invoke('read-text', png),
   saveOcrTest: (png, test) => ipcRenderer.invoke('save-ocr-test', png, test),

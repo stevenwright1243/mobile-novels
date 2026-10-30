@@ -187,6 +187,7 @@ const EnumDisplayDevices = user32.func(
 const MONITOR_DEFAULTTONULL = 0;
 
 const SW_SHOWNOACTIVATE = 4;
+const SW_RESTORE = 9;
 const HWND_BOTTOM = 1;
 const SWP_NOSIZE = 0x0001;
 const SWP_NOMOVE = 0x0002;
@@ -277,6 +278,15 @@ export function sendToBack(hwnd: number) {
     0,
     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
   );
+}
+
+// Un-minimizes the window if needed and brings it in front of all others,
+// focused, as if clicked in the taskbar.
+export function bringToFront(hwnd: number) {
+  if (IsIconic(hwnd)) {
+    ShowWindow(hwnd, SW_RESTORE);
+  }
+  SetForegroundWindow(hwnd);
 }
 
 // Un-minimizes the window without focusing it, then tucks it behind
