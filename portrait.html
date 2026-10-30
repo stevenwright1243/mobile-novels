@@ -16,38 +16,12 @@
         </div>
         <!-- The line read by OCR (see portrait.ts). -->
         <p id="text-line" class="message-window glass"></p>
-        <!-- The "tap to continue" arrow in the message window's corner. It
-             holds every arrow shape; portrait.css shows the one picked in
-             the picker's Style settings. Outside #text-line, because setting
-             the line's text would remove anything inside it. -->
-        <span id="next-arrow" class="next-arrow" aria-hidden="true">
-          <svg class="chevron" viewBox="0 0 24 24">
-            <path d="M5 9l7 7 7-7" />
-          </svg>
-          <span class="dots"><i></i><i></i><i></i></span>
-          <span class="triangle"></span>
-          <span class="ember"></span>
-          <span class="drop"></span>
-          <!-- A big heart and a small one, like MiSide's menu cursor. -->
-          <svg class="hearts" viewBox="0 0 32 32">
-            <path
-              transform="translate(0 2) rotate(-12 10 12) scale(0.85)"
-              d="M12 21s-7.5-4.6-9.6-9.2C.9 8.2 3.2 4.5 6.8 4.5c2.1 0 3.6 1.2 4.2 2.6.6-1.4 2.1-2.6 4.2-2.6 3.6 0 5.9 3.7 4.4 7.3C19.5 16.4 12 21 12 21z"
-            />
-            <path
-              transform="translate(16 15) rotate(12 7 7) scale(0.6)"
-              d="M12 21s-7.5-4.6-9.6-9.2C.9 8.2 3.2 4.5 6.8 4.5c2.1 0 3.6 1.2 4.2 2.6.6-1.4 2.1-2.6 4.2-2.6 3.6 0 5.9 3.7 4.4 7.3C19.5 16.4 12 21 12 21z"
-            />
-          </svg>
-          <!-- A bloody knife (SVG Repo's "knife blood"), mirrored left to
-               right so the blade points into the corner. -->
-          <svg class="knife" viewBox="0 0 24 24">
-            <path
-              transform="matrix(-1 0 0 1 24 0)"
-              d="M4.342 1.408L22.373 19.44a1.5 1.5 0 0 1-2.121 2.122l-4.596-4.597L12.12 20.5 8 16.38V19a1 1 0 0 1-2 0v-4a1 1 0 0 0-1.993-.117L4 15v1a1 1 0 0 1-2 0V7.214a7.976 7.976 0 0 1 2.168-5.627l.174-.179zm.241 3.07l-.051.11a5.993 5.993 0 0 0-.522 2.103L4 7l-.001.12a5.984 5.984 0 0 0 1.58 4.003l.177.185 6.363 6.363 2.829-2.828L4.583 4.478z"
-            />
-          </svg>
-        </span>
+        <!-- The "tap to continue" arrow in the message window's corner.
+             portrait.ts fills it with every arrow shape (arrow-shapes.ts);
+             reader.css shows the one picked in Style settings. Outside
+             #text-line, because setting the line's text would remove
+             anything inside it. -->
+        <span id="next-arrow" class="next-arrow" aria-hidden="true"></span>
         <!-- Full-screen text mode's page (page-view.ts), in place of the
              line and name. The glass doesn't scroll, so its border stays
              put; the text inside it does. -->
@@ -215,139 +189,14 @@
           aria-labelledby="border-heading"
         ></div>
         <p class="sheet-note">Changes are saved for every game.</p>
-        <!-- The sizes, folded away until opened (menus-sheet.ts). The same
-             settings as the picker's sliders, in 5% steps here, as a finger
-             can't be more exact. -->
+        <!-- The sizes, folded away until opened (sizes-panel.ts). The same
+             panel as the picker's Sizes page. -->
         <details id="sizes">
           <summary><h2>Sizes</h2></summary>
-          <div class="sizes-body">
-            <!-- A small copy of the reader screen at its real proportions,
-                 showing the sizes as they're changed: the picture at its
-                 height, the line and name, the corner buttons. Drawn by
-                 portrait.ts; it's the whole screen's layout, scaled down. -->
-            <div id="sizes-sample" aria-hidden="true" inert>
-              <div class="sample-screen">
-                <canvas></canvas>
-                <span class="corner-button glass sample-left">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M3 5h18v12H3zM8 21h8M12 17v4" />
-                  </svg>
-                  Menus
-                </span>
-                <span class="corner-button glass sample-right">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 3" />
-                  </svg>
-                  Log
-                </span>
-                <div class="text-zone">
-                  <div class="name-tag"><span class="name-text"></span></div>
-                  <p class="message-window glass"></p>
-                  <span class="next-arrow"></span>
-                </div>
-              </div>
-            </div>
-            <div class="sliders">
-              <label class="slider">
-                <span>Text size</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-text-size"
-                  min="0.6"
-                  max="2"
-                  step="0.05"
-                />
-              </label>
-              <label class="slider">
-                <span>Name size</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-name-size"
-                  min="0.5"
-                  max="2"
-                  step="0.05"
-                />
-              </label>
-              <label class="slider">
-                <span>Portrait height</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-background-y"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                />
-              </label>
-              <label class="slider">
-                <span>Portrait width</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-background-width"
-                  min="0.5"
-                  max="1"
-                  step="0.05"
-                />
-              </label>
-              <label class="slider">
-                <span>Button size</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-button-size"
-                  min="0.5"
-                  max="1.5"
-                  step="0.05"
-                />
-              </label>
-              <label class="slider">
-                <span>Text padding</span>
-                <output></output>
-                <input
-                  type="range"
-                  id="sheet-text-padding"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                />
-              </label>
-              <!-- Where the message window sits: an on/off-style switch
-                   between Bottom and Top (menus-sheet.ts). -->
-              <div class="toggle-row">
-                <span id="text-position-label">Text position</span>
-                <span class="toggle">
-                  <span class="toggle-side">Bot</span>
-                  <button
-                    id="text-position"
-                    class="toggle-switch"
-                    role="switch"
-                    aria-checked="false"
-                    aria-labelledby="text-position-label"
-                  >
-                    <span class="toggle-knob"></span>
-                  </button>
-                  <span class="toggle-side">Top</span>
-                </span>
-              </div>
-            </div>
-            <p class="sheet-note">
-              Text size, name size, portrait height and width, text padding and
-              text position are this game's; button size is for every game.
-              Changes show at once, and are kept when you save.
-            </p>
-            <!-- At the bottom of Sizes, always shown while it's open: Save
-                 keeps the changes, Reset puts back the values as last saved,
-                 Default sets the default sizes (menus-sheet.ts). Disabled (and
-                 blurred) while there's nothing for them to do. -->
-            <div id="sheet-actions" class="sheet-actions">
-              <button class="chip save-button" disabled>Save</button>
-              <button class="chip reset-button" disabled>Reset</button>
-              <button id="sheet-default" class="chip" disabled>Default</button>
-            </div>
-          </div>
+          <!-- A small copy of the reader screen beside the sliders, and
+               Save, Reset and Default under them: filled in by
+               sizes-panel.ts, shared with the picker. -->
+          <div class="sizes-body"></div>
         </details>
         <!-- The saved games (the picker's "Your games"), folded away until
              opened: tapping a running one makes it the game being played,
@@ -370,48 +219,13 @@
             <button id="close-game" class="chip" disabled>Close game</button>
           </div>
         </details>
-        <!-- How taps reach the game, folded away until opened
-             (input-settings.ts). The same setting as the picker's "Taps click
-             by", part of the game's profile, so saved with Save. -->
+        <!-- How taps reach the game, and moving its window, folded away
+             until opened (input-settings.ts). The same panel as the
+             picker's Input page. -->
         <details id="input-settings">
           <summary><h2>Input Settings</h2></summary>
-          <div class="toggle-row">
-            <span id="click-method-label">Taps click by</span>
-            <span class="toggle">
-              <span class="toggle-side">Messages</span>
-              <button
-                id="click-method"
-                class="toggle-switch"
-                role="switch"
-                aria-checked="false"
-                aria-labelledby="click-method-label"
-              >
-                <span class="toggle-knob"></span>
-              </button>
-              <span class="toggle-side">Mouse</span>
-            </span>
-          </div>
-          <p class="sheet-note">
-            Messages click without moving the mouse or taking the game to the
-            front; some games ignore them. Mouse moves the real pointer and
-            clicks, which works in more games. This is the game's own setting,
-            kept when you save.
-          </p>
-          <div class="sheet-actions">
-            <button class="chip save-button" disabled>Save</button>
-            <button class="chip reset-button" disabled>Reset</button>
-          </div>
-          <!-- Moves the game's window on the PC (input-settings.ts): in front
-               of everything (focused), or behind everything, as the picker's
-               "Send game to back" does. -->
-          <div class="sheet-actions" id="game-window-actions">
-            <button id="game-to-front" class="chip" disabled>
-              Bring game to front
-            </button>
-            <button id="game-to-back" class="chip" disabled>
-              Send game to back
-            </button>
-          </div>
+          <!-- Filled in by input-settings.ts, shared with the picker. -->
+          <div class="input-body"></div>
         </details>
       </section>
 

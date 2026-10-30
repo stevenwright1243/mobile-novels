@@ -675,11 +675,12 @@ app.whenReady().then(async () => {
     });
   });
 
-  // The Menus sheet's Visual Novels: start a game that isn't running, and
-  // pick it once its window opens. A Steam game is started through Steam,
-  // like its Play button (see steam.ts); any other from its saved .exe (in
-  // its own folder, as games expect). `detached` and `unref()` let it keep
-  // running on its own, even after this app closes.
+  // The picker's game list and the Menus sheet's Visual Novels: start a game
+  // that isn't running, and pick it once its window opens. A Steam game is
+  // started through Steam, like its Play button (see steam.ts); any other
+  // from its saved .exe (in its own folder, as games expect). `detached`
+  // and `unref()` let it keep running on its own, even after this app
+  // closes.
   ipcMain.handle('launch-game', async (_event, id: string) => {
     const saved = (await listProfiles()).find((game) => game.id === id);
     if (!saved?.exePath) {
@@ -702,8 +703,9 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  // The Menus sheet's Close button: force-closes a running game, with
-  // anything it started (`/T`), without asking it first (`/F`).
+  // The picker's close buttons and the Menus sheet's Close button:
+  // force-close a running game, with anything it started (`/T`), without
+  // asking it first (`/F`).
   ipcMain.handle('close-game', async (_event, id: string) => {
     const open = (await openWindowsByProfile()).get(id);
     if (open) {

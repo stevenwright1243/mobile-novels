@@ -1,53 +1,615 @@
 @import './theme.css';
+/* The reader screen and the Sizes and Input panels, shared with the
+   portrait, for the Sizes and Input pages. */
+@import './reader.css';
+@import './settings-panel.css';
 
-body {
-  font-family: var(--font);
-  color: var(--ink);
-  /* The theme's pale accent, fading to the surface colour. */
-  background: linear-gradient(
-    to bottom,
-    var(--accent-pale),
-    var(--surface) 40%
-  );
-  margin: 0;
-  padding: 1rem;
-  box-sizing: border-box;
-  /* `dvh` tracks the visible height, even as mobile browser bars come and go. */
-  height: 100dvh;
-  /* Page layout: header and list take what they need, the preview gets the
-     rest (`1fr` = one share of the leftover space). */
-  display: grid;
-  grid-template-areas:
-    'header'
-    'games'
-    'list'
-    'ocr'
-    'preview';
-  grid-template-rows: auto auto auto auto 1fr;
-  gap: 0.5rem;
+/* The `hidden` attribute always hides, even on elements whose `display` is
+   set below (a grid or flex box would otherwise show anyway). */
+[hidden] {
+  display: none !important;
 }
 
-/* A single row of items, so flexbox is the right tool here. It wraps onto
-   more lines when the window is too narrow. */
-header {
-  grid-area: header;
+/* The page: the sidebar on the left, the picked game's settings on the
+   right. Each scrolls on its own, so the page itself never does. */
+body {
+  margin: 0;
+  height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-areas: 'sidebar content';
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--surface-tint);
+}
+
+/* --- Controls ------------------------------------------------------------------ */
+
+/* Form controls don't inherit the page's font by default. */
+button,
+select,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Plain buttons: soft, rounded pills with an accent ring on hover. In
+   `:where()`, which counts for nothing in specificity, so the shared
+   panels' own buttons (`.chip`, `.toggle-switch`) keep their look. */
+:where(button) {
+  padding: 0.4rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+:where(button:hover:not(:disabled, [aria-disabled='true'])) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+:where(button:active:not(:disabled)) {
+  background: var(--accent-pale);
+}
+
+:where(button:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}
+
+:where(select, input[type='number'], input[type='text']) {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: calc(0.5rem * var(--corner));
+  background: var(--surface);
+}
+
+:where(input[type='text']:disabled) {
+  opacity: 0.5;
+}
+
+/* A clear ring when moving around with the keyboard (not on mouse clicks). */
+:focus-visible {
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 2px;
+}
+
+/* The main action, solid in the accent while it can be pressed. */
+.primary-button:not(:disabled),
+button.primary {
+  border-color: var(--accent-deep);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+/* Buttons that show hover with their background instead of the ring. */
+.icon-button,
+.game-row,
+.window-row,
+#tabs [role='tab'] {
+  box-shadow: none !important;
+}
+
+/* A round button with only an icon. */
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent-deep);
+}
+
+/* Icons: simple line drawings that take the text colour. */
+.icon-button svg,
+.brand svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- Sidebar ------------------------------------------------------------------- */
+
+/* Games, then windows, then the phone at the bottom: a column, so
+   flexbox. */
+#sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 0;
+  padding: 0.9rem 0.6rem 0.75rem;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--accent-pale) 45%, var(--surface));
+  border-right: 1px solid var(--line);
+  /* The status dots' cut-out ring matches this. */
+  --sidebar-colour: color-mix(in srgb, var(--accent-pale) 45%, var(--surface));
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.5rem 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent-deep);
+
+  svg {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}
+
+/* Each list's heading: small capitals, with a count. */
+.side-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0.2rem;
+  padding: 0 0.25rem 0 0.5rem;
+  min-height: 1.9rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
+.count {
+  margin-left: 0.3em;
+  padding: 0 0.45em;
+  border-radius: var(--pill);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent-deep);
+}
+
+.count:empty {
+  display: none;
+}
+
+/* The window list's heading opens and shuts it, with a chevron that turns
+   when it's open. */
+summary.side-heading {
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  > span::before {
+    content: '';
+    display: inline-block;
+    width: 0.4em;
+    height: 0.4em;
+    margin: 0 0.6em 0.15em 0;
+    border: solid currentColor;
+    border-width: 0 0.13em 0.13em 0;
+    rotate: -45deg;
+    transition: rotate 0.15s;
+  }
+}
+
+details[open] > summary.side-heading > span::before {
+  rotate: 45deg;
+}
+
+.side-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A game: its icon, name and state; the close button beside it shows on
+   hover. */
+#game-list li {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.game-row,
+.window-row {
+  display: grid;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: calc(0.6rem * var(--corner));
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.game-row {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* Over the row's own right end, so the name keeps the whole width. */
+#game-list .close-game {
+  position: absolute;
+  right: 0.3rem;
+  opacity: 0;
+}
+
+#game-list li:hover .close-game,
+#game-list .close-game:focus-visible {
+  opacity: 1;
+}
+
+.game-row:hover,
+.window-row:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.game-row[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* The game being played: highlighted, with a bar at the sidebar's edge. */
+.game-row[aria-current='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -0.6rem;
+    top: 22%;
+    bottom: 22%;
+    width: 4px;
+    border-radius: 0 4px 4px 0;
+    background: var(--accent-deep);
+  }
+}
+
+/* The game's first letter on a rounded square, with a dot at its corner
+   while it's running. Grey while it isn't. */
+.game-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: calc(0.75rem * var(--corner));
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-row[data-state='closed'] .game-icon {
+  background: color-mix(in srgb, var(--ink) 22%, var(--surface));
+}
+
+.game-row:not([data-state='closed']) .game-icon::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 0.7rem;
+  height: 0.7rem;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--sidebar-colour);
+  background: var(--accent);
+}
+
+.game-row[data-state='playing'] .game-icon::after {
+  background: var(--accent-deep);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.game-text {
+  display: grid;
+  min-width: 0;
+}
+
+.game-title,
+.game-state,
+.window-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Room on the right for the close button. */
+#game-list li:has(.close-game) .game-text {
+  padding-right: 1.6rem;
+}
+
+.game-state {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
+.game-row[data-state='playing'] .game-state {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+/* An open window: a small thumbnail and its title. */
+.window-row {
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  font-size: 0.85rem;
+
+  img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: calc(0.3rem * var(--corner));
+    background: var(--deep);
+  }
+}
+
+/* At the bottom: the phone, and where the portrait goes. */
+.side-footer {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding: 0.75rem 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* "Phone connected" / "Phone not connected" (phone-status.ts). */
+#phone-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+
+  &::before {
+    content: '';
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+
+  &.connected {
+    color: var(--accent-deep);
+    font-weight: 700;
+  }
+
+  &.connected::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+/* --- The game's settings ------------------------------------------------------- */
+
+/* The top bar, the tabs, and the page shown, which gets the rest. */
+#content {
+  grid-area: content;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The game's name on the left, its short name and Save on the right: one
+   row, so flexbox. It wraps in a narrow window. */
+#topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  gap: 0.6rem 1rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--surface);
 }
 
+.title-block {
+  flex: 1 1 12rem;
+  min-width: 0;
+
+  h1 {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.3rem;
+    color: var(--ink);
+  }
+
+  p {
+    margin: 0.1rem 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    color: color-mix(in srgb, var(--ink) 60%, transparent);
+  }
+}
+
+.name-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+/* Tabs: words, the picked one in the accent and underlined. */
+#tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  padding: 0 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+
+  [role='tab'] {
+    margin-bottom: -1px;
+    padding: 0.6rem 0.85rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+    cursor: pointer;
+  }
+
+  [role='tab']:hover {
+    color: var(--ink);
+  }
+
+  [role='tab'][aria-selected='true'] {
+    color: var(--accent-deep);
+    border-bottom-color: var(--accent-deep);
+  }
+}
+
+.page {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+/* A box of settings. `--picked` is the colour of the picked chip's ring
+   (settings-panel.css). */
+.card {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 46rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: calc(1rem * var(--corner));
+  background: var(--surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 10%, transparent);
+  --picked: var(--accent-deep);
+
+  h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--accent-deep);
+  }
+}
+
+#sizes {
+  max-width: 54rem;
+}
+
+/* A setting's name and its control, lined up in two columns. */
+.form-row {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 18rem);
+  align-items: center;
+  gap: 1rem;
+}
+
+/* --- Regions ------------------------------------------------------------------- */
+
+/* The buttons, the edit panel, and the preview, which gets the rest of the
+   height. */
+#page-regions {
+  /* Named rows, so the preview keeps the last one while the edit panel is
+     hidden. */
+  grid-template-areas:
+    'tools'
+    'edit'
+    'preview';
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
+  overflow: hidden;
+}
+
+/* One row of buttons, wrapping when narrow, so flexbox. */
+.toolbar,
 #edit-panel,
 #edit-panel .coordinates {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  gap: 0.4rem 0.75rem;
 }
 
-/* `display: flex` above would otherwise override the `hidden` attribute. */
-#edit-panel[hidden] {
-  display: none;
+.toolbar {
+  gap: 0.4rem;
+}
+
+#page-regions .toolbar {
+  grid-area: tools;
+}
+
+#edit-panel {
+  grid-area: edit;
+}
+
+/* Between the boxes and the spots. */
+.toolbar-gap {
+  width: 1px;
+  height: 1.5rem;
+  margin: 0 0.35rem;
+  background: var(--line);
+}
+
+/* Each button has a dot in its box's colour (the colours below). The one
+   being edited ("Done") is filled in the accent. */
+.toolbar button[data-region]::before,
+.toolbar button[data-point]::before {
+  content: '';
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--color);
+  box-shadow: 0 0 0 1px #000;
+}
+
+.toolbar button[aria-pressed='true'] {
+  border-color: var(--accent-deep);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
+}
+
+#edit-panel {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: calc(0.75rem * var(--corner));
+  background: var(--surface);
+  font-size: 0.9rem;
 }
 
 #edit-panel .coordinates {
@@ -64,195 +626,6 @@ header {
   opacity: 0.7;
 }
 
-h1 {
-  font-size: 1.35rem;
-  margin: 0;
-  color: var(--accent-deep);
-}
-
-/* --- Controls ------------------------------------------------------------------ */
-
-/* Form controls don't inherit the page's font by default. */
-button,
-select,
-input {
-  font: inherit;
-  color: inherit;
-}
-
-/* Soft, rounded "pill" buttons with an accent glow on hover. */
-button {
-  padding: 0.3rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: var(--pill);
-  background: linear-gradient(var(--surface), var(--accent-pale));
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-
-button:hover:not(:disabled) {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-button:active:not(:disabled) {
-  background: var(--accent-pale);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Save stands out while there's something to save. */
-#save-profile:not(:disabled) {
-  border-color: var(--accent-deep);
-  background: linear-gradient(var(--accent), var(--accent-deep));
-  color: var(--on-accent);
-}
-
-select,
-input[type='number'],
-input[type='text'] {
-  padding: 0.15rem 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  background: var(--surface);
-}
-
-/* A clear ring when moving around with the keyboard (not on mouse clicks). */
-:focus-visible {
-  outline: 2px solid var(--accent-deep);
-  outline-offset: 2px;
-}
-
-/* --- Your games (saved profiles) --- */
-
-#games {
-  grid-area: games;
-}
-
-#game-list {
-  /* The same wrapping-columns pattern as the window list. */
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 0.5rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 20dvh;
-  overflow-y: auto;
-}
-
-/* Title and badge on the first row; .exe and details below, full width. */
-.game-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.25rem 0.5rem;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* Game cards and window thumbnails: white cards rather than pill buttons. */
-.game-card,
-#window-list button {
-  border-radius: 0.75rem;
-  background: var(--surface);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 12%, transparent);
-}
-
-.game-card[aria-disabled='true'] {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.game-title,
-.game-exe,
-.game-details {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.game-exe,
-.game-details {
-  grid-column: 1 / -1;
-  font-size: 0.8rem;
-}
-
-.game-exe {
-  opacity: 0.7;
-}
-
-.badge {
-  padding: 0 0.5rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  background: var(--accent-pale);
-  color: var(--ink);
-}
-
-.badge.open {
-  background: var(--accent-deep);
-  color: var(--on-accent);
-}
-
-#windows {
-  grid-area: list;
-}
-
-/* The fold-out lines of "Your games" and "Open windows". */
-#games > summary,
-#windows > summary {
-  cursor: pointer;
-  color: var(--accent-deep);
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-}
-
-#window-list {
-  /* Fits as many 10rem+ columns as there's room for, then wraps. `rem` is
-     relative to the text size, so the grid scales with it. */
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.5rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 40dvh;
-  overflow-y: auto;
-}
-
-#window-list button {
-  display: grid;
-  /* `minmax(0, 1fr)` lets long window names get cut off with "…" instead of
-     stretching the button. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.25rem;
-  width: 100%;
-  padding: 0.25rem;
-  cursor: pointer;
-}
-
-#window-list img {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: contain;
-  background: var(--ink);
-  border-radius: 0.5rem;
-}
-
-#window-list span {
-  font-size: 0.8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* The zoom controls above the preview, which gets the rest of the height. */
 #preview-section {
   grid-area: preview;
@@ -261,7 +634,7 @@ input[type='text'] {
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
 
 /* A single row, so flexbox. */
@@ -270,10 +643,12 @@ input[type='text'] {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 0.5rem;
+  font-size: 0.9rem;
 }
 
 #zoom-controls button {
-  min-width: 2rem;
+  min-width: 2.2rem;
+  padding: 0.2rem 0.7rem;
 }
 
 #zoom-level {
@@ -283,8 +658,46 @@ input[type='text'] {
 
 #zoom-controls .hint {
   font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+/* Before a game is picked. */
+#preview-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--on-accent);
   opacity: 0.7;
 }
+
+/* Each region's colour, for its outline and its button's dot. */
+:is(.outline, button)[data-region='background'] {
+  --color: #f90;
+}
+
+:is(.outline, button)[data-region='text'] {
+  --color: #4af;
+}
+
+:is(.outline, button)[data-region='name'] {
+  --color: #6d6;
+}
+
+:is(.outline, button)[data-region='page'] {
+  --color: #c6f;
+}
+
+:is(.marker, button)[data-point='quickSave'] {
+  --color: #f6a;
+}
+
+:is(.marker, button)[data-point='quickLoad'] {
+  --color: #3dd;
+}
+
+/* --- The preview and the region boxes ---------------------------------------- */
 
 #preview-area {
   position: relative;
@@ -432,25 +845,8 @@ input[type='text'] {
   cursor: ew-resize;
 }
 
-/* Each region gets its own color through the `--color` custom property. */
-.outline[data-region='background'] {
-  --color: #f90;
-}
-
-.outline[data-region='text'] {
-  --color: #4af;
-}
-
-.outline[data-region='name'] {
-  --color: #6d6;
-}
-
 /* The full-screen text area covers nearly the whole game, so it's only
    shown while it's being edited. */
-.outline[data-region='page'] {
-  --color: #c6f;
-}
-
 .outline[data-region='page']:not(.editing) {
   display: none;
 }
@@ -530,14 +926,6 @@ input[type='text'] {
   right: calc(100% + 3px);
 }
 
-.marker[data-point='quickSave'] {
-  --color: #f6a;
-}
-
-.marker[data-point='quickLoad'] {
-  --color: #3dd;
-}
-
 /* Placing a spot: only its X and Y (see index.html). */
 #edit-panel.placing .box-only {
   display: none;
@@ -561,30 +949,7 @@ input[type='text'] {
   background: #fd5;
 }
 
-/* A slider with its percent box (the text size settings). */
-.slider-field input[type='range'] {
-  width: 7rem;
-  vertical-align: middle;
-}
-
-/* `ch` is the width of one character: room for "100.0". */
-/* Debug tools: a dashed outline marks them as not part of normal use. A
-   single row, so flexbox. */
-#debug-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.75rem;
-  padding: 0.2rem 0.3rem 0.2rem 0.75rem;
-  border: 1px dashed var(--line);
-  border-radius: var(--pill);
-  font-size: 0.9rem;
-}
-
-/* `display: flex` above would otherwise override the `hidden` attribute. */
-#debug-tools[hidden] {
-  display: none;
-}
+/* --- Debug -------------------------------------------------------------------- */
 
 /* "Save as OCR test" (ocr-test.ts): a native modal dialog. */
 #ocr-test-dialog {
@@ -650,22 +1015,6 @@ button.primary {
   color: var(--on-accent);
 }
 
-/* "On phone" / "Phone not connected" (phone-status.ts). */
-#phone-status {
-  padding: 0.1rem 0.6rem;
-  border-radius: var(--pill);
-  border: 1px solid var(--line);
-  font-size: 0.85rem;
-  color: var(--ink);
-  opacity: 0.6;
-
-  &.connected {
-    background: var(--accent-pale);
-    color: var(--accent-deep);
-    opacity: 1;
-  }
-}
-
 /* A choice of two or more drawn as one pill, the chosen part filled in the
    accent colour (the portrait's PC / Phone switch). Underneath it's radio buttons, so
    arrow keys and screen readers work; the round dots are hidden. A single
@@ -707,15 +1056,9 @@ button.primary {
   }
 }
 
-.slider-field input[type='number'] {
-  width: 7ch;
-  margin-left: 0.25rem;
-}
-
 /* OCR test: the image that was read beside what came back. Stacks on
    narrow windows (`auto-fit` makes as many columns as fit). */
 #ocr-test {
-  grid-area: ocr;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: 0.5rem 1rem;

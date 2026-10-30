@@ -4,10 +4,14 @@ The sizes and positions of everything in the portrait view (what the phone
 sees), in one place. Read this before tuning the layout, especially the text
 box, which is meant to be adjusted against the background defaults below.
 
-Percentages are what the picker's sliders and boxes show. "vw" is a percent of
-the portrait's width, so sizes follow the screen; "vmin" is a percent of its
-shorter side (the width, in portrait); `clamp(min, preferred, max)` keeps them
-within limits.
+Percentages are what the Sizes sliders show (the picker's Sizes page and the
+Menus sheet's Sizes, one shared panel). "vw" is a percent of the portrait's
+width, so sizes follow the screen; "vmin" is a percent of its shorter side
+(the width, in portrait); `clamp(min, preferred, max)` keeps them within
+limits. In `src/reader.css` they're written as container units (`cqw`,
+`cqh`, `cqmin`: shares of the `.portrait`), which in the portrait are the
+same as `vw`, `dvh`, `vmin`, and let the picker's Sizes sample lay out a
+copy of the screen at the portrait's size.
 
 A cap in `rem`/px doesn't mean the same size everywhere: the phone's display
 (from Apollo) has the phone's full pixel count at 100% scaling, so it's about
@@ -27,16 +31,16 @@ bottom, and never moves it.
 
 - Left ↔ Right is **fixed in code** (centered): `BACKGROUND_VIEW` in
   `src/zone-view.ts`.
-- Portrait width is the **Portrait width** slider (picker: 50–100% in 1%
-  steps with a percent field; Menus sheet: 5% steps), saved per game
+- Portrait width is the **Portrait width** slider (Sizes, 50–100% in 5%
+  steps), saved per game
   (`backgroundWidth`). `BACKGROUND_VIEW.width` (75%) is the default.
   Measured as a share of the width, so a given % looks the same in every
   game. (Until 2026-10-30 the zoom was fixed for every game, 20% of the way
   from "show all" to "fill", which showed 74% of Aokana's width, 77% of You
   and Me and Her's and 79% of Katawa Shoujo's.)
-- Top ↔ Bottom is the picker's **Portrait height** slider (0–100%), saved
-  per game in its profile (`backgroundY`; slider in
-  `src/background-view.ts`). `BACKGROUND_VIEW.y` (20%) is the default for a
+- Top ↔ Bottom is the **Portrait height** slider (Sizes, 0–100%), saved
+  per game in its profile (`backgroundY`; the picker's "Portrait view" box
+  in `src/background-view.ts`). `BACKGROUND_VIEW.y` (20%) is the default for a
   game that hasn't set one. Older profiles' saved `backgroundView` (all three
   values) is ignored.
 - Space around a zoomed-out picture shows a blurred copy of it, washed with
@@ -52,7 +56,7 @@ bottom, and never moves it.
 | Name size | 100%    | 50–200% | Multiplies the name tag's size (both modes). Relative to the text size, so it grows and shrinks with it |
 
 - **Base size (100%):** `clamp(1.6875rem, 7.5vw, 3rem)` = `--base-font-size` at
-  the top of `portrait.css`. Raised by half from the original
+  the top of `reader.css`. Raised by half from the original
   `clamp(1.125rem, 5vw, 2rem)`, so 100% now equals the old 150%.
 - Font: Nunito, weight 600, line height 1.55.
 
@@ -116,11 +120,11 @@ bottom, and never moves it.
   - The arrow (`#next-arrow`) is sized in `em` of the chosen text size and
     sits `clamp(0.75rem, 3.5vw, 1.25rem)` in from the window's right edge,
     `clamp(0.5rem, 2.5vw, 0.9rem)` up from its bottom.
-  - Set in the "Message window styles" section of `src/portrait.css`.
+  - Set in the "Message window styles" section of `src/reader.css`.
 
 ## Name tag
 
-The speaker's name (`#name-tag` in `src/portrait.css`), read by OCR from the
+The speaker's name (`#name-tag` in `src/reader.css`), read by OCR from the
 game's name box (the `name` region, per game).
 
 - **Text mode:** a solid accent pill (`--accent` → `--accent-deep`, text in
@@ -164,7 +168,9 @@ game's name box (the `name` region, per game).
   `--accent-deep`.
 - At the sheet's top: **Full-screen text**, Off / On buttons
   (`max(6rem, 25vmin)` wide), with a one-line note above them.
-- At the bottom, **Sizes**, a drop-down (closed at first; its heading is a
+- At the bottom, **Sizes** (the same panel as the picker's Sizes page,
+  `src/sizes-panel.ts` and `src/sizes-sample.ts`, styled in
+  `src/settings-panel.css`), a drop-down (closed at first; its heading is a
   48px-tall button with a turning chevron; opening it scrolls the sheet to
   it): Text size (60–200%), Name size
   (50–200%), Portrait height (0–100%), Portrait width (50–100%) and Button
@@ -225,13 +231,13 @@ game's name box (the `name` region, per game).
   tall, `max(0.75rem, 4.5vmin)` from the top and sides (set in a little
   further than the message window), text
   `clamp(1.05rem, 4.75vmin × Button size, 7vmin)`, padding `0.5em 1.15em`.
-  Set in `.corner-button` in `src/portrait.css`. Sized only by the screen
+  Set in `.corner-button` in `src/reader.css`. Sized only by the screen
   (no `rem` cap), so they look the same on the PC and the phone; the 7vmin
   ceiling (about 150%) keeps both fitting side by side.
-- **Button size** (picker slider, 50–150%, default 100%): an app setting,
+- **Button size** (Sizes slider, 50–150%, default 100%): an app setting,
   the same for every game, saved with the Save button like the game's
-  settings (`buttonSize` in `settings.json`, `src/settings.ts`; slider in
-  `src/button-size.ts`; before 2026-10-30 it saved straight away).
+  settings (`buttonSize` in `settings.json`, `src/settings.ts`; before
+  2026-10-30 it saved straight away).
   (Before 2026-10-29: 44px, `clamp(0.5rem, 3vw, 1rem)` from the edges,
   `clamp(0.95rem, 4vw, 1.2rem)`; then `clamp(0.75rem, 4.5vw, 2rem)` and
   `clamp(1.05rem, 4.75vw, 1.75rem)`, whose `rem` cap left them small on the
@@ -270,13 +276,13 @@ old background settings are no longer used.)
 
 ## Where to change things
 
-| What                               | Where                                             |
-| ---------------------------------- | ------------------------------------------------- |
-| Background zoom and position       | `BACKGROUND_VIEW` in `src/zone-view.ts`           |
-| Portrait height (per game)         | Portrait height slider in the picker              |
-| Base text size                     | `--base-font-size` in `src/portrait.css`          |
-| Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
-| Name tag size and position         | `#name-tag` in `src/portrait.css`                 |
-| Corner button size and gaps        | `.corner-button` in `src/portrait.css`            |
-| Slider ranges                      | `min` / `max` on the inputs in `index.html`       |
-| Colours, fonts and shapes (themes) | `src/theme.css`                                   |
+| What                               | Where                                           |
+| ---------------------------------- | ----------------------------------------------- |
+| Background zoom and position       | `BACKGROUND_VIEW` in `src/zone-view.ts`         |
+| Portrait height (per game)         | Portrait height slider in Sizes                 |
+| Base text size                     | `--base-font-size` in `src/reader.css`          |
+| Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/reader.css` |
+| Name tag size and position         | `#name-tag` in `src/reader.css`                 |
+| Corner button size and gaps        | `.corner-button` in `src/reader.css`            |
+| Slider ranges                      | `slider(…)` calls in `src/sizes-panel.ts`       |
+| Colours, fonts and shapes (themes) | `src/theme.css`                                 |

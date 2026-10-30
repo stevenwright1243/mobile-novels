@@ -1,39 +1,45 @@
 /**
  * Runs in the page (the "renderer" process). No Node or Electron APIs here;
  * anything from main has to come through `window.vn` (see preload.ts).
+ *
+ * The picker: a sidebar of saved games and open windows, and the picked
+ * game's settings on the right, a page at a time (Regions, Sizes, Look,
+ * Input, and Debug in debug mode).
  */
 
 // The colour scheme and its fonts (theme.ts).
 import './theme';
 import './index.css';
 import { playCapture, stopCapture } from './capture';
-// The "Portrait view" box in the preview, and the "Portrait height" slider.
-import { enableBackgroundY } from './background-view';
-import './button-size';
+// The "Portrait view" box in the preview.
+import './background-view';
+import './input-settings';
 import './message-style';
 import { enableOcrTest } from './ocr-test';
 import './phone-status';
+import { refreshSizesPage } from './picker-sizes';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
-import { enableTextStyle } from './text-style';
 
 // The `!` tells TypeScript "this element definitely exists", since
 // querySelector would otherwise be typed as possibly null.
 const refreshButton = document.querySelector<HTMLButtonElement>('#refresh')!;
 const windowsSection = document.querySelector<HTMLDetailsElement>('#windows')!;
-const windowsSummary = windowsSection.querySelector('summary')!;
+const windowsCount = windowsSection.querySelector('.count')!;
 const windowList = document.querySelector<HTMLUListElement>('#window-list')!;
-const gamesSection = document.querySelector<HTMLDetailsElement>('#games')!;
-const gamesSummary = gamesSection.querySelector('summary')!;
+const gamesSection = document.querySelector<HTMLElement>('#games')!;
+const gamesCount = gamesSection.querySelector('.count')!;
 const gameList = document.querySelector<HTMLUListElement>('#game-list')!;
 const preview = document.querySelector<HTMLVideoElement>('#preview')!;
-const sendToBackButton =
-  document.querySelector<HTMLButtonElement>('#send-to-back')!;
-const clickMethodSelect =
-  document.querySelector<HTMLSelectElement>('#click-method')!;
+const previewEmpty = document.querySelector<HTMLElement>('#preview-empty')!;
+const gameHeading = document.querySelector<HTMLElement>('#game-heading')!;
+const gameSubtitle = document.querySelector<HTMLElement>('#game-subtitle')!;
 const gameNameInput = document.querySelector<HTMLInputElement>('#game-name')!;
 
-// Picks a window as the game: from its thumbnail, or from its profile card.
+// The picked game's window, or null.
+let selectedId: string | null = null;
+
+// Picks a window as the game: from its thumbnail, or from its game row.
 // Main may ask about unsaved edits first; if the pick goes ahead, it sends
 // `source-selected`, which shows it (below).
 function pickWindow(source: GameWindow) {
@@ -42,29 +48,31 @@ function pickWindow(source: GameWindow) {
 
 // Shows the picked game: picked here, or from the portrait's Menus sheet.
 function showPicked(sourceId: string) {
+  selectedId = sourceId;
   playCapture(preview, sourceId);
+  previewEmpty.hidden = true;
   enableRegionEditing();
   enableOcrTest(preview);
-  enableTextStyle();
-  enableBackgroundY();
   // Fold the window list away; its summary line still opens it again.
   windowsSection.open = false;
-  sendToBackButton.disabled = false;
-  clickMethodSelect.disabled = false;
   gameNameInput.disabled = false;
+  refresh();
 }
 
 async function showWindowList() {
   const sources = await window.vn.listWindows();
-  windowsSummary.textContent = `Open windows (${sources.length})`;
+  windowsCount.textContent = String(sources.length);
   windowList.replaceChildren(
     ...sources.map((source) => {
       const img = document.createElement('img');
       img.src = source.thumbnail;
+      img.alt = '';
       const label = document.createElement('span');
       label.textContent = source.name;
 
       const button = document.createElement('button');
+      button.className = 'window-row';
+      button.title = source.name;
       button.append(img, label);
       button.addEventListener('click', () =>
         pickWindow({ id: source.id, name: source.name }),
@@ -107,7 +115,7 @@ function timeAgo(isoDate: string) {
   return 'just now';
 }
 
-// Makes an element with a class and text, for building the cards.
+// Makes an element with a class and text, for building the rows.
 function element(tag: string, className: string, text: string) {
   const created = document.createElement(tag);
   created.className = className;
@@ -115,14 +123,69 @@ function element(tag: string, className: string, text: string) {
   return created;
 }
 
+// The game's short name if it has one, else its window title.
+const nameOf = (profile: ProfileSummary) => profile.name ?? profile.title;
+
+// Games started from here (or the portrait) whose window hasn't opened yet,
+// shown as "Starting…" until it does (or for a minute, as main gives up
+// then too).
+const starting = new Map<string, number>();
+const STARTING_FOR = 60_000;
+
+// What a game's row says under its name. Main mutes every running game but
+// the one being played (see `muteOtherGames`).
+function stateOf(profile: ProfileSummary) {
+  if (profile.sourceId) {
+    if (profile.sourceId === selectedId) {
+      return 'Playing';
+    }
+    return selectedId ? 'Open · muted' : 'Open';
+  }
+  if (!profile.exePath) {
+    return "Can't start: no .exe saved";
+  }
+  const since = starting.get(profile.id);
+  return since !== undefined && Date.now() - since < STARTING_FOR
+    ? 'Starting…'
+    : 'Not running · click to start';
+}
+
+// A small square with a game's first letter, like a server icon.
+function iconOf(profile: ProfileSummary) {
+  const icon = element('span', 'game-icon', nameOf(profile).trim()[0] ?? '?');
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
+}
+
 async function showGameList() {
   const profiles = await window.vn.listProfiles();
   gamesSection.hidden = profiles.length === 0;
-  gamesSummary.textContent = `Your games (${profiles.length})`;
+  gamesCount.textContent = String(profiles.length);
   gameList.replaceChildren(
     ...profiles.map((profile) => {
+      const { sourceId } = profile;
+      if (sourceId) {
+        starting.delete(profile.id);
+      }
       const exeName = profile.exePath?.split('\\').pop() ?? 'unknown .exe';
-      const details = [
+      const playing = sourceId !== undefined && sourceId === selectedId;
+      if (playing) {
+        showHeading(profile, exeName);
+      }
+
+      const button = document.createElement('button');
+      button.className = 'game-row';
+      button.dataset.state = playing ? 'playing' : sourceId ? 'open' : 'closed';
+      if (playing) {
+        button.setAttribute('aria-current', 'true');
+      }
+      const text = element('span', 'game-text', '');
+      const state = element('span', 'game-state', stateOf(profile));
+      text.append(element('strong', 'game-title', nameOf(profile)), state);
+      button.append(iconOf(profile), text);
+      button.title = [
+        profile.title,
+        exeName,
         profile.window
           ? `${profile.window.width} × ${profile.window.height}`
           : null,
@@ -130,33 +193,27 @@ async function showGameList() {
         `played ${timeAgo(profile.lastPlayed)}`,
       ]
         .filter(Boolean)
-        .join(' · ');
+        .join('\n');
 
-      const button = document.createElement('button');
-      button.className = 'game-card';
-      button.append(
-        element('strong', 'game-title', profile.title),
-        element(
-          'span',
-          profile.isOpen ? 'badge open' : 'badge',
-          profile.isOpen ? 'Open' : 'Not running',
-        ),
-        element('span', 'game-exe', exeName),
-        element('span', 'game-details', details),
-      );
-
-      const { sourceId } = profile;
       const pick = () => {
         if (sourceId) {
           pickWindow({ id: sourceId, name: profile.title });
         }
       };
-      button.addEventListener('click', pick);
-      if (!sourceId) {
+      // A running game is picked; one that isn't running is started, and
+      // main picks it once its window opens.
+      button.addEventListener('click', async () => {
+        if (sourceId) {
+          pick();
+        } else if (await window.vn.launchGame(profile.id)) {
+          starting.set(profile.id, Date.now());
+          state.textContent = 'Starting…';
+        }
+      });
+      if (!sourceId && !profile.exePath) {
         // `aria-disabled` rather than `disabled`: it looks and reads as
         // unavailable, but still gets right-clicks (for the menu below).
         button.setAttribute('aria-disabled', 'true');
-        button.title = 'Start the game, then click Refresh';
       }
 
       // Right-click (or the keyboard's Menu key): the profile's options.
@@ -174,9 +231,48 @@ async function showGameList() {
 
       const item = document.createElement('li');
       item.append(button);
+      // A running game can be closed (force-closed, as the portrait's Close
+      // button does, without asking).
+      if (profile.isOpen) {
+        const close = document.createElement('button');
+        close.className = 'icon-button close-game';
+        close.title = `Close ${nameOf(profile)} (force-quits it)`;
+        close.setAttribute('aria-label', close.title);
+        close.innerHTML =
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>';
+        close.addEventListener('click', () => {
+          close.disabled = true;
+          window.vn.closeGame(profile.id);
+        });
+        item.append(close);
+      }
       return item;
     }),
   );
+
+  // A window picked that isn't a saved game yet: its title until it's
+  // saved.
+  const pickedId = selectedId;
+  if (pickedId && !profiles.some((profile) => profile.sourceId === pickedId)) {
+    const sources = await window.vn.listWindows();
+    gameHeading.textContent =
+      sources.find((source) => source.id === pickedId)?.name ?? 'New game';
+    gameSubtitle.textContent = 'New game: Save to keep its settings.';
+  }
+}
+
+// The top bar: the game being played, and what's saved about it.
+function showHeading(profile: ProfileSummary, exeName: string) {
+  gameHeading.textContent = nameOf(profile);
+  gameSubtitle.textContent = [
+    exeName,
+    profile.window
+      ? `${profile.window.width} × ${profile.window.height}`
+      : null,
+    `taps by ${clickMethodNames[profile.clickMethod].toLowerCase()}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function refresh() {
@@ -184,13 +280,23 @@ function refresh() {
   showGameList();
 }
 
-refreshButton.addEventListener('click', refresh);
+// Inside the "Open windows" line, so it mustn't fold the list too.
+refreshButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  refresh();
+});
 window.vn.onProfilesChanged(showGameList);
 // Main says when windows open or close; also refresh on coming back to this
 // window, in case something changed while it was in the background.
 window.vn.onWindowsChanged(refresh);
 window.addEventListener('focus', refresh);
-refresh();
+window.vn.getSelectedSource().then((sourceId) => {
+  if (sourceId) {
+    showPicked(sourceId);
+  } else {
+    refresh();
+  }
+});
 
 // A game was picked (here or in the portrait), or the game was closed (main
 // sends `null`): then stop the blank preview and unfold the window list,
@@ -198,23 +304,47 @@ refresh();
 window.vn.onSourceSelected((sourceId) => {
   if (sourceId !== null) {
     showPicked(sourceId);
-  } else {
-    stopCapture(preview);
-    windowsSection.open = true;
-    sendToBackButton.disabled = true;
+    return;
   }
+  selectedId = null;
+  stopCapture(preview);
+  previewEmpty.hidden = false;
+  windowsSection.open = true;
+  gameHeading.textContent = 'No game picked';
+  gameSubtitle.textContent = 'The game was closed. Pick another on the left.';
+  refresh();
 });
 
-// --- Game controls -------------------------------------------------------------
+// --- Pages ---------------------------------------------------------------------
 
-// Hides the game behind other windows. Use this instead of minimizing, which
-// stops the game from being captured (see win32.ts).
-sendToBackButton.addEventListener('click', () => window.vn.sendGameToBack());
+// The tabs above the pages: one page shows at a time.
+const tabs = document.querySelectorAll<HTMLButtonElement>('#tabs [role="tab"]');
+function showPage(name: string) {
+  for (const tab of tabs) {
+    const shown = tab.dataset.page === name;
+    tab.setAttribute('aria-selected', String(shown));
+    document.querySelector<HTMLElement>(`#page-${tab.dataset.page}`)!.hidden =
+      !shown;
+  }
+  if (name === 'sizes') {
+    refreshSizesPage();
+  }
+}
+for (const tab of tabs) {
+  tab.addEventListener('click', () => showPage(tab.dataset.page!));
+}
+
+// The Debug page, only in debug mode (`npm run start:debug`).
+window.vn.isDebug().then((debug) => {
+  document.querySelector<HTMLElement>('[data-page="debug"]')!.hidden = !debug;
+});
+
+// --- Saving --------------------------------------------------------------------
 
 // Saving is manual: the button shows whether there's anything to save.
 const saveButton = document.querySelector<HTMLButtonElement>('#save-profile')!;
 
-window.vn.onSaveStateChanged(({ hasGame, edited, saved }) => {
+function showSaveState({ hasGame, edited, saved }: SaveState) {
   // Clickable when there are edits (the button size can be edited with no
   // game picked), or when this game has no profile file yet (to create one,
   // even with the default settings).
@@ -224,7 +354,9 @@ window.vn.onSaveStateChanged(({ hasGame, edited, saved }) => {
     : saved
       ? 'Saved'
       : 'Save profile';
-});
+}
+window.vn.onSaveStateChanged(showSaveState);
+window.vn.getSaveState().then(showSaveState);
 
 saveButton.addEventListener('click', () => window.vn.saveProfile());
 
@@ -238,17 +370,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-// How taps in the portrait are delivered to the game (see win32.ts). Part of
-// the game's profile, so main sends its choice when a game is picked.
-window.vn.onClickMethodChanged((method) => {
-  clickMethodSelect.value = method;
-});
-clickMethodSelect.addEventListener('change', () => {
-  window.vn.setClickMethod(clickMethodSelect.value as ClickMethod);
-});
-
 // The game's short name for the portrait's Visual Novels, part of its
-// profile like the click method: empty shows the window title.
+// profile like its other settings: empty shows the window title.
 window.vn.onGameNameChanged((name) => {
   gameNameInput.value = name;
 });

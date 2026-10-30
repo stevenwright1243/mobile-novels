@@ -1,0 +1,282 @@
+/* The settings controls shared by the portrait's Menus sheet and the
+   picker: the Sizes panel (its sample of the reader screen, sliders, the
+   Text position switch, and Save, Reset and Default) and Input Settings
+   (sizes-panel.ts, input-settings.ts). Sized in `em`s, from the text size
+   of the box they're in. `--picked` is the colour of the picked chip's
+   ring, set by that box. */
+
+/* A small note under a setting. */
+.sheet-note {
+  margin: 0.4em 0 0;
+  font-size: 0.8em;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+/* A big, rounded button. */
+.chip {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 0.4em 0.6em;
+  font: inherit;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--line);
+  border-radius: calc(0.6em * var(--corner));
+  cursor: pointer;
+}
+
+.chip[aria-checked='true'] {
+  outline: 3px solid var(--picked);
+  outline-offset: 2px;
+}
+
+.chip:active {
+  scale: 0.97;
+}
+
+/* Open: the sample beside the sliders, so both stay in view while they're
+   dragged; the note and Save button below. (In a box of its own: a
+   <details> doesn't lay out its content as a grid in every browser.) */
+#sizes .sizes-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'sample sliders'
+    'note note'
+    'save save';
+  align-items: start;
+  gap: 0.5em 0.6em;
+
+  /* As tall as the sample beside it, the sliders spread out over it, so
+     the last row (Text position) lines up with the sample's bottom edge. */
+  .sliders {
+    grid-area: sliders;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.3em;
+  }
+
+  .sheet-note {
+    grid-area: note;
+  }
+
+  #sheet-actions {
+    grid-area: save;
+  }
+}
+
+/* The sample of the reader screen (portrait.ts), centered above the
+   sliders: the screen's layout at full size (100vw × 100dvh, so its sizes
+   are the real ones), shrunk by `--sample-scale` to the sample's width;
+   portrait.ts sets the sample's height to the screen's shape. */
+#sizes-sample {
+  grid-area: sample;
+  /* The screen's shape, as tall as the sliders beside it (portrait.ts sets
+     its size; the scale is its width over the screen's). A third of the
+     screen until then. */
+  width: 33vw;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(0.6em * var(--corner));
+  box-shadow: 0 0.3em 1em color-mix(in srgb, var(--shadow) 25%, transparent);
+  pointer-events: none;
+}
+
+.sample-screen {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'stage';
+  grid-template-rows: 1fr;
+  width: 100vw;
+  height: 100dvh;
+  transform-origin: 0 0;
+  scale: var(--sample-scale, 0.5);
+  /* The reader's own text settings, not the sheet's. */
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: normal;
+
+  canvas,
+  .text-zone {
+    grid-area: stage;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sample-left {
+    left: var(--corner-gap);
+  }
+
+  .sample-right {
+    right: var(--corner-gap);
+  }
+}
+
+/* One slider: its name and value on a row, the slider below, full width. */
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.2em 0.5em;
+}
+
+/* Names on one line, so the column's height doesn't change with its width
+   (the sample beside it is sized from that height). */
+.slider span,
+.toggle-row > span {
+  white-space: nowrap;
+}
+
+.slider output {
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+/* A track to drag along, and a thumb big enough for a finger: the input is
+   48px tall for touch, with the track drawn thin in the middle of it, the
+   part before the thumb filled with the accent (`--fill`, set by
+   menus-sheet.ts). */
+.slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider input::-webkit-slider-runnable-track {
+  height: 0.45em;
+  border-radius: var(--pill);
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--fill, 50%),
+    color-mix(in srgb, var(--line) 80%, transparent) var(--fill, 50%)
+  );
+}
+
+.slider input::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.6em;
+  height: 1.6em;
+  margin-top: calc((0.45em - 1.6em) / 2);
+  border-radius: 50%;
+  background: var(--surface);
+  border: 0.2em solid var(--accent-deep);
+  box-shadow: 0 0.15em 0.5em color-mix(in srgb, var(--shadow) 30%, transparent);
+}
+
+.slider input:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* An on/off switch between two words: Text position ("Bot" / "Top") and
+   Input Settings' "Taps click by" ("Messages" / "Mouse"). The switch is a
+   pill track with a round knob that slides right (and fills with the
+   accent) for the second word. */
+/* The name, and the switch at the right; when the column is too narrow
+   for both (a narrow PC window), the switch goes under the name. */
+.toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.3em;
+  min-height: 48px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.toggle-side {
+  font-size: 0.75em;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+/* The picked side's word stands out. */
+.toggle:has([aria-checked='false']) .toggle-side:first-child,
+.toggle:has([aria-checked='true']) .toggle-side:last-child {
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+/* Sized in the sheet's text size (a button doesn't take it by itself). */
+.toggle-switch {
+  font-size: inherit;
+  position: relative;
+  width: 2.3em;
+  height: 1.3em;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch[aria-checked='true'] {
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  border-color: var(--accent-deep);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 0.13em;
+  left: 0.13em;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0.1em 0.3em color-mix(in srgb, var(--shadow) 35%, transparent);
+  transition: translate 0.2s;
+}
+
+.toggle-switch[aria-checked='true'] .toggle-knob {
+  translate: 1em 0;
+}
+
+.toggle-switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Save, Reset and Default, side by side at the bottom of Sizes (Save and
+   Reset at the bottom of Input Settings too): Save solid in the accent,
+   the others plain. */
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+/* With nothing to save: dimmed, a little blurred, and not pressable. */
+.sheet-actions .chip:disabled {
+  opacity: 0.45;
+  filter: blur(1.5px);
+  cursor: default;
+  pointer-events: none;
+}
+
+.sheet-actions .chip {
+  padding-inline: 1.4em;
+  font-weight: 700;
+}
+
+.chip.save-button {
+  color: var(--on-accent);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  border-color: var(--accent-deep);
+}

@@ -1,35 +1,22 @@
 /**
  * The settings sheet under the game in the portrait's Menus mode: the
- * full-screen text switch (page-mode.ts), the sizes (portrait-sizes.ts),
- * and the look
+ * full-screen text switch (page-mode.ts), the screenshot button, the sizes
+ * (sizes-panel.ts), and the look
  * (theme, "tap to continue" arrow, border), picked with big buttons that
  * each show what they pick, and a sample message window in the current
  * look. The same app settings as the picker's Style settings: changes go
  * to main, which saves them and sends them to both windows.
  */
 
-import {
-  DEFAULT_BACKGROUND_WIDTH,
-  DEFAULT_BACKGROUND_Y,
-  DEFAULT_BUTTON_SIZE,
-  DEFAULT_TEXT_STYLE,
-} from './default-sizes';
+import { ARROW_SHAPES } from './arrow-shapes';
 import { ARROWS, BORDERS, THEMES } from './look-options';
 import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
-import {
-  backgroundWidth,
-  backgroundY,
-  backgroundYCap,
-  buttonSize,
-  textStyle,
-} from './portrait-sizes';
+// The Sizes drop-down (sizes-panel.ts, via sizes-sample.ts, which draws its
+// sample; portrait.ts sets the sample up).
+import './sizes-sample';
 
 // The current border and arrow, kept up to date by main.
 let style: MessageStyle = { border: 'halo', arrow: 'chevron' };
-
-// The shapes of every arrow, copied from the message window's own arrow
-// (portrait.html), so there's one copy of them in the page's source.
-const ARROW_SHAPES = document.querySelector('#next-arrow')!.innerHTML;
 
 const previewArrow = document.querySelector<HTMLElement>(
   '#look-preview .next-arrow',
@@ -95,161 +82,6 @@ screenshotButton.addEventListener('click', async () => {
     screenshotLabel.textContent = 'Take';
   }, 1500);
 });
-
-// --- Sizes ---------------------------------------------------------------------
-
-// Wires a slider to a size: it shows the size (as a percent, in its
-// <output>) and changes it while dragged. The slider moves in 5% steps;
-// a size set more exactly in the picker shows as it is until moved.
-function linkSlider(
-  id: string,
-  get: () => number,
-  set: (value: number) => void,
-  listen: (callback: () => void) => void,
-) {
-  const slider = document.querySelector<HTMLInputElement>(`#${id}`)!;
-  const output = slider.parentElement!.querySelector('output')!;
-  const show = () => {
-    const value = get();
-    slider.value = String(value);
-    output.value = `${Math.round(value * 100)}%`;
-    // How far along the track the thumb is, for the filled part of the
-    // track in portrait.css.
-    const min = Number(slider.min);
-    const share = (value - min) / (Number(slider.max) - min);
-    slider.style.setProperty('--fill', `${Math.round(share * 100)}%`);
-  };
-  // Rounded to whole percents: steps of 0.05 can add up to 0.6500000001.
-  slider.addEventListener('input', () =>
-    set(Math.round(slider.valueAsNumber * 100) / 100),
-  );
-  listen(show);
-}
-
-linkSlider(
-  'sheet-text-size',
-  () => textStyle.get().size,
-  (size) => textStyle.set({ ...textStyle.get(), size }),
-  textStyle.listen,
-);
-linkSlider(
-  'sheet-name-size',
-  () => textStyle.get().nameSize,
-  (nameSize) => textStyle.set({ ...textStyle.get(), nameSize }),
-  textStyle.listen,
-);
-// Portrait height stops at its cap (see `backgroundYCap`): it shows the
-// height in effect, and can't be dragged past it.
-linkSlider(
-  'sheet-background-y',
-  () => Math.min(backgroundY.get(), backgroundYCap.get()),
-  (y) => backgroundY.set(Math.min(y, backgroundYCap.get())),
-  (callback) => {
-    backgroundY.listen(callback);
-    backgroundYCap.listen(callback);
-  },
-);
-linkSlider(
-  'sheet-background-width',
-  backgroundWidth.get,
-  backgroundWidth.set,
-  backgroundWidth.listen,
-);
-linkSlider(
-  'sheet-button-size',
-  buttonSize.get,
-  buttonSize.set,
-  buttonSize.listen,
-);
-// Extra space on the side the text box grows from (see `TextStyle`).
-linkSlider(
-  'sheet-text-padding',
-  () => textStyle.get().padding ?? 0,
-  (padding) => textStyle.set({ ...textStyle.get(), padding }),
-  textStyle.listen,
-);
-
-// Text position: a switch, on for "top" (see `TextStyle`). Tapping the
-// words beside it works too.
-const positionSwitch =
-  document.querySelector<HTMLButtonElement>('#text-position')!;
-const togglePosition = () =>
-  textStyle.set({
-    ...textStyle.get(),
-    position: textStyle.get().position === 'top' ? 'bottom' : 'top',
-  });
-positionSwitch.addEventListener('click', togglePosition);
-for (const side of positionSwitch.parentElement!.querySelectorAll(
-  '.toggle-side',
-)) {
-  side.addEventListener('click', togglePosition);
-}
-textStyle.listen((style) =>
-  positionSwitch.setAttribute('aria-checked', String(style.position === 'top')),
-);
-
-// The sizes are only saved when asked (as in the picker; the button size
-// too, though it's for every game), so Save and Reset sit at the bottom of
-// Sizes (and of Input Settings), and can be pressed while there are
-// changes: Reset puts back the values as last saved. The game's sliders
-// and switches are disabled while no game is picked.
-const actionButtons = document.querySelectorAll<HTMLButtonElement>(
-  '.save-button, .reset-button',
-);
-const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position, #click-method, #game-to-front, #game-to-back',
-);
-function showSaveState({ hasGame, edited }: SaveState) {
-  for (const button of actionButtons) {
-    button.disabled = !edited;
-  }
-  for (const slider of gameSliders) {
-    slider.disabled = !hasGame;
-  }
-}
-for (const button of document.querySelectorAll('.save-button')) {
-  button.addEventListener('click', () => window.vn.saveProfile());
-}
-for (const button of document.querySelectorAll('.reset-button')) {
-  button.addEventListener('click', () => window.vn.revertEdits());
-}
-window.vn.onSaveStateChanged(showSaveState);
-window.vn.getSaveState().then(showSaveState);
-
-// The Default button sets the default sizes (default-sizes.ts, also what a
-// new game starts with), as unsaved changes, like moving the sliders: Save
-// keeps them, Reset undoes them. It can be pressed while any size differs
-// from these.
-const DEFAULT_SIZES = {
-  textStyle: DEFAULT_TEXT_STYLE,
-  backgroundY: DEFAULT_BACKGROUND_Y,
-  backgroundWidth: DEFAULT_BACKGROUND_WIDTH,
-  buttonSize: DEFAULT_BUTTON_SIZE,
-};
-const defaultButton =
-  document.querySelector<HTMLButtonElement>('#sheet-default')!;
-defaultButton.addEventListener('click', () => {
-  textStyle.set({ ...DEFAULT_SIZES.textStyle });
-  backgroundY.set(DEFAULT_SIZES.backgroundY);
-  backgroundWidth.set(DEFAULT_SIZES.backgroundWidth);
-  buttonSize.set(DEFAULT_SIZES.buttonSize);
-});
-function showDefaultState() {
-  const style = textStyle.get();
-  const atDefaults =
-    style.size === DEFAULT_SIZES.textStyle.size &&
-    style.nameSize === DEFAULT_SIZES.textStyle.nameSize &&
-    style.position === DEFAULT_SIZES.textStyle.position &&
-    (style.padding ?? 0) === DEFAULT_SIZES.textStyle.padding &&
-    backgroundY.get() === DEFAULT_SIZES.backgroundY &&
-    backgroundWidth.get() === DEFAULT_SIZES.backgroundWidth &&
-    buttonSize.get() === DEFAULT_SIZES.buttonSize;
-  defaultButton.disabled = atDefaults;
-}
-textStyle.listen(showDefaultState);
-backgroundY.listen(showDefaultState);
-backgroundWidth.listen(showDefaultState);
-buttonSize.listen(showDefaultState);
 
 // --- Look ----------------------------------------------------------------------
 

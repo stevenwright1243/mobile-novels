@@ -5,343 +5,331 @@
     <title>VN Mobile</title>
   </head>
   <body>
-    <header>
-      <h1>Pick a window</h1>
-      <button id="refresh">Refresh</button>
-      <button id="send-to-back" disabled>Send game to back</button>
-      <button id="save-profile" disabled>Save profile</button>
-      <button data-region="background" disabled>Edit background</button>
-      <button data-region="text" disabled>Edit text zone</button>
-      <button data-region="name" disabled>Edit name box</button>
-      <button
-        data-region="page"
-        disabled
-        title="Where the text goes in games that fill the screen with it, read when Full-screen text is on in the portrait's Menus."
-      >
-        Edit full-screen text
-      </button>
-      <!-- Spots rather than boxes: where the game's own quick save and quick
-           load buttons are, tapped by the portrait's q.Save and q.Load
-           (region-editor.ts). -->
-      <button
-        data-point="quickSave"
-        disabled
-        title="Click the game's quick save button in the preview. The portrait's q.Save (in Menus) clicks there."
-      >
-        Place q.Save
-      </button>
-      <button
-        data-point="quickLoad"
-        disabled
-        title="Click the game's quick load button in the preview. The portrait's q.Load (in Menus) clicks there."
-      >
-        Place q.Load
-      </button>
-      <!-- A short name for the game, shown in the portrait's Visual Novels
-           instead of its window title (renderer.ts). -->
-      <label>
-        Name
-        <input
-          type="text"
-          id="game-name"
-          size="18"
-          placeholder="Same as the title"
-          disabled
-        />
-      </label>
-      <label>
-        Taps click by
-        <select id="click-method" disabled>
-          <option value="message">Sending messages</option>
-          <option value="mouse">Simulating the mouse</option>
-        </select>
-      </label>
-      <!-- The text size in the portrait's message window (text-style.ts). -->
-      <span class="slider-field">
-        <label for="text-size">Text size</label>
-        <input
-          type="range"
-          id="text-size"
-          min="0.6"
-          max="2"
-          step="0.05"
-          disabled
-        />
-        <input
-          type="number"
-          id="text-size-percent"
-          min="60"
-          max="200"
-          step="1"
-          aria-label="Text size, percent of normal"
-          disabled
-        />%
-      </span>
-      <!-- The size of the speaker's name tag, relative to the text size
-           (text-style.ts). -->
-      <span
-        class="slider-field"
-        title="The size of the speaker's name on the message window, compared with the text. It grows and shrinks with the text size."
-      >
-        <label for="name-size">Name size</label>
-        <input
-          type="range"
-          id="name-size"
-          min="0.5"
-          max="2"
-          step="0.05"
-          disabled
-        />
-        <input
-          type="number"
-          id="name-size-percent"
-          min="50"
-          max="200"
-          step="1"
-          aria-label="Name size, percent of normal"
-          disabled
-        />%
-      </span>
-      <!-- Where the background sits in the portrait, top to bottom, per game
-           (background-view.ts). -->
-      <span
-        class="slider-field"
-        title="Where the game's picture sits in the portrait: 0% at the top, 100% at the bottom. Saved with the game's profile."
-      >
-        <label for="background-y">Portrait height</label>
-        <span>Top</span>
-        <input
-          type="range"
-          id="background-y"
-          min="0"
-          max="1"
-          step="0.01"
-          disabled
-        />
-        <span>Bottom</span>
-        <input
-          type="number"
-          id="background-y-percent"
-          min="0"
-          max="100"
-          step="1"
-          aria-label="Portrait height, percent from top to bottom"
-          disabled
-        />%
-      </span>
-      <span
-        class="slider-field"
-        title="How much of the game's picture shows across the portrait: 100% is all of its width, 50% half of it, bigger. Saved with the game's profile."
-      >
-        <label for="background-width">Portrait width</label>
-        <input
-          type="range"
-          id="background-width"
-          min="0.5"
-          max="1"
-          step="0.01"
-          disabled
-        />
-        <input
-          type="number"
-          id="background-width-percent"
-          min="50"
-          max="100"
-          step="1"
-          aria-label="Portrait width, percent of the picture's width"
-          disabled
-        />%
-      </span>
-      <!-- The size of the portrait's corner buttons, for every game
-           (button-size.ts). -->
-      <span
-        class="slider-field"
-        title="The size of the Menus and Log buttons in the portrait, for every game. Saved with the Save button."
-      >
-        <label for="button-size">Button size</label>
-        <input type="range" id="button-size" min="0.5" max="1.5" step="0.05" />
-        <output id="button-size-percent" for="button-size">100%</output>
-      </span>
-      <!-- The colour scheme, and the look of the portrait's message window,
-           for every game (message-style.ts). -->
-      <span
-        id="message-style"
-        role="group"
-        aria-label="Style settings"
-        title="The colour scheme of both windows, and the look of the portrait's message window, for every game. Saved straight away."
-      >
-        Style settings:
-        <label>
-          Theme
-          <!-- Options filled in from look-options.ts. -->
-          <select id="theme"></select>
-        </label>
-        <label>
-          Border
-          <select id="message-border"></select>
-        </label>
-        <label>
-          Arrow
-          <select id="message-arrow"></select>
-        </label>
-      </span>
-      <!-- Whether the phone is streaming (phone-status.ts). -->
-      <span id="phone-status" aria-live="polite"></span>
-      <!-- Whether the portrait goes on the phone's display while there is
-           one: a switch made of two radio buttons (phone-status.ts). -->
-      <span
-        id="portrait-place"
-        class="switch"
-        role="radiogroup"
-        aria-label="Show the portrait on"
-      >
-        <label
-          ><input type="radio" name="portrait-place" value="pc" /> PC</label
-        >
-        <label
-          ><input type="radio" name="portrait-place" value="phone" />
-          Phone</label
-        >
-      </span>
-      <!-- Debug tools, only shown with `npm run start:debug` (ocr-test.ts). -->
-      <span id="debug-tools" role="group" aria-label="Debug tools" hidden>
-        <strong>Debug:</strong>
-        <button id="ocr-test-button" disabled>Read text (OCR test)</button>
-        <label>
-          <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean up
-          image
-        </label>
-        <button id="save-ocr-test" disabled>Save as OCR test…</button>
-        <button id="show-ocr-tests">Show OCR tests</button>
-      </span>
-      <!-- Saves the current frame as an OCR test (see ocr-test.ts), with
-           what it should read. `method="dialog"` closes the dialog on
-           submit, setting its `returnValue` to the clicked button's value. -->
-      <dialog id="ocr-test-dialog">
-        <form method="dialog">
-          <h2>Save as OCR test</h2>
-          <p>
-            Saves this frame and your regions, for
-            <code>npm run ocr-bench</code>. Fix the text below to what the game
-            really shows.
-          </p>
-          <label>
-            Text
-            <textarea id="expected-text" rows="3"></textarea>
-          </label>
-          <label>
-            <span
-              ><input type="checkbox" id="test-name-box" checked /> Name</span
+    <!-- The page: a sidebar of games and windows on the left, the picked
+         game's settings on the right, a page at a time (renderer.ts). -->
+    <aside id="sidebar">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 15h6M9 18h4"
+          />
+        </svg>
+        VN Mobile
+      </div>
+
+      <!-- Saved game profiles, filled in by renderer.ts: click a running
+           one to play it, one that isn't running to start it; the ✕ beside
+           a running one closes it. Right-click for more. -->
+      <section id="games" class="side-section" aria-labelledby="games-heading">
+        <h2 id="games-heading" class="side-heading">
+          Your games <span class="count"></span>
+        </h2>
+        <ul id="game-list" class="side-list"></ul>
+      </section>
+
+      <!-- Every open window, to make a new game from. `<details>` is the
+           browser's own collapsible section: clicking the summary line
+           folds or unfolds it. It folds by itself once a game is picked. -->
+      <details id="windows" class="side-section" open>
+        <summary class="side-heading">
+          <span>Open windows <span class="count"></span></span>
+          <button
+            id="refresh"
+            class="icon-button"
+            title="Refresh the lists"
+            aria-label="Refresh"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" />
+            </svg>
+          </button>
+        </summary>
+        <ul id="window-list" class="side-list"></ul>
+      </details>
+
+      <!-- Whether the phone is streaming, and where the portrait goes
+           (phone-status.ts). -->
+      <footer class="side-footer">
+        <span id="phone-status" aria-live="polite"></span>
+        <div class="footer-row">
+          <span>Portrait on</span>
+          <!-- A switch made of two radio buttons. -->
+          <span
+            id="portrait-place"
+            class="switch"
+            role="radiogroup"
+            aria-label="Show the portrait on"
+          >
+            <label
+              ><input type="radio" name="portrait-place" value="pc" /> PC</label
             >
-            <input type="text" id="expected-name" />
-          </label>
-          <label>
-            <span
-              ><input type="checkbox" id="test-page" /> Full-screen text</span
+            <label
+              ><input type="radio" name="portrait-place" value="phone" />
+              Phone</label
             >
-            <textarea
-              id="expected-page"
-              rows="5"
-              placeholder="Its paragraphs, with a blank line between them"
-            ></textarea>
+          </span>
+        </div>
+      </footer>
+    </aside>
+
+    <main id="content">
+      <!-- The picked game: its title, short name and Save. -->
+      <header id="topbar">
+        <div class="title-block">
+          <h1 id="game-heading">No game picked</h1>
+          <p id="game-subtitle">Pick a game or a window on the left.</p>
+        </div>
+        <!-- A short name for the game, shown in the portrait's Visual Novels
+             instead of its window title. -->
+        <label class="name-field">
+          Short name
+          <input
+            type="text"
+            id="game-name"
+            size="16"
+            placeholder="Same as the title"
+            disabled
+          />
+        </label>
+        <button id="save-profile" class="primary-button" disabled>
+          Save profile
+        </button>
+      </header>
+
+      <!-- One page at a time, picked here (renderer.ts). -->
+      <nav id="tabs" role="tablist" aria-label="Settings">
+        <button role="tab" aria-selected="true" data-page="regions">
+          Regions
+        </button>
+        <button role="tab" aria-selected="false" data-page="sizes">
+          Sizes
+        </button>
+        <button role="tab" aria-selected="false" data-page="look">Look</button>
+        <button role="tab" aria-selected="false" data-page="input">
+          Input
+        </button>
+        <button role="tab" aria-selected="false" data-page="debug" hidden>
+          Debug
+        </button>
+      </nav>
+
+      <!-- Regions: where each part of the game is, drawn as boxes over a live
+           preview (region-editor.ts). -->
+      <section id="page-regions" class="page" role="tabpanel">
+        <div class="toolbar" role="group" aria-label="Edit a region">
+          <button data-region="background" disabled>Background</button>
+          <button data-region="text" disabled>Text box</button>
+          <button data-region="name" disabled>Name box</button>
+          <button
+            data-region="page"
+            disabled
+            title="Where the text goes in games that fill the screen with it, read when Full-screen text is on in the portrait's Menus."
+          >
+            Full-screen text
+          </button>
+          <span class="toolbar-gap"></span>
+          <!-- Spots rather than boxes: where the game's own quick save and
+               quick load buttons are, tapped by the portrait's q.Save and
+               q.Load. -->
+          <button
+            data-point="quickSave"
+            disabled
+            title="Click the game's quick save button in the preview. The portrait's q.Save (in Menus) clicks there."
+          >
+            Place q.Save
+          </button>
+          <button
+            data-point="quickLoad"
+            disabled
+            title="Click the game's quick load button in the preview. The portrait's q.Load (in Menus) clicks there."
+          >
+            Place q.Load
+          </button>
+        </div>
+        <!-- Shown while editing a region (see region-editor.ts). -->
+        <div id="edit-panel" role="group" aria-label="Region settings" hidden>
+          <!-- `box-only` parts are hidden while placing a spot, which has
+               only a position. -->
+          <label class="box-only">
+            <input type="checkbox" id="snap" checked /> Snap to edges
           </label>
-          <p class="dialog-hint">
-            Leave a box empty if it should read nothing.
-          </p>
-          <div class="dialog-buttons">
-            <button value="cancel" formnovalidate>Cancel</button>
-            <button value="save" class="primary">Save test</button>
+          <span class="coordinates">
+            <label>X <input type="number" id="field-x" min="0" /></label>
+            <label>Y <input type="number" id="field-y" min="0" /></label>
+            <label class="box-only">
+              W <input type="number" id="field-w" min="1" />
+            </label>
+            <label class="box-only">
+              H <input type="number" id="field-h" min="1" />
+            </label>
+            <span id="game-size"></span>
+          </span>
+          <label class="box-only">
+            <input type="checkbox" id="lock-size" /> Lock size
+          </label>
+        </div>
+        <section id="preview-section">
+          <!-- Zooming the preview (preview-zoom.ts). -->
+          <div id="zoom-controls" role="group" aria-label="Preview zoom">
+            <button id="zoom-out" title="Zoom out (Ctrl+scroll)" disabled>
+              −
+            </button>
+            <output id="zoom-level">Fit</output>
+            <button id="zoom-in" title="Zoom in (Ctrl+scroll)">+</button>
+            <button id="zoom-fit" disabled>Fit</button>
+            <span class="hint">
+              Ctrl+scroll to zoom · drag to move around (middle-drag while
+              editing)
+            </span>
           </div>
-        </form>
-      </dialog>
-      <!-- Shown while editing a region (see region-editor.ts). -->
-      <div id="edit-panel" role="group" aria-label="Region settings" hidden>
-        <!-- `box-only` parts are hidden while placing a spot, which has
-             only a position. -->
-        <label class="box-only">
-          <input type="checkbox" id="snap" checked /> Snap to edges
-        </label>
-        <span class="coordinates">
-          <label>X <input type="number" id="field-x" min="0" /></label>
-          <label>Y <input type="number" id="field-y" min="0" /></label>
-          <label class="box-only">
-            W <input type="number" id="field-w" min="1" />
-          </label>
-          <label class="box-only">
-            H <input type="number" id="field-h" min="1" />
-          </label>
-          <span id="game-size"></span>
-        </span>
-        <label class="box-only">
-          <input type="checkbox" id="lock-size" /> Lock size
-        </label>
-      </div>
-    </header>
-    <!-- Saved game profiles; filled in by renderer.ts. Folds like the
-         window list below, but stays as the user left it. -->
-    <details id="games" open hidden>
-      <summary>Your games</summary>
-      <ul id="game-list"></ul>
-    </details>
-    <!-- Every open window. `<details>` is the browser's own collapsible
-         section: clicking the summary line folds or unfolds it. It folds by
-         itself once a game is picked (renderer.ts). -->
-    <details id="windows" open>
-      <summary>Open windows</summary>
-      <ul id="window-list"></ul>
-    </details>
-    <!-- OCR: the name and line read automatically, and the test button's
-         results. Filled in by ocr-test.ts. -->
-    <section id="ocr-test" hidden>
-      <p id="live-name"><strong>Live name:</strong> <span></span></p>
-      <p id="live-text"><strong>Live text:</strong> <span></span></p>
-      <img id="ocr-image" alt="The image that was read" />
-      <div>
-        <p id="ocr-stats"></p>
-        <pre id="ocr-output"></pre>
-      </div>
-    </section>
-    <section id="preview-section">
-      <!-- Zooming the preview (preview-zoom.ts). -->
-      <div id="zoom-controls" role="group" aria-label="Preview zoom">
-        <button id="zoom-out" title="Zoom out (Ctrl+scroll)" disabled>−</button>
-        <output id="zoom-level">Fit</output>
-        <button id="zoom-in" title="Zoom in (Ctrl+scroll)">+</button>
-        <button id="zoom-fit" disabled>Fit</button>
-        <span class="hint">
-          Ctrl+scroll to zoom · drag to move around (middle-drag while editing)
-        </span>
-      </div>
-      <!-- Scrolls when zoomed in: #zoom-box grows past its edges. -->
-      <div id="preview-area">
-        <div id="zoom-box">
-          <video id="preview" autoplay muted></video>
-          <!-- Sized by region-editor.ts to sit exactly over the game picture. -->
-          <div id="frame">
-            <div class="outline" data-region="background">
-              <span>Background</span>
-              <!-- The part the portrait shows (background-view.ts). -->
-              <div class="visible-area" hidden>
-                <span>Portrait view</span>
+          <!-- Scrolls when zoomed in: #zoom-box grows past its edges. -->
+          <div id="preview-area">
+            <div id="zoom-box">
+              <video id="preview" autoplay muted></video>
+              <!-- Sized by region-editor.ts to sit exactly over the game
+                   picture. -->
+              <div id="frame">
+                <div class="outline" data-region="background">
+                  <span>Background</span>
+                  <!-- The part the portrait shows (background-view.ts). -->
+                  <div class="visible-area" hidden>
+                    <span>Portrait view</span>
+                  </div>
+                </div>
+                <div class="outline" data-region="text"><span>Text</span></div>
+                <div class="outline" data-region="name"><span>Name</span></div>
+                <!-- Shown only while it's being edited, as it covers the
+                     rest. -->
+                <div class="outline" data-region="page">
+                  <span>Full-screen text</span>
+                </div>
+                <!-- The quick save and quick load spots, once placed. -->
+                <div class="marker" data-point="quickSave" hidden>
+                  <span>q.Save</span>
+                </div>
+                <div class="marker" data-point="quickLoad" hidden>
+                  <span>q.Load</span>
+                </div>
               </div>
             </div>
-            <div class="outline" data-region="text"><span>Text</span></div>
-            <div class="outline" data-region="name"><span>Name</span></div>
-            <!-- Shown only while it's being edited, as it covers the rest. -->
-            <div class="outline" data-region="page">
-              <span>Full-screen text</span>
-            </div>
-            <!-- The quick save and quick load spots, once placed. -->
-            <div class="marker" data-point="quickSave" hidden>
-              <span>q.Save</span>
-            </div>
-            <div class="marker" data-point="quickLoad" hidden>
-              <span>q.Load</span>
-            </div>
+            <p id="preview-empty">Pick a game to see it here.</p>
           </div>
+        </section>
+      </section>
+
+      <!-- Sizes: the same panel as the portrait's Menus sheet, filled in by
+           sizes-panel.ts (its sample drawn by picker-sizes.ts). -->
+      <section id="page-sizes" class="page" role="tabpanel" hidden>
+        <div id="sizes" class="card">
+          <h2>Sizes</h2>
+          <div class="sizes-body"></div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- Look: the colour scheme of both windows, and the look of the
+           portrait's message window, for every game (message-style.ts). -->
+      <section id="page-look" class="page" role="tabpanel" hidden>
+        <div
+          id="message-style"
+          class="card"
+          role="group"
+          aria-labelledby="look-heading"
+        >
+          <h2 id="look-heading">Look</h2>
+          <!-- Options filled in from look-options.ts. -->
+          <label class="form-row">
+            <span>Theme</span>
+            <select id="theme"></select>
+          </label>
+          <label class="form-row">
+            <span>Border</span>
+            <select id="message-border"></select>
+          </label>
+          <label class="form-row">
+            <span>Arrow</span>
+            <select id="message-arrow"></select>
+          </label>
+          <p class="sheet-note">
+            The colour scheme of both windows, and the look of the portrait's
+            message window. For every game, saved straight away.
+          </p>
+        </div>
+      </section>
+
+      <!-- Input: the same panel as the portrait's Menus sheet, filled in by
+           input-settings.ts. -->
+      <section id="page-input" class="page" role="tabpanel" hidden>
+        <div id="input-settings" class="card">
+          <h2>Input Settings</h2>
+          <div class="input-body"></div>
+        </div>
+      </section>
+
+      <!-- Debug tools, only with `npm run start:debug` (ocr-test.ts). -->
+      <section id="page-debug" class="page" role="tabpanel" hidden>
+        <div
+          id="debug-tools"
+          class="toolbar"
+          role="group"
+          aria-label="Debug tools"
+          hidden
+        >
+          <button id="ocr-test-button" disabled>Read text (OCR test)</button>
+          <label>
+            <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean
+            up image
+          </label>
+          <button id="save-ocr-test" disabled>Save as OCR test…</button>
+          <button id="show-ocr-tests">Show OCR tests</button>
+        </div>
+        <!-- The name and line read automatically, and the test button's
+             results. -->
+        <section id="ocr-test" class="card" hidden>
+          <p id="live-name"><strong>Live name:</strong> <span></span></p>
+          <p id="live-text"><strong>Live text:</strong> <span></span></p>
+          <img id="ocr-image" alt="The image that was read" />
+          <div>
+            <p id="ocr-stats"></p>
+            <pre id="ocr-output"></pre>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Saves the current frame as an OCR test (see ocr-test.ts), with
+         what it should read. `method="dialog"` closes the dialog on
+         submit, setting its `returnValue` to the clicked button's value. -->
+    <dialog id="ocr-test-dialog">
+      <form method="dialog">
+        <h2>Save as OCR test</h2>
+        <p>
+          Saves this frame and your regions, for
+          <code>npm run ocr-bench</code>. Fix the text below to what the game
+          really shows.
+        </p>
+        <label>
+          Text
+          <textarea id="expected-text" rows="3"></textarea>
+        </label>
+        <label>
+          <span><input type="checkbox" id="test-name-box" checked /> Name</span>
+          <input type="text" id="expected-name" />
+        </label>
+        <label>
+          <span><input type="checkbox" id="test-page" /> Full-screen text</span>
+          <textarea
+            id="expected-page"
+            rows="5"
+            placeholder="Its paragraphs, with a blank line between them"
+          ></textarea>
+        </label>
+        <p class="dialog-hint">Leave a box empty if it should read nothing.</p>
+        <div class="dialog-buttons">
+          <button value="cancel" formnovalidate>Cancel</button>
+          <button value="save" class="primary">Save test</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>

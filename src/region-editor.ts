@@ -45,10 +45,10 @@ const fields: Record<keyof Region, HTMLInputElement> = {
 };
 
 const buttonLabels: Record<RegionName, string> = {
-  background: 'Edit background',
-  text: 'Edit text zone',
-  name: 'Edit name box',
-  page: 'Edit full-screen text',
+  background: 'Background',
+  text: 'Text box',
+  name: 'Name box',
+  page: 'Full-screen text',
 };
 
 const pointLabels: Record<PointName, string> = {
@@ -311,10 +311,13 @@ function setEditing(region: RegionName | null, point: PointName | null = null) {
   for (const button of regionButtons) {
     const name = button.dataset.region as RegionName;
     button.textContent = name === region ? 'Done' : buttonLabels[name];
+    // Marks the active button, for index.css.
+    button.setAttribute('aria-pressed', String(name === region));
   }
   for (const button of pointButtons) {
     const name = button.dataset.point as PointName;
     button.textContent = name === point ? 'Done' : pointLabels[name];
+    button.setAttribute('aria-pressed', String(name === point));
   }
   editPanel.hidden = region === null && point === null;
   // A spot has only X and Y (index.css).

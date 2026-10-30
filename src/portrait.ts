@@ -14,6 +14,7 @@ import {
   stopCapture,
 } from './capture';
 import './history-log';
+import { ARROW_SHAPES } from './arrow-shapes';
 import './menus-sheet';
 import './visual-novels';
 import './input-settings';
@@ -30,6 +31,14 @@ import {
   buttonSize,
   textStyle,
 } from './portrait-sizes';
+import {
+  backgroundYCapFor,
+  copyToSample,
+  drawSample,
+  fitSample,
+  sampleParts,
+  setUpSample,
+} from './sizes-sample';
 import { startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
@@ -130,17 +139,11 @@ buttonSize.listen(setButtonSize);
 const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
 const nextArrow = document.querySelector<HTMLElement>('#next-arrow')!;
 const pageView = document.querySelector<HTMLElement>('#page-view')!;
-// The Sizes sample's copies of the message window and arrow (see "The Sizes
-// sample" below).
-const sample = document.querySelector<HTMLElement>('#sizes-sample')!;
-const sampleLine = sample.querySelector<HTMLElement>('.message-window')!;
-const sampleArrow = sample.querySelector<HTMLElement>('.next-arrow')!;
+nextArrow.innerHTML = ARROW_SHAPES;
 function setMessageStyle(style: MessageStyle) {
   textLine.dataset.border = style.border;
   pageView.dataset.border = style.border;
-  sampleLine.dataset.border = style.border;
   nextArrow.dataset.arrow = style.arrow;
-  sampleArrow.dataset.arrow = style.arrow;
   portrait.dataset.arrow = style.arrow;
 }
 window.vn.onMessageStyleChanged(setMessageStyle);
@@ -148,10 +151,12 @@ window.vn.getMessageStyle().then(setMessageStyle);
 
 // The picker outlines the part of the background that's shown, which depends
 // on the zone's shape (it changes with the window's size), so let it know.
+// In CSS pixels: the zone fills the portrait, so this is also the screen's
+// size, which the picker's Sizes sample is laid out at.
 function reportZoneSize() {
   window.vn.setBackgroundZoneSize({
-    width: backgroundCanvas.width,
-    height: backgroundCanvas.height,
+    width: backgroundCanvas.clientWidth,
+    height: backgroundCanvas.clientHeight,
   });
 }
 
@@ -361,7 +366,12 @@ function drawFrame() {
     if (!rawMode) {
       reportPictureBottom(place);
     } else if (sizesDropdown.open) {
-      drawSample(regions);
+      // The reader places the picture the same way on the full screen, so
+      // this is where it ends there too, for the sample's message window.
+      const bottom = drawSample(video, clientArea, regions);
+      if (bottom !== null) {
+        setPictureBottom(bottom);
+      }
     }
   }
   requestAnimationFrame(drawFrame);
@@ -506,7 +516,7 @@ function showTextLine(line: string) {
   // A new line starts from its beginning, if it scrolls.
   textLine.scrollTop = 0;
   updateScrollState(textLine);
-  copyToSample();
+  copyLineToSample();
   // Fades in while drifting up slightly, like a message window turning a
   // page.
   textLine.animate(
@@ -528,7 +538,7 @@ function showSpeaker(name: string) {
     return;
   }
   nameText.textContent = name;
-  copyToSample();
+  copyLineToSample();
   // Pops in with a little slide from the left, like a name card.
   nameTag.animate(
     [
@@ -543,66 +553,27 @@ window.vn.getSpeaker().then(showSpeaker);
 
 // --- Portrait height cap (text position "top") -------------------------------
 
-// With text position "top", the message window hangs under the picture and
-// scrolls when the text needs more room than is left (portrait.css), so the
-// picture can only go so low: it must leave room under it for the name tag
-// and the window at its 3 lines (its `min-height`). Worked out each frame
-// from the sizes on screen, measured on the reader's text zone, or in Menus
-// mode (where that's hidden) on the Sizes sample's, which has the same
-// layout at full size. The result is `backgroundYCap`.
+// The highest the picture may sit with text position "top" (see
+// `backgroundYCapFor`), measured on the reader's text zone, or in Menus
+// mode (where that's hidden) on the Sizes sample's. Worked out each frame.
 const textZone = document.querySelector<HTMLElement>('#text-zone')!;
-const sampleZone = document.querySelector<HTMLElement>(
-  '.sample-screen .text-zone',
-)!;
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
-const sampleNameTag = sample.querySelector<HTMLElement>('.name-tag')!;
-
-// How much of the screen's height Text padding 100% adds (as in
-// portrait.css's `--text-extra`).
-const TEXT_PADDING_SHARE = 0.2;
 
 function updateBackgroundYCap(regions: Regions) {
-  if (textStyle.get().position !== 'top') {
-    backgroundYCap.set(1);
-    return;
-  }
-  const zone = rawMode ? sampleZone : textZone;
-  // The box whose `min-height` is the window's 3 lines, and the name tag.
-  const lines = rawMode ? sampleLine : isPageMode() ? pageText : textLine;
-  const tag = rawMode ? sampleNameTag : nameTag;
-  if (!zone.offsetHeight) {
-    // Not laid out (Menus mode with the sample shut): keep the last cap.
-    return;
-  }
-  // The room the zone needs at 3 lines, from its parts (not the zone's own
-  // height, which is squeezed when the picture is too low): the gap above
-  // it (its side padding is the same `--gap`), its top and bottom padding,
-  // the name tag's room (less its overlap with the window) and the window.
-  const zoneStyle = getComputedStyle(zone);
-  const tagStyle = getComputedStyle(tag);
-  const room =
-    parseFloat(zoneStyle.paddingLeft) +
-    parseFloat(zoneStyle.paddingTop) +
-    parseFloat(zoneStyle.paddingBottom) +
-    tag.offsetHeight +
-    parseFloat(tagStyle.marginTop) +
-    parseFloat(tagStyle.marginBottom) +
-    parseFloat(getComputedStyle(lines).minHeight) +
-    // The Text padding, above the zone (a fifth of the screen at 100%).
-    (textStyle.get().padding ?? 0) * TEXT_PADDING_SHARE * innerHeight;
-  // The picture's height on screen (it doesn't depend on its position),
-  // and the height that puts its bottom at the lowest it may go.
-  const { sw, sh } = regionInVideo(video, clientArea, regions.background);
-  const { dh } = placeInZone(sw, sh, innerWidth, innerHeight, {
-    ...BACKGROUND_VIEW,
-    width: backgroundWidth.get(),
+  const parts = rawMode
+    ? sampleParts
+    : {
+        zone: textZone,
+        lines: isPageMode() ? pageText : textLine,
+        tag: nameTag,
+      };
+  const cap = backgroundYCapFor(parts, video, clientArea, regions, {
+    width: innerWidth,
+    height: innerHeight,
   });
-  const lowest = innerHeight - room;
-  backgroundYCap.set(
-    dh >= innerHeight
-      ? 0
-      : Math.min(1, Math.max(0, (lowest - dh) / (innerHeight - dh))),
-  );
+  if (cap !== null) {
+    backgroundYCap.set(cap);
+  }
 }
 
 // The window scrolls by dragging (when it scrolls at all), and is marked
@@ -614,59 +585,14 @@ new ResizeObserver(() => updateScrollState(textLine)).observe(textLine);
 // --- The Sizes sample ----------------------------------------------------------
 
 // While the Menus sheet's Sizes drop-down is open, it shows a small copy of
-// the reader screen, so the sizes can be seen changing: the picture at its
-// height, the line and name, the corner buttons. It's the screen's layout
-// at its full size (`.sample-screen` is 100vw × 100dvh, so every size in
-// it is the real one), scaled down to the sample's width.
+// the reader screen (sizes-sample.ts), this window's size.
 const sizesDropdown = document.querySelector<HTMLDetailsElement>('#sizes')!;
-const sampleCanvas = sample.querySelector('canvas')!;
-const sampleName = sample.querySelector<HTMLElement>('.name-text')!;
-sampleArrow.innerHTML = nextArrow.innerHTML;
+setUpSample();
 
-// It's as tall as the sliders beside it (their own height, without the
-// room their column spreads them over), so the last row, Text position,
-// lines up with its bottom edge; its width follows from the screen's shape.
-const sampleSliders = document.querySelector<HTMLElement>('#sizes .sliders')!;
-function slidersHeight() {
-  const rows = [...sampleSliders.children] as HTMLElement[];
-  const gap = parseFloat(getComputedStyle(sampleSliders).rowGap) || 0;
-  return (
-    rows.reduce((sum, row) => sum + row.offsetHeight, 0) +
-    gap * (rows.length - 1)
-  );
-}
-
-// At most this share of the drop-down's width, so the sliders keep room.
-const MAX_SAMPLE_SHARE = 0.5;
-
-function fitSample() {
-  const height = slidersHeight();
-  const body = sample.parentElement!.clientWidth;
-  if (height > 0 && body > 0) {
-    const width = Math.min(
-      (height * innerWidth) / innerHeight,
-      body * MAX_SAMPLE_SHARE,
-    );
-    sample.style.width = `${width}px`;
-  }
-  const scale = sample.clientWidth / innerWidth;
-  sample.style.setProperty('--sample-scale', String(scale));
-  sample.style.height = `${innerHeight * scale}px`;
-}
-// Sized again when it's laid out (it's 0 while the drop-down is shut) or
-// the sliders' column changes shape.
-new ResizeObserver(fitSample).observe(sample);
-new ResizeObserver(fitSample).observe(sampleSliders);
-addEventListener('resize', fitSample);
-
-// The line and name on screen, or stand-ins while there are none.
-function copyToSample() {
-  sampleLine.textContent =
-    textLine.textContent || 'The text will look like this.';
-  sampleName.textContent = nameText.textContent || 'Name';
-}
+const copyLineToSample = () =>
+  copyToSample(textLine.textContent ?? '', nameText.textContent ?? '');
 sizesDropdown.addEventListener('toggle', () => {
-  copyToSample();
+  copyLineToSample();
   if (sizesDropdown.open) {
     // Sized now, so the sheet knows how tall it is, then scrolled up into
     // view: it opens at the bottom of the sheet.
@@ -674,54 +600,6 @@ sizesDropdown.addEventListener('toggle', () => {
     sizesDropdown.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 });
-
-// The picture, where the reader places it, over a blurred, tinted copy
-// (drawn simply, with a blur filter: the sample is small).
-function drawSample(regions: Regions) {
-  const width = Math.round(sample.clientWidth * devicePixelRatio);
-  const height = Math.round(sample.clientHeight * devicePixelRatio);
-  if (width < 1 || height < 1) {
-    return;
-  }
-  if (sampleCanvas.width !== width || sampleCanvas.height !== height) {
-    sampleCanvas.width = width;
-    sampleCanvas.height = height;
-  }
-  const context = sampleCanvas.getContext('2d')!;
-  const { sx, sy, sw, sh } = regionInVideo(
-    video,
-    clientArea,
-    regions.background,
-  );
-  const cover = placeInZone(sw, sh, width, height, { fill: 1, x: 0.5, y: 0.5 });
-  context.filter = 'blur(6px)';
-  context.drawImage(
-    video,
-    sx,
-    sy,
-    sw,
-    sh,
-    cover.dx,
-    cover.dy,
-    cover.dw,
-    cover.dh,
-  );
-  context.filter = 'none';
-  context.fillStyle = backdropTint;
-  context.fillRect(0, 0, width, height);
-  const { dx, dy, dw, dh } = placeInZone(
-    sw,
-    sh,
-    width,
-    height,
-    backgroundZone.view(),
-  );
-  context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
-  // The reader places the picture the same way on the full screen, so this
-  // is where it ends there too (in Menus mode the reader's own drawing
-  // doesn't report it), for the sample's message window.
-  setPictureBottom(((dy + dh) / height) * innerHeight);
-}
 
 // A name box often has a decoration beside the name (an icon, brackets, a
 // colon) that OCR reads as stray marks: trim anything that isn't a letter,
