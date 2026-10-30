@@ -647,12 +647,10 @@ body {
   translate: 0 20vmin;
 }
 
-/* The line, centered in a glass card, kept inside the log's middle row. */
+/* The line, centered in a glass card. */
 #log-message {
   grid-area: message;
   align-self: center;
-  max-height: 100%;
-  overflow-y: auto;
   padding: max(1rem, 5vmin);
 }
 
