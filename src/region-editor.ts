@@ -89,6 +89,7 @@ function fitFrameToPicture() {
   frame.style.top = `${(clientHeight - height) / 2}px`;
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;
+  placeLabels();
 }
 
 // Refit when the preview changes size (window resized). Re-measure when the
@@ -123,7 +124,30 @@ function showOutlines() {
     outline.style.width = `${region.w * 100}%`;
     outline.style.height = `${region.h * 100}%`;
   }
+  placeLabels();
   showFields();
+}
+
+// Each outline's name goes just below it, unless that would hang off the
+// bottom of the game picture; then it goes inside, in the top left corner
+// (the `label-inside` class in index.css). Rechecked whenever a region moves
+// or the picture changes size, since the label's size is in screen pixels.
+function placeLabels() {
+  if (!regions) {
+    return;
+  }
+  const frameHeight = frame.clientHeight;
+  for (const outline of outlines) {
+    const label = outline.querySelector<HTMLElement>(':scope > span');
+    const region = regions[outline.dataset.region as RegionName];
+    if (label) {
+      // Where the label's bottom edge would be, in pixels down the picture
+      // (2px for the border it sits outside).
+      const bottom =
+        (region.y + region.h) * frameHeight + 2 + label.offsetHeight;
+      outline.classList.toggle('label-inside', bottom > frameHeight);
+    }
+  }
 }
 
 window.vn.onRegionsChanged((newRegions) => {

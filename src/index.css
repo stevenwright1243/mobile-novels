@@ -446,10 +446,23 @@ h2 {
   --color: #6d6;
 }
 
-.outline span {
+/* Each region's name, just outside its box at the bottom left, lined up with
+   the dashed border's outer edge, so it hides as little of the box as
+   possible. Where that would hang off the bottom of the game picture,
+   region-editor.ts adds `label-inside`, putting it in the top left corner
+   inside the box instead. */
+.outline > span {
   position: absolute;
+  top: calc(100% + 2px);
+  left: -2px;
+}
+
+.outline.label-inside > span {
   top: 0;
   left: 0;
+}
+
+.outline span {
   padding: 0 0.25rem;
   font-size: 0.75rem;
   color: #000;
@@ -467,7 +480,8 @@ h2 {
 }
 
 .visible-area span {
-  top: auto;
+  position: absolute;
+  left: 0;
   bottom: 0;
   background: #fd5;
 }
