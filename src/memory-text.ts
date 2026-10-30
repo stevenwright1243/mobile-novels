@@ -70,8 +70,9 @@ const SAME_LINE = 0.85;
 const MAX_SEARCHES = 6;
 // Line searches in a row that find no copy of the line before the game's
 // memory stops being searched (it doesn't keep its lines as UTF-16 or
-// UTF-8 text). Each reads all of it, 0.15 to 1 s in the background.
-const MAX_EMPTY_SEARCHES = 8;
+// UTF-8 text: Steins;Gate). Each reads all of it, 0.15 to 1 s in the
+// background, and 5 s in Steins;Gate's 839 MB.
+const MAX_EMPTY_SEARCHES = 5;
 // OCR lines in a row that aren't in the buffer before it's dropped and
 // searched for again (the game may have moved it).
 const MAX_MISSES = 5;
@@ -289,8 +290,9 @@ function endFor(text: string, read: string) {
 // the line with them) and Ren'Py's ("{w}", "{i}…{/i}").
 const MARKUP = /<\/?[a-z][^<>]{0,40}>|\{\/?[a-z]+(?:=[^{}]{0,20})?\}/gi;
 // Characters no game shows: undecodable bytes (a length byte just before
-// a UTF-8 line), invisible formatting and private-use characters.
-const JUNK = /[\uFFFD\p{Cf}\p{Co}]/gu;
+// a UTF-8 line), half of a UTF-16 pair, invisible formatting and
+// private-use characters.
+const JUNK = /[\uFFFD\p{Cs}\p{Cf}\p{Co}]/gu;
 const clean = (text: string) => text.replace(MARKUP, '').replace(JUNK, '');
 
 // A line as shown: formatting codes out, the end mark off its end, the same
@@ -692,6 +694,7 @@ async function findNameCopies(memory: GameMemory, name: string, end: string) {
       continue;
     }
     for (const encoding of ['utf16le', 'utf8'] as const) {
+      await breather();
       const needle = Buffer.from(name, encoding);
       for (
         let at = bytes.indexOf(needle);
@@ -887,6 +890,13 @@ async function search(memory: GameMemory, read: string) {
 function bestCopy(copies: Spot[], read: string, needles: string[]) {
   let best: string | null = null;
   let bestScore = MATCH;
+  // The read's writing systems: a letter from another just before the line
+  // is data before the string read as text (Ren'Py's "踁This is…"), not a
+  // word the line starts inside of, and it's trimmed off the line's ends.
+  const systems = writingSystems(read);
+  const known = (character: string | undefined) =>
+    character !== undefined &&
+    [...writingSystems(character)].every((system) => systems.has(system));
   // Many copies are the same text: each stretch is tried once.
   const tried = new Set<string>();
   for (const { found } of copies) {
@@ -908,11 +918,23 @@ function bestCopy(copies: Spot[], read: string, needles: string[]) {
     tried.add(stretch);
     for (let start = Math.max(0, guess - 8); start <= guess + 8; start++) {
       // Not from inside a word.
-      if (isWordCharacter(text[start - 1]) && isWordCharacter(text[start])) {
+      if (
+        isWordCharacter(text[start - 1]) &&
+        known(text[start - 1]) &&
+        isWordCharacter(text[start])
+      ) {
         continue;
       }
       const rest = text.slice(start);
       let line = tidy(rest.slice(0, endFor(rest, read)), '');
+      const characters = [...line];
+      while (characters.length > 0 && !known(characters[0])) {
+        characters.shift();
+      }
+      while (characters.length > 0 && !known(characters.at(-1))) {
+        characters.pop();
+      }
+      line = characters.join('').trim();
       if (!read.includes('~')) {
         line = line.replaceAll('~', ' ').replace(/\s+/g, ' ');
       }
@@ -989,6 +1011,9 @@ async function findSpots(memory: GameMemory, needles: string[]) {
       continue;
     }
     for (const { encoding, bytes: needle } of searches) {
+      // Looking through a big stretch takes a while, so the main process
+      // gets a turn between runs (its windows' requests wait meanwhile).
+      await breather();
       for (
         let at = bytes.indexOf(needle);
         at !== -1 && spots.size < MAX_CANDIDATES;
@@ -1006,6 +1031,9 @@ async function findSpots(memory: GameMemory, needles: string[]) {
   }
   return [...spots.values()];
 }
+
+// Lets the main process handle what's waiting before going on.
+const breather = () => new Promise((resolve) => setImmediate(resolve));
 
 // Where the text around `at` starts: back to just after a control character
 // (a zero, usually), at most a line's length back.
