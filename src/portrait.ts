@@ -14,6 +14,7 @@ import {
   stopCapture,
 } from './capture';
 import './history-log';
+import './menus-sheet';
 import { startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
@@ -62,7 +63,8 @@ const portrait = document.querySelector<HTMLElement>('.portrait')!;
 // The top-left button switches between the reader layout and the whole game:
 // the entire game screen in full, so every menu, setting and choice can be
 // seen and tapped, with taps landing 1:1. Just for now, not saved. The
-// `raw-mode` class switches the layout in portrait.css.
+// `raw-mode` class switches the layout in portrait.css: the game goes in
+// `#game-slot`, under the corner buttons, with the settings sheet below.
 const WHOLE_GAME: Region = { x: 0, y: 0, w: 1, h: 1 };
 let rawMode = false;
 const rawButton = document.querySelector<HTMLButtonElement>('#raw-button')!;
@@ -103,9 +105,14 @@ window.vn.onButtonSizeChanged(setButtonSize);
 window.vn.getButtonSize().then(setButtonSize);
 
 // The message window's border and arrow (an app setting), set as
-// `data-border` and `data-arrow` attributes that portrait.css styles by.
+// `data-border` and `data-arrow` attributes that portrait.css styles by. On
+// the window and the arrow themselves, so the Menus sheet's samples can show
+// other ones; the arrow also on .portrait, for the room the text leaves it.
+const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
+const nextArrow = document.querySelector<HTMLElement>('#next-arrow')!;
 function setMessageStyle(style: MessageStyle) {
-  portrait.dataset.border = style.border;
+  textLine.dataset.border = style.border;
+  nextArrow.dataset.arrow = style.arrow;
   portrait.dataset.arrow = style.arrow;
 }
 window.vn.onMessageStyleChanged(setMessageStyle);
@@ -131,6 +138,13 @@ video.muted = true;
 let clientArea: Region = { x: 0, y: 0, w: 1, h: 1 };
 video.addEventListener('resize', async () => {
   clientArea = await getClientArea();
+  // The game's shape, for the Menus mode's game slot (portrait.css).
+  portrait.style.setProperty(
+    '--game-aspect',
+    String(
+      (video.videoWidth * clientArea.w) / (video.videoHeight * clientArea.h),
+    ),
+  );
 });
 
 // CSS stretches each canvas to fill its zone, but the canvas's own pixel grid
@@ -150,6 +164,22 @@ const resizeObserver = new ResizeObserver((entries) => {
 });
 resizeObserver.observe(backgroundCanvas, { box: 'device-pixel-content-box' });
 
+// In Menus mode the game is drawn into the box of `#game-slot` (under the
+// corner buttons, above the settings sheet), while the backdrop still fills
+// the whole canvas. That box, in the canvas's pixels.
+const gameSlot = document.querySelector<HTMLElement>('#game-slot')!;
+function slotInCanvas(canvas: HTMLCanvasElement) {
+  const canvasRect = canvas.getBoundingClientRect();
+  const slot = gameSlot.getBoundingClientRect();
+  const scale = canvas.width / canvasRect.width;
+  return {
+    x: (slot.left - canvasRect.left) * scale,
+    y: (slot.top - canvasRect.top) * scale,
+    width: slot.width * scale,
+    height: slot.height * scale,
+  };
+}
+
 // Where a zone's region comes from in the video (`s...`, source) and where it
 // lands on the zone's canvas (`d...`, destination), all in pixels. Used both
 // to draw the zone and to work out where a tap on it points in the game.
@@ -157,14 +187,17 @@ function placeZone(zone: Zone, regions: Regions) {
   const { canvas } = zone;
   const region = zoneRegion(zone, regions);
   const { sx, sy, sw, sh } = regionInVideo(video, clientArea, region);
+  const box = rawMode
+    ? slotInCanvas(canvas)
+    : { x: 0, y: 0, width: canvas.width, height: canvas.height };
   const { dx, dy, dw, dh } = placeInZone(
     sw,
     sh,
-    canvas.width,
-    canvas.height,
+    box.width,
+    box.height,
     zoneView(zone),
   );
-  return { sx, sy, sw, sh, dx, dy, dw, dh };
+  return { sx, sy, sw, sh, dx: box.x + dx, dy: box.y + dy, dw, dh };
 }
 
 // The backdrop behind a zoomed-out background: the same picture, filling the
@@ -309,7 +342,6 @@ function showRipple(event: MouseEvent) {
 
 // A tap on the text clicks the middle of the game's text box, which moves on
 // to the next line in most VNs.
-const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
 const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
 function clickTextBox(event: MouseEvent) {
   if (regions) {

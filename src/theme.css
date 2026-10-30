@@ -22,7 +22,8 @@
    - --pill: the corner radius of buttons (999px = fully round ends). */
 
 /* Aokana: a bright, airy sky-blue and white look. */
-:root {
+:root,
+.theme-sample[data-theme='aokana'] {
   --accent: #6cc4f5;
   --accent-deep: #2f86d6;
   --accent-pale: #e8f6ff;
@@ -54,7 +55,8 @@
    charcoal text in a plain sans, a thin grey chevron. Greys with no colour.
    Picking it in the picker also picks the plain border and the chevron
    (message-style.ts). */
-:root[data-theme='kimikano'] {
+:root[data-theme='kimikano'],
+.theme-sample[data-theme='kimikano'] {
   --accent: #8c8c94;
   --accent-deep: #55555c;
   --accent-pale: #f2f2f4;
@@ -92,7 +94,7 @@
 
 /* The message window itself is see-through: no glass, no edge. Border
    options still draw over it (they're as specific as this and come later). */
-:root[data-theme='kimikano'] #text-line {
+:root[data-theme='kimikano'] :is(#text-line, .message-window) {
   background: none;
   backdrop-filter: none;
   border-color: transparent;
@@ -101,7 +103,7 @@
 
 /* The speaker's name as plain accent-coloured text on the haze, with no
    pill, as in the game. */
-:root[data-theme='kimikano'] .portrait #name-tag {
+:root[data-theme='kimikano'] .portrait :is(#name-tag, .name-tag) {
   margin-bottom: 0;
   padding-inline: 0;
   color: var(--accent-deep);
@@ -111,13 +113,14 @@
 }
 
 /* A thin chevron, as in the game. */
-:root[data-theme='kimikano'] .portrait #next-arrow .chevron {
+:root[data-theme='kimikano'] .portrait :is(#next-arrow, .next-arrow) .chevron {
   stroke-width: 2;
 }
 
 /* Katawa Shoujo: quiet and warm, like a spring afternoon at school: cream
    paper, a dusty coral accent, gently squared corners. */
-:root[data-theme='katawa-shoujo'] {
+:root[data-theme='katawa-shoujo'],
+.theme-sample[data-theme='katawa-shoujo'] {
   --accent: #e39a8b;
   --accent-deep: #b9604f;
   --accent-pale: #fbf1ea;
@@ -141,7 +144,8 @@
 
 /* Witch on the Holy Night: a winter night in an old town. Deep navy, gold
    trim, cream text in a book serif, nearly square corners. */
-:root[data-theme='mahoyo'] {
+:root[data-theme='mahoyo'],
+.theme-sample[data-theme='mahoyo'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
   --accent: #c9a45c;
@@ -172,7 +176,8 @@
 
 /* Hoshizora no Memoria: a starry evening sky. Indigo glass scattered with
    tiny stars, lavender accents, a star-gold rim. */
-:root[data-theme='hoshimemo'] {
+:root[data-theme='hoshimemo'],
+.theme-sample[data-theme='hoshimemo'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
   --accent: #b9a4ff;
@@ -217,7 +222,8 @@
 
 /* Steins;Gate: a cluttered lab at night. Charcoal, the amber glow of a
    Nixie tube, terminal type, faint scanlines, sharp corners. */
-:root[data-theme='steins-gate'] {
+:root[data-theme='steins-gate'],
+.theme-sample[data-theme='steins-gate'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
   --accent: #ff8a2b;
@@ -247,7 +253,8 @@
 
 /* Doki Doki Literature Club!: sweet pink and white, with the polka dots of
    the club's menus. */
-:root[data-theme='ddlc'] {
+:root[data-theme='ddlc'],
+.theme-sample[data-theme='ddlc'] {
   --accent: #ff8fc8;
   --accent-deep: #e8559f;
   --accent-pale: #ffe6f4;
@@ -275,7 +282,8 @@
    pink accents, a wallpaper of doodled hearts, flowers and stars, heavy
    rounded type. Picking it in the picker also picks the two-hearts arrow
    (message-style.ts). */
-:root[data-theme='miside'] {
+:root[data-theme='miside'],
+.theme-sample[data-theme='miside'] {
   /* A dark theme: native scrollbars and dropdowns go dark to match. */
   color-scheme: dark;
   --accent: #f77fd0;
@@ -305,7 +313,7 @@
 }
 
 /* MiSide's menu text sits on a dark drop shadow. */
-:root[data-theme='miside'] :is(#text-line, #log-text) {
+:root[data-theme='miside'] :is(#text-line, .message-window, #log-text) {
   text-shadow: 0 0.06em 0 rgb(0 0 0 / 45%);
 }
 
@@ -314,7 +322,8 @@
    groove inside it), soft purple text in a thin, wide, techy font, and a
    flat triangle. Picking it in the picker also picks border None and the
    triangle (message-style.ts). */
-:root[data-theme='miyuki'] {
+:root[data-theme='miyuki'],
+.theme-sample[data-theme='miyuki'] {
   --accent: #8a87b0;
   --accent-deep: #5f5c88;
   --accent-pale: #d9dae8;
@@ -342,7 +351,7 @@
    buttons, the history log). The message window's border options still
    draw over it (they're more specific). */
 :root[data-theme='miyuki'] .glass,
-:root[data-theme='miyuki'] .portrait #name-tag {
+:root[data-theme='miyuki'] .portrait :is(#name-tag, .name-tag) {
   border: 3px solid var(--rim-light);
   box-shadow:
     inset 0 0 0 1px var(--accent),

@@ -44,6 +44,8 @@ body {
   /* The text size of the corner buttons and "Return to game" (see
      `.corner-button`). Defined here, where `--button-size` is set. */
   --button-font-size: clamp(1.05rem, 4.75vmin * var(--button-size, 1), 7vmin);
+  /* How far the corner buttons sit from the top and sides. */
+  --corner-gap: max(0.75rem, 4.5vmin);
   height: 100dvh;
   display: grid;
   grid-template-areas: 'stage';
@@ -162,7 +164,7 @@ body {
 }
 
 /* The name pill's look. */
-.portrait #name-tag {
+.portrait :is(#name-tag, .name-tag) {
   padding: 0.15em 1.1em 0.2em 0.9em;
   font-weight: 700;
   line-height: 1.35;
@@ -180,7 +182,7 @@ body {
 }
 
 /* A small dot before the name. */
-.portrait #name-tag::before {
+.portrait :is(#name-tag, .name-tag)::before {
   content: '';
   display: inline-block;
   width: 0.32em;
@@ -198,7 +200,7 @@ body {
    with the chevron. */
 
 /* Border "halo": a soft accent glow all the way round, slowly breathing. */
-.portrait[data-border='halo'] #text-line {
+.portrait :is(#text-line, .message-window)[data-border='halo'] {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
     0 0 0 2px color-mix(in srgb, var(--surface) 70%, transparent),
@@ -226,14 +228,14 @@ body {
   initial-value: 0deg;
 }
 
-.portrait[data-border='rim'] #text-line {
+.portrait :is(#text-line, .message-window)[data-border='rim'] {
   border-color: transparent;
 }
 
 /* A gradient-filled layer with its middle cut out by a mask, leaving only a
    5px ring: the "content-box" layer is the middle, and `exclude` keeps only
    where the two layers don't overlap. */
-.portrait[data-border='rim'] #text-line::before {
+.portrait :is(#text-line, .message-window)[data-border='rim']::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -263,7 +265,7 @@ body {
 
 /* Border "ribbon": a thin accent ribbon along the top edge, fading out at the
    ends (the original look). */
-.portrait[data-border='ribbon'] #text-line::before {
+.portrait :is(#text-line, .message-window)[data-border='ribbon']::before {
   content: '';
   position: absolute;
   top: 0;
@@ -286,7 +288,7 @@ body {
 
 /* #next-arrow holds every arrow shape; only the picked one shows (none, for
    arrow "none"). */
-#next-arrow > * {
+:is(#next-arrow, .next-arrow) > * {
   display: none;
 }
 
@@ -295,7 +297,7 @@ body {
   --arrow-width: 0.85em;
 }
 
-.portrait[data-arrow='chevron'] #next-arrow .chevron {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='chevron'] .chevron {
   display: block;
   width: 0.85em;
   height: 0.85em;
@@ -312,14 +314,14 @@ body {
   --arrow-width: 1.12em;
 }
 
-.portrait[data-arrow='dots'] #next-arrow .dots {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='dots'] .dots {
   display: flex;
   gap: 0.18em;
   /* Lined up with where the chevron's point sits. */
   margin: 0 0.1em 0.2em 0;
 }
 
-#next-arrow .dots i {
+:is(#next-arrow, .next-arrow) .dots i {
   width: 0.22em;
   height: 0.22em;
   border-radius: 50%;
@@ -327,11 +329,11 @@ body {
   animation: hop 1.2s ease-in-out infinite;
 }
 
-#next-arrow .dots i:nth-child(2) {
+:is(#next-arrow, .next-arrow) .dots i:nth-child(2) {
   animation-delay: 0.15s;
 }
 
-#next-arrow .dots i:nth-child(3) {
+:is(#next-arrow, .next-arrow) .dots i:nth-child(3) {
   animation-delay: 0.3s;
 }
 
@@ -354,7 +356,7 @@ body {
   --arrow-width: 1.3em;
 }
 
-.portrait[data-arrow='hearts'] #next-arrow .hearts {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='hearts'] .hearts {
   display: block;
   width: 1.3em;
   height: 1.3em;
@@ -382,7 +384,7 @@ body {
   --arrow-width: 0.62em;
 }
 
-.portrait[data-arrow='ember'] #next-arrow .ember {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='ember'] .ember {
   display: block;
   width: 0.42em;
   height: 0.42em;
@@ -411,7 +413,7 @@ body {
   --arrow-width: 0.5em;
 }
 
-.portrait[data-arrow='drop'] #next-arrow .drop {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='drop'] .drop {
   display: block;
   width: 0.5em;
   height: 0.72em;
@@ -460,7 +462,7 @@ body {
   --arrow-width: 0.7em;
 }
 
-.portrait[data-arrow='triangle'] #next-arrow .triangle {
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='triangle'] .triangle {
   display: block;
   width: 0.7em;
   height: 0.5em;
@@ -468,13 +470,6 @@ body {
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   background: linear-gradient(var(--accent), var(--accent-deep));
   animation: bob 1.2s ease-in-out infinite;
-}
-
-/* Whole-game mode: the background zone fills the portrait and shows the
-   entire game (portrait.ts places it with `SHOW_ALL`, so nothing is cut
-   off); the text zone is hidden. */
-.portrait.raw-mode #text-zone {
-  display: none;
 }
 
 @keyframes bob {
@@ -523,7 +518,6 @@ body {
    two always fit side by side, and never smaller than 1.05rem, or 48px tall,
    a comfortable size for a finger. */
 .corner-button {
-  --corner-gap: max(0.75rem, 4.5vmin);
   position: absolute;
   top: var(--corner-gap);
   z-index: 2;
@@ -760,4 +754,220 @@ body {
 :root.on-phone,
 :root.on-phone * {
   cursor: none !important;
+}
+
+/* --- Menus mode ---------------------------------------------------------------
+   The whole game, under the corner buttons, with a settings sheet below it
+   (the `raw-mode` class, set by portrait.ts). portrait.ts draws the game
+   into `#game-slot`'s box, all of it (`SHOW_ALL`), while the background
+   canvas still fills the portrait with the blurred backdrop. The text zone
+   is hidden. */
+
+#game-slot,
+#menus-sheet {
+  display: none;
+}
+
+.portrait.raw-mode {
+  --sheet-gap: clamp(0.5rem, 3vw, 1rem);
+  /* The corner buttons' row: the gap above them, their height (48px at
+     least, or the icon's 1.2em plus 0.5em of padding top and bottom), and
+     the same gap again below. */
+  --buttons-height: calc(
+    2 * var(--corner-gap) + max(48px, 2.2 * var(--button-font-size))
+  );
+  grid-template-areas:
+    'buttons'
+    'game'
+    'sheet';
+  grid-template-rows: var(--buttons-height) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+
+  /* Behind everything, filling the portrait. */
+  #background-zone {
+    grid-area: 1 / 1 / -1 / -1;
+  }
+
+  #text-zone {
+    display: none;
+  }
+
+  /* Full width, the game's own shape (`--game-aspect`, set by portrait.ts
+     from the capture), but never more than 55% of the height, so the
+     sheet keeps some room; the game then shrinks to fit, centered. */
+  #game-slot {
+    display: block;
+    grid-area: game;
+    height: min(100vw / var(--game-aspect, 1.7778), 55dvh);
+  }
+
+  #menus-sheet {
+    display: grid;
+    grid-area: sheet;
+    align-content: start;
+    gap: max(0.4rem, 1.8vmin);
+    margin: var(--sheet-gap) var(--sheet-gap) max(var(--sheet-gap), 3dvh);
+    padding: max(0.9rem, 4vmin);
+    /* Scrolls inside itself when it doesn't fit, without dragging the page
+       along at either end. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    position: relative;
+    z-index: 1;
+    /* Sized by the screen's shorter side, like the corner buttons, so it
+       looks the same on the PC and the phone. */
+    font-size: max(0.95rem, 3.8vmin);
+    /* The current theme's colour for the picked option's ring, worked out
+       here: the theme buttons below redefine `--accent-deep` for
+       themselves. */
+    --picked: var(--accent-deep);
+  }
+}
+
+/* A window wider than it's tall (the portrait window on the PC, resized):
+   the sheet goes beside the game instead of below it. */
+@media (orientation: landscape) {
+  .portrait.raw-mode {
+    grid-template-areas:
+      'buttons buttons'
+      'game sheet';
+    grid-template-rows: var(--buttons-height) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 38%);
+
+    #game-slot {
+      height: auto;
+    }
+  }
+}
+
+#menus-sheet h2,
+#menus-sheet h3 {
+  margin: 0;
+  font-weight: 700;
+}
+
+#menus-sheet h2 {
+  font-size: 1.15em;
+}
+
+#menus-sheet h3 {
+  margin-top: 0.4em;
+  font-size: 0.8em;
+  letter-spacing: 0.05em;
+  color: var(--accent-deep);
+}
+
+.sheet-note {
+  margin: 0.4em 0 0;
+  font-size: 0.8em;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+/* The sample message window: the real one's look, at the sheet's size. */
+#look-preview {
+  margin-top: 0.6em;
+
+  .name-tag {
+    position: relative;
+    z-index: 1;
+    width: fit-content;
+    margin: 0 0 -0.6em 1em;
+    font-size: 0.8em;
+  }
+
+  .message-window {
+    position: relative;
+    margin: 0;
+    /* Room on the right for the arrow. */
+    padding: 0.9em 2.4em 0.9em 1.1em;
+    font-size: 1.1em;
+    font-weight: var(--text-weight);
+    line-height: 1.5;
+  }
+
+  .next-arrow {
+    position: absolute;
+    right: 0.8em;
+    bottom: 0.6em;
+  }
+}
+
+/* The option buttons: a grid that fits as many to a row as it can. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--chip-width), 1fr));
+  gap: 0.6em;
+}
+
+#theme-chips {
+  --chip-width: max(7.5rem, 30vmin);
+}
+
+#arrow-chips {
+  --chip-width: max(3.5rem, 14vmin);
+}
+
+#border-chips {
+  --chip-width: max(5.5rem, 21vmin);
+}
+
+.chip {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 0.4em 0.6em;
+  font: inherit;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--line);
+  border-radius: calc(0.6em * var(--corner));
+  cursor: pointer;
+}
+
+.chip[aria-checked='true'] {
+  outline: 3px solid var(--picked);
+  outline-offset: 2px;
+}
+
+.chip:active {
+  scale: 0.97;
+}
+
+/* A theme button, in its own theme's colours and font (it carries that
+   theme's variables: `.theme-sample` in theme.css), with a strip of its
+   accent on the left. */
+.chip.theme-sample {
+  padding-left: 1em;
+  font-family: var(--font);
+  font-size: 0.85em;
+  font-weight: var(--text-weight);
+  text-wrap: balance;
+  color: var(--ink);
+  background:
+    var(--glass-pattern), linear-gradient(var(--surface), var(--surface-tint));
+  border-color: var(--accent);
+  box-shadow: inset 0.4em 0 0 var(--accent);
+}
+
+/* An arrow button: the arrow, moving, at a size that reads. */
+.chip .next-arrow {
+  display: block;
+  font-size: 1.6em;
+  line-height: 1;
+}
+
+/* A border button: a small message window, with room around it for the
+   glow. */
+.chip:has(.message-window) {
+  padding: 0.6em;
+}
+
+.chip .message-window {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.35em 0.5em;
+  font-size: 0.85em;
+  font-weight: var(--text-weight);
 }

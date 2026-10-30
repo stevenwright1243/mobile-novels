@@ -12,6 +12,7 @@ import {
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { THEME_STYLES } from './look-options';
 import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
 import { followPhoneDisplay } from './phone-display';
@@ -747,13 +748,23 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-theme', async (_event, theme: ThemeName) => {
     settings = { ...settings, theme };
     broadcast('theme-changed', theme);
+    // A theme with its own border or arrow picks them too.
+    const style = THEME_STYLES[theme];
+    if (style) {
+      settings = {
+        ...settings,
+        messageStyle: { ...settings.messageStyle, ...style },
+      };
+      broadcast('message-style-changed', settings.messageStyle);
+    }
     await saveSettings(settings);
   });
-  // The message window's border and arrow, saved straight away.
+  // The message window's border and arrow, saved straight away. Sent back
+  // to the sender too: the portrait can change them from its Menus sheet.
   ipcMain.handle('get-message-style', () => settings.messageStyle);
-  ipcMain.handle('set-message-style', async (event, style: MessageStyle) => {
+  ipcMain.handle('set-message-style', async (_event, style: MessageStyle) => {
     settings = { ...settings, messageStyle: style };
-    broadcast('message-style-changed', style, event.sender);
+    broadcast('message-style-changed', style);
     await saveSettings(settings);
   });
 

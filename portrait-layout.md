@@ -108,6 +108,22 @@ game's name box (the `name` region, per game).
   text box's top edge, `clamp(0.5rem, 3vw, 1rem)` from the left.
 - Tapping it clicks the game's text box, like the message window.
 
+## Menus mode
+
+- The game, whole, sits just under the corner buttons (the buttons' row:
+  `2 × corner gap + max(48px, 2.2 × button text size)`), full width at its
+  own shape, at most **55%** of the portrait's height (`#game-slot`).
+- Below it, the **Menus sheet** (`#menus-sheet`, glass), filling the rest,
+  `clamp(0.5rem, 3vw, 1rem)` from the sides, at least 3% of the height from
+  the bottom; it scrolls inside itself. Text `max(0.95rem, 3.8vmin)`.
+- In a window wider than tall, the sheet goes beside the game instead
+  (`minmax(16rem, 38%)` wide).
+- Sheet contents: **Look**: a sample message window (name tag, text, arrow),
+  then buttons for Theme (at least `max(7.5rem, 30vmin)` wide), Arrow
+  (`max(3.5rem, 14vmin)`) and Border (`max(5.5rem, 21vmin)`), each at least
+  48px tall; the picked one has a 3px ring in the current theme's
+  `--accent-deep`.
+
 ## Corner buttons
 
 - **Menus** (top-left) and **Log** (top-right): frosted pills, at least 48px

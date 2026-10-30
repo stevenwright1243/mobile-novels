@@ -15,12 +15,12 @@
           <span id="name-text"></span>
         </div>
         <!-- The line read by OCR (see portrait.ts). -->
-        <p id="text-line" class="glass"></p>
+        <p id="text-line" class="message-window glass"></p>
         <!-- The "tap to continue" arrow in the message window's corner. It
              holds every arrow shape; portrait.css shows the one picked in
              the picker's Style settings. Outside #text-line, because setting
              the line's text would remove anything inside it. -->
-        <span id="next-arrow" aria-hidden="true">
+        <span id="next-arrow" class="next-arrow" aria-hidden="true">
           <svg class="chevron" viewBox="0 0 24 24">
             <path d="M5 9l7 7 7-7" />
           </svg>
@@ -41,6 +41,46 @@
           </svg>
         </span>
       </div>
+
+      <!-- Menus mode only (the `raw-mode` class): an empty box under the
+           corner buttons that the whole game is drawn into (portrait.ts),
+           and the settings sheet below it (menus-sheet.ts). -->
+      <div id="game-slot"></div>
+      <section id="menus-sheet" class="glass" aria-label="Settings">
+        <h2>Look</h2>
+        <!-- A sample message window in the picked look, since the real one
+             is hidden in Menus mode. -->
+        <div id="look-preview">
+          <div class="name-tag">Name</div>
+          <p class="message-window glass">
+            The text will look like this.
+            <span class="next-arrow" aria-hidden="true"></span>
+          </p>
+        </div>
+        <!-- Each row is filled with a button per option (menus-sheet.ts). -->
+        <h3 id="theme-heading">Theme</h3>
+        <div
+          id="theme-chips"
+          class="chips"
+          role="radiogroup"
+          aria-labelledby="theme-heading"
+        ></div>
+        <h3 id="arrow-heading">Arrow</h3>
+        <div
+          id="arrow-chips"
+          class="chips"
+          role="radiogroup"
+          aria-labelledby="arrow-heading"
+        ></div>
+        <h3 id="border-heading">Border</h3>
+        <div
+          id="border-chips"
+          class="chips"
+          role="radiogroup"
+          aria-labelledby="border-heading"
+        ></div>
+        <p class="sheet-note">Changes are saved for every game.</p>
+      </section>
 
       <!-- Switches between the reader layout and the whole game (portrait.ts).
            Shows whichever it switches to. -->
