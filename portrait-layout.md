@@ -88,6 +88,26 @@ bottom, and never moves it.
     `clamp(0.5rem, 2.5vw, 0.9rem)` up from its bottom.
   - Set in the "Message window styles" section of `src/portrait.css`.
 
+## Name tag
+
+The speaker's name (`#name-tag` in `src/portrait.css`), read by OCR from the
+game's name box (the `name` region, per game).
+
+- **Text mode:** a solid accent pill (`--accent` → `--accent-deep`, text in
+  `--on-accent`, corners `--pill`) with a small dot before the name, inset
+  `clamp(0.75rem, 4vw, 1.5rem)` from the window's left edge and overlapping
+  its top edge by `0.6em`. Text **72%** of the chosen text size, bold,
+  padding `0.15em 1.1em 0.2em 0.9em`, at most 80% of the width (longer names
+  end in "…"). It pops in with a short slide from the left on each new
+  speaker, and is hidden while the name box is empty (narration), so the
+  window doesn't move either way (the text zone grows upwards).
+  - You and Me and Her: plain accent-coloured text on the haze, no pill.
+  - Miyuki's Realm: the same bevelled frame as its glass panels.
+- **Image mode:** the name box's picture, shaped like the name region,
+  `1.5 ×` the base text size tall (at most 70% of the width), sitting on the
+  text box's top edge, `clamp(0.5rem, 3vw, 1rem)` from the left.
+- Tapping it (text mode) clicks the game's text box, like the message window.
+
 ## Corner buttons
 
 - **Menus** (top-left) and **Log** (top-right): frosted pills, at least 48px
@@ -144,6 +164,7 @@ old background settings are no longer used.)
 | Base text size                     | `--base-font-size` in `src/portrait.css`          |
 | Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
 | Smallest shrink for long lines     | `SMALLEST_SIZE` in `src/portrait.ts`              |
+| Name tag size and position         | `#name-tag` in `src/portrait.css`                 |
 | Corner button size and gaps        | `.corner-button` in `src/portrait.css`            |
 | Slider ranges                      | `min` / `max` on the inputs in `index.html`       |
 | Colours, fonts and shapes (themes) | `src/theme.css`                                   |

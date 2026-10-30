@@ -63,6 +63,8 @@ let textShrink: number | null = null;
 
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
+// Who's speaking, read from the name box ('' for narration).
+let speaker = '';
 
 // The history log: the last lines read, oldest first. Cleared when another
 // game is picked.
@@ -412,8 +414,10 @@ app.whenReady().then(async () => {
     broadcast('text-style-changed', profile.textStyle);
     // The last game's line no longer applies.
     textLine = '';
+    speaker = '';
     textHistory = [];
     broadcast('text-line-changed', textLine);
+    broadcast('speaker-changed', speaker);
     sendSaveState();
     return true;
   });
@@ -538,8 +542,10 @@ app.whenReady().then(async () => {
       if (!windowExists(hwnd)) {
         selectedSource = null;
         textLine = '';
+        speaker = '';
         broadcast('source-selected', null);
         broadcast('text-line-changed', textLine);
+        broadcast('speaker-changed', speaker);
       } else if (isMinimized(hwnd)) {
         restoreBehind(hwnd);
       }
@@ -653,6 +659,13 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle('get-text-history', () => textHistory);
+
+  // The speaker's name, read from the name box the same way.
+  ipcMain.handle('get-speaker', () => speaker);
+  ipcMain.handle('set-speaker', (_event, name: string) => {
+    speaker = name;
+    broadcast('speaker-changed', speaker);
+  });
 
   ipcMain.handle('get-phone-display', () => phoneDisplay);
   // The PC / Phone switch, saved straight away.

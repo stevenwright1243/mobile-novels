@@ -40,6 +40,12 @@ const zones: Zone[] = [
     region: 'text',
     view: () => SHOW_ALL,
   },
+  {
+    // The name box picture (image mode), in the name tag.
+    canvas: document.querySelector('#name-tag canvas')!,
+    region: 'name',
+    view: () => SHOW_ALL,
+  },
 ];
 
 // The current regions, kept up to date by main. Null until they arrive.
@@ -329,21 +335,21 @@ function drawZone(zone: Zone, regions: Regions) {
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-// Shapes the text zone like the text region (width / height in real pixels),
-// through the `--text-aspect` CSS variable, so its `contain` fit has no bars.
-// Only touches the style when the shape changes, so layout isn't redone
-// every frame.
+// Shapes an element like a region (width / height in real pixels), through a
+// CSS variable (`--text-aspect` for the text zone, `--name-aspect` for the
+// name tag), so the picture's `contain` fit has no bars. Only touches the
+// style when the shape changes, so layout isn't redone every frame.
 const textZone = document.querySelector<HTMLElement>('#text-zone')!;
-let textAspect = '';
-function fitTextZone(regions: Regions) {
-  const { w, h } = regions.text;
+const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
+const aspects = new Map<HTMLElement, string>();
+function fitShape(element: HTMLElement, variable: string, { w, h }: Region) {
   const aspect = (
     (w * clientArea.w * video.videoWidth) /
     (h * clientArea.h * video.videoHeight)
   ).toFixed(4);
-  if (aspect !== textAspect) {
-    textAspect = aspect;
-    textZone.style.setProperty('--text-aspect', aspect);
+  if (aspect !== aspects.get(element)) {
+    aspects.set(element, aspect);
+    element.style.setProperty(variable, aspect);
   }
 }
 
@@ -351,10 +357,12 @@ function fitTextZone(regions: Regions) {
 // the browser paints, so drawing stays in step with the display.
 function drawFrame() {
   if (regions && video.videoWidth > 0) {
-    fitTextZone(regions);
+    fitShape(textZone, '--text-aspect', regions.text);
+    fitShape(nameTag, '--name-aspect', regions.name);
     for (const zone of zones) {
-      // The text zone's picture isn't shown in text mode or whole-game mode.
-      if (zone.region === 'text' && (textMode === 'text' || rawMode)) {
+      // The text and name box pictures aren't shown in text mode or
+      // whole-game mode.
+      if (zone.region !== 'background' && (textMode === 'text' || rawMode)) {
         continue;
       }
       drawZone(zone, regions);
@@ -404,11 +412,19 @@ function showRipple(event: MouseEvent) {
 // In text mode, a tap on the text clicks the middle of the game's text box,
 // which moves on to the next line in most VNs.
 const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
-textLine.addEventListener('click', (event) => {
+function clickTextBox(event: MouseEvent) {
   if (regions) {
     const { x, y, w, h } = regions.text;
     showRipple(event);
     window.vn.clickGame({ x: x + w / 2, y: y + h / 2 });
+  }
+}
+textLine.addEventListener('click', clickTextBox);
+// The name tag too, as it's part of the message window. (In image mode its
+// picture is a zone, and a tap on it clicks the game where it points.)
+nameTag.addEventListener('click', (event) => {
+  if (textMode === 'text') {
+    clickTextBox(event);
   }
 });
 
@@ -465,11 +481,44 @@ function showTextLine(line: string) {
 window.vn.onTextLineChanged(showTextLine);
 window.vn.getTextLine().then(showTextLine);
 
-// Read the game's text automatically (see text-reader.ts).
-startTextReader(video, () =>
+// The speaker's name, in the tag on the message window's top-left corner.
+// Hidden by portrait.css while it's empty (narration).
+const nameText = document.querySelector<HTMLSpanElement>('#name-text')!;
+function showSpeaker(name: string) {
+  if (name === nameText.textContent) {
+    return;
+  }
+  nameText.textContent = name;
+  // Pops in with a little slide from the left, like a name card.
+  nameTag.animate(
+    [
+      { opacity: 0, translate: '-0.4em 0' },
+      { opacity: 1, translate: '0 0' },
+    ],
+    { duration: 200, easing: 'ease-out' },
+  );
+}
+window.vn.onSpeakerChanged(showSpeaker);
+window.vn.getSpeaker().then(showSpeaker);
+
+// A name box often has a decoration beside the name (an icon, brackets, a
+// colon) that OCR reads as stray marks: trim anything that isn't a letter,
+// a digit or a question mark ("???" is a common unknown speaker) off both
+// ends.
+const tidyName = (name: string) =>
+  name.replace(/^[^\p{L}\p{N}?]+|[^\p{L}\p{N}?!]+$/gu, '');
+
+// Read the game's text and the speaker's name automatically, each from its
+// own box (see text-reader.ts).
+const findRegion = (name: RegionName) => () =>
   regions && video.videoWidth > 0
-    ? regionInVideo(video, clientArea, regions.text)
-    : null,
+    ? regionInVideo(video, clientArea, regions[name])
+    : null;
+startTextReader(video, findRegion('text'), (line) =>
+  window.vn.setTextLine(line),
+);
+startTextReader(video, findRegion('name'), (name) =>
+  window.vn.setSpeaker(tidyName(name)),
 );
 
 window.vn.onSourceSelected(showSource);

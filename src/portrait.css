@@ -78,6 +78,27 @@ body {
   display: none;
 }
 
+/* The name tag, on the text box's top-left corner. In image mode it's the
+   name box's picture (its canvas), shaped like the name region through
+   `--name-aspect` (set by portrait.ts), sitting just above the text box. */
+#name-tag {
+  position: absolute;
+  z-index: 1;
+  left: clamp(0.5rem, 3vw, 1rem);
+  bottom: 100%;
+  height: calc(var(--base-font-size) * 1.5);
+  max-width: 70%;
+  aspect-ratio: var(--name-aspect, 4);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: calc(0.4rem * var(--corner)) calc(0.4rem * var(--corner)) 0 0;
+  background: #000;
+}
+
+#name-text {
+  display: none;
+}
+
 .portrait.text-mode {
   /* Both zones share one grid cell: the background fills the whole portrait
      and the message window floats over its bottom edge. The window can grow
@@ -158,6 +179,60 @@ body {
   }
 
   #text-line:empty + #next-arrow {
+    display: none;
+  }
+
+  /* The name tag: the speaker's name as a solid accent pill, overlapping
+     the message window's top edge like a game's name plate. In the flow
+     just above the window, so the text zone grows by its height (upwards:
+     the zone sits at the bottom), and the window never moves. Hidden while
+     there's no name (narration). */
+  #name-tag {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    height: auto;
+    aspect-ratio: auto;
+    width: fit-content;
+    max-width: 80%;
+    box-sizing: border-box;
+    /* Overlaps the window by about half its height. */
+    margin: 0 0 -0.6em clamp(0.75rem, 4vw, 1.5rem);
+    padding: 0.15em 1.1em 0.2em 0.9em;
+    font-size: calc(var(--chosen-font-size) * 0.72);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+    color: var(--on-accent);
+    background: linear-gradient(to bottom, var(--accent), var(--accent-deep));
+    border: 1px solid color-mix(in srgb, var(--on-accent) 45%, transparent);
+    border-radius: var(--pill);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--rim-light) 55%, transparent),
+      0 0.25rem 0.9rem color-mix(in srgb, var(--shadow) 30%, transparent);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  /* A small dot before the name. */
+  #name-tag::before {
+    content: '';
+    display: inline-block;
+    width: 0.32em;
+    height: 0.32em;
+    margin: 0 0.55em 0.12em 0;
+    vertical-align: middle;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.75;
+  }
+
+  #name-text {
+    display: inline;
+  }
+
+  #name-tag:has(#name-text:empty) {
     display: none;
   }
 }

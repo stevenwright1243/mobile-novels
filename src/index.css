@@ -442,6 +442,10 @@ h2 {
   --color: #4af;
 }
 
+.outline[data-region='name'] {
+  --color: #6d6;
+}
+
 .outline span {
   position: absolute;
   top: 0;

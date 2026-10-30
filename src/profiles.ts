@@ -5,10 +5,12 @@ import { app } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-// Used for a game that has no saved regions yet.
+// Used for a game that has no saved regions yet. The name box starts just
+// above the text box's left end, where most VNs put it.
 export const DEFAULT_REGIONS: Regions = {
   background: { x: 0, y: 0, w: 1, h: 0.7 },
   text: { x: 0, y: 0.7, w: 1, h: 0.3 },
+  name: { x: 0.05, y: 0.63, w: 0.2, h: 0.06 },
 };
 
 // Normal-sized text.

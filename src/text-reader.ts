@@ -1,7 +1,8 @@
 /**
  * Reads the game's text automatically with OCR (runs in the portrait page,
- * which always has the live capture). The confirmed line goes to main, which
- * shares it with every window.
+ * which always has the live capture). Each box is read by its own reader:
+ * the text box for the line, the name box for the speaker. The confirmed
+ * text goes to main, which shares it with every window.
  *
  * The tricky part is knowing when a line is finished. Text often types out
  * a letter at a time, and the "next" arrow keeps bobbing, so the text box
@@ -106,11 +107,13 @@ function looksLikeText(text: string, confidence: number) {
   return real / words.length >= MIN_WORD_SHARE;
 }
 
-// Starts reading. `findTextBox` says where the text box is in the video right
+// Starts reading. `findTextBox` says where the box is in the video right
 // now, or null when there's nothing to read yet (no capture or regions).
+// `onRead` gets each confirmed read ('' when the box is empty).
 export function startTextReader(
   video: HTMLVideoElement,
   findTextBox: () => VideoRect | null,
+  onRead: (text: string) => void,
 ) {
   // The sample at the last read, the text of the last read, and the last
   // line sent to main.
@@ -133,7 +136,7 @@ export function startTextReader(
         const read = tidied && looksLikeText(tidied, confidence) ? tidied : '';
         if (read === lastRead && read !== confirmed) {
           confirmed = read;
-          window.vn.setTextLine(read);
+          onRead(read);
         }
         lastRead = read;
       }

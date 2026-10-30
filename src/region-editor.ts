@@ -39,6 +39,7 @@ const fields: Record<keyof Region, HTMLInputElement> = {
 const buttonLabels: Record<RegionName, string> = {
   background: 'Edit background',
   text: 'Edit text zone',
+  name: 'Edit name box',
 };
 
 // Called once a game window is picked, since there's nothing to edit before.

@@ -84,6 +84,11 @@ contextBridge.exposeInMainWorld('vn', {
       callback(line),
     );
   },
+  getSpeaker: () => ipcRenderer.invoke('get-speaker'),
+  setSpeaker: (name) => ipcRenderer.invoke('set-speaker', name),
+  onSpeakerChanged: (callback) => {
+    ipcRenderer.on('speaker-changed', (_event, name: string) => callback(name));
+  },
   getPhoneDisplay: () => ipcRenderer.invoke('get-phone-display'),
   onPhoneDisplayChanged: (callback) => {
     ipcRenderer.on(

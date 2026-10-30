@@ -22,9 +22,10 @@ interface Region {
   h: number;
 }
 
-// The named regions the portrait view draws. `Record<K, V>` is an object
-// with exactly the keys K, each holding a V.
-type RegionName = 'background' | 'text';
+// The named regions the portrait view draws: the background, the text box,
+// and the name box (the speaker's name). `Record<K, V>` is an object with
+// exactly the keys K, each holding a V.
+type RegionName = 'background' | 'text' | 'name';
 type Regions = Record<RegionName, Region>;
 
 // How a tap is delivered to the game: 'message' posts click messages to its
@@ -212,6 +213,11 @@ interface Window {
     getTextLine(): Promise<string>;
     setTextLine(line: string): Promise<void>;
     onTextLineChanged(callback: (line: string) => void): void;
+    // Who's speaking, read by OCR from the name box (text-reader.ts), or ''
+    // when the name box is empty (narration). Kept by main like the line.
+    getSpeaker(): Promise<string>;
+    setSpeaker(name: string): Promise<void>;
+    onSpeakerChanged(callback: (name: string) => void): void;
     // The history log: the last 30 lines read, oldest first.
     getTextHistory(): Promise<string[]>;
     // The phone's display while one is connected (the portrait is full
