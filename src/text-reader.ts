@@ -331,7 +331,15 @@ export function startTextReader(
         dotsAppeared
       ) {
         lastSample = sample;
-        const clean = await readBox(video, box, 'clean', page);
+        let clean = await readBox(video, box, 'clean', page);
+        if (textBox) {
+          // White text drawn straight over the art may read better from its
+          // white alone (see `OcrPrep`); whichever is surer wins.
+          const white = await readBox(video, box, 'white');
+          if (white.ok && (!clean.ok || white.confidence > clean.confidence)) {
+            clean = white;
+          }
+        }
         let read = clean.ok ? clean.text : '';
         if (!read && textBox) {
           const ink = measureInk(video, box);

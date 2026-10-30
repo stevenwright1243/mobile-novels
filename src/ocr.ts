@@ -48,6 +48,12 @@ function fixCommonMistakes(text: string) {
       // any letter, `\p{N}` any digit; `(?<!...)` and `(?!...)` check the
       // neighbours without including them in the match.
       .replace(/(?<![\p{L}\p{N}])l(?![\p{L}\p{N}])/gu, 'I')
+      // A stammered "I" read as ones: "1-1" is "I-I" (and "1-1-1" "I-I-I").
+      // Numbers are written with a dash between them far less often than
+      // a stammer.
+      .replace(/(?<![\p{L}\p{N}-])1(?:-1)+(?![\p{L}\p{N}-])/gu, (ones) =>
+        ones.replaceAll('1', 'I'),
+      )
       // A "0" in a word that's otherwise letters is an "o": "so00000000"
       // is a drawn-out "sooooooooo". Capital "O" in a capitalised word
       // ("NO0O"). Words with other digits ("2000s", "10am") stay as they are,

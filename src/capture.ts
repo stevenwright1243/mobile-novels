@@ -158,7 +158,12 @@ export function ocrScale(
 //    text that's barely different from a shaded background, like white names
 //    on a light gradient plate, which 'clean' reads badly. It reads ordinary
 //    text worse, though, so it's a second try (see text-reader.ts).
-export type OcrPrep = 'none' | 'clean' | 'flatten';
+//  - 'white': only the pure white (colourless and bright) pixels kept, as
+//    black on white. For white text with a dark outline drawn straight over
+//    the art, like The Colorful World's: where the art behind is pale,
+//    'clean' can't tell the letters from it by brightness, but the art is
+//    coloured and the letters aren't (see `whiteToBlack`).
+export type OcrPrep = 'none' | 'clean' | 'flatten' | 'white';
 
 // Copies part of the video into a PNG for OCR, enlarged to suit its text
 // (`ocrScale()`, unless given), prepared as `prep` says.
@@ -185,6 +190,9 @@ export async function cropForOcr(
   }
   if (prep === 'flatten') {
     canvas = flatten(video, box, canvas, scale);
+  }
+  if (prep === 'white') {
+    whiteToBlack(canvas);
   }
 
   // `toBlob` hands over the PNG through a callback; wrapping it in a Promise
@@ -230,9 +238,49 @@ function toBlackOnWhite(canvas: HTMLCanvasElement) {
   for (let i = 0; i < ink.length; i++) {
     ink[i] = (lightText ? brightness[i] > cut : brightness[i] < cut) ? 1 : 0;
   }
+  clearEdgeMarks(ink, width, height);
+  paintInk(image, ink);
+  context.putImageData(image, 0, 0);
+}
 
-  // Clear marks touching the edge: from every edge pixel, follow its ink
-  // neighbours (a "flood fill") and clear them all.
+// How far apart a pixel's red, green and blue may be (0 to 255) for it to
+// count as colourless, and how bright its darkest channel must be for it to
+// count as white, in `whiteToBlack`.
+const MAX_WHITE_SPREAD = 24;
+const MIN_WHITE_LEVEL = 170;
+
+// Turns a colour crop into black on white, keeping only its white pixels:
+// colourless (red, green and blue about the same) and bright. White letters
+// with a dark outline keep their white middles, while art, even pale art,
+// is nearly always a little coloured. Marks touching the crop's edge are
+// cleared, as in `toBlackOnWhite`, which also clears a white box behind
+// dark text (so this reads such a box as empty).
+function whiteToBlack(canvas: HTMLCanvasElement) {
+  const { width, height } = canvas;
+  const context = canvas.getContext('2d')!;
+  const image = context.getImageData(0, 0, width, height);
+  const { data } = image;
+  const ink = new Uint8Array(width * height);
+  for (let i = 0; i < ink.length; i++) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    const darkest = Math.min(r, g, b);
+    ink[i] =
+      darkest >= MIN_WHITE_LEVEL &&
+      Math.max(r, g, b) - darkest <= MAX_WHITE_SPREAD
+        ? 1
+        : 0;
+  }
+  clearEdgeMarks(ink, width, height);
+  paintInk(image, ink);
+  context.putImageData(image, 0, 0);
+}
+
+// Clears marks touching the edge of a crop's ink (1 for ink, 0 for none):
+// from every edge pixel, follow its ink neighbours (a "flood fill") and clear
+// them all.
+function clearEdgeMarks(ink: Uint8Array, width: number, height: number) {
   const stack: number[] = [];
   for (let x = 0; x < width; x++) {
     stack.push(x, (height - 1) * width + x);
@@ -252,13 +300,15 @@ function toBlackOnWhite(canvas: HTMLCanvasElement) {
     if (i >= width) stack.push(i - width);
     if (i < ink.length - width) stack.push(i + width);
   }
+}
 
+// Paints a crop's ink black and the rest white.
+function paintInk({ data }: ImageData, ink: Uint8Array) {
   for (let i = 0; i < ink.length; i++) {
     const shade = ink[i] ? 0 : 255;
     data[i * 4] = data[i * 4 + 1] = data[i * 4 + 2] = shade;
     data[i * 4 + 3] = 255;
   }
-  context.putImageData(image, 0, 0);
 }
 
 // Removes the background from a greyscale crop (`canvas`, of `box`, enlarged
