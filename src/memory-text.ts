@@ -99,6 +99,9 @@ const MIN_SHORT_NEEDLE = 8;
 // Reads with fewer letters than this (a line of "......") aren't matched
 // against memory: every text with as few letters is alike to them.
 const MIN_LETTERS = 2;
+// Runs searched for first across all of memory, where lines are matched
+// one by one (see `copiesOf`).
+const FIRST_NEEDLES = 2;
 // Runs searched for per line: several, since OCR may have got any word
 // wrong ("fTndnanage te get a single questieh": only "get a single" is
 // right).
@@ -186,6 +189,9 @@ interface GameMemory {
   // re-read of it (OCR reads it a little differently each time) keeps it.
   corrected: { read: string; line: string } | null;
   searching: boolean;
+  // The latest line OCR read while a search ran, looked up once it's done
+  // (else a line shown during a slow search would never be corrected).
+  waiting: string | null;
   // The speaker's name copies (see "Speakers"), and finding them.
   names: Spot[];
   nameCandidates: Spot[];
@@ -204,6 +210,9 @@ interface GameMemory {
   standardFound: boolean;
   alphabetFound: boolean;
   hotRegions: number[];
+  // Where the last line matched one by one starts in memory, to look for
+  // the next one right after it (see `nextInScript`).
+  lastLine: { codec: Codec; address: number } | null;
 }
 let game: GameMemory | null = null;
 
@@ -254,6 +263,7 @@ function memoryOf(processId: number) {
       noFollowing: false,
       corrected: null,
       searching: false,
+      waiting: null,
       names: [],
       nameCandidates: [],
       nameSearchedFor: '',
@@ -264,8 +274,10 @@ function memoryOf(processId: number) {
       learning: false,
       learnTries: 0,
       standardFound: false,
-      alphabetFound: false,
+      // A saved alphabet is taken to be the game's, until it finds nothing.
+      alphabetFound: savedAlphabet !== null,
       hotRegions: [],
+      lastLine: null,
     };
     setStatus('searching');
   }
@@ -476,6 +488,16 @@ export function lineForRead(processId: number, read: string): string | null {
   const { corrected } = memory;
   if (corrected && alike(read, corrected.read) >= SAME_LINE) {
     return corrected.line;
+  }
+  // Most often the line after the last one: no search needed, and it works
+  // even when OCR reads only the start ("“What!?" with the rest in red).
+  const next = nextInScript(memory, read);
+  if (next !== null) {
+    memory.corrected = { read, line: next };
+    memory.emptySearches = 0;
+    setStatus('matching');
+    log(`next in the script: "${read}" → "${next}"`);
+    return next;
   }
   // Checking the last search's candidates happens straight away, so the
   // buffer may be found for this very line; a new search runs on its own.
@@ -797,8 +819,8 @@ export async function isGameText(
     if (needles.length === 0) {
       continue;
     }
-    const { exact } = await copiesOf(memory, paragraph, needles);
-    if (exact !== null) {
+    const { match } = await copiesOf(memory, paragraph, needles);
+    if (match !== null) {
       log(`game text: "${paragraph}"`);
       return true;
     }
@@ -855,14 +877,18 @@ async function findNameCopies(memory: GameMemory, name: string, end: string) {
         const start = startOfText(bytes, at, codec);
         // Its text, up to the first control character, from the bytes at
         // hand (reading each of many copies one by one would be slow).
-        let stop = at + needle.length;
         const step = codec.width;
-        while (
-          stop + step <= bytes.length &&
-          stop - start < MAX_NAME * 2 * step &&
-          codec.isText(codec.codeAt(bytes, stop))
-        ) {
-          stop += step;
+        let stop = at + needle.length;
+        if (codec instanceof AlphabetCodec) {
+          stop = codec.stringEnd(bytes, stop, MAX_NAME * 2);
+        } else {
+          while (
+            stop + step <= bytes.length &&
+            stop - start < MAX_NAME * 2 * step &&
+            codec.isText(codec.codeAt(bytes, stop))
+          ) {
+            stop += step;
+          }
         }
         const found = codec.decode(bytes, start, stop);
         if (nameIn(found, end) === name) {
@@ -956,6 +982,7 @@ async function findName(memory: GameMemory, buffer: LineBuffer, read: string) {
 // changed to this line; if none has, searches for this line instead.
 async function search(memory: GameMemory, read: string) {
   if (memory.searching) {
+    memory.waiting = read;
     return;
   }
   if (memory.candidates.length > 0 && !memory.noFollowing) {
@@ -1002,7 +1029,7 @@ async function search(memory: GameMemory, read: string) {
     // straight away: in engines where every line is a new string (Unity,
     // Ren'Py), none is ever rewritten for the next line.
     const found = await copiesOf(memory, read, needles);
-    let { exact } = found;
+    let exact = found.match?.line ?? null;
     memory.candidates = found.copies;
     memory.searchedFor = read;
     // A line in the game's own alphabet can teach it codes it didn't know
@@ -1015,13 +1042,23 @@ async function search(memory: GameMemory, read: string) {
       for (const spot of memory.candidates) {
         spot.found = textAt(memory, spot) ?? spot.found;
       }
-      exact = bestCopy(memory.candidates, read, needles) ?? exact;
+      exact = bestCopy(memory.candidates, read, needles)?.line ?? exact;
+    }
+    // Where the line is, to look for the next one right after it.
+    if (found.match) {
+      memory.lastLine = {
+        codec: found.match.spot.codec,
+        address: found.match.spot.address,
+      };
     }
     log(
       `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms${exact === null ? '' : `: "${exact}"`}`,
     );
     if (exact === null) {
       memory.emptySearches++;
+      if (memory.alphabetFound && !memory.standardFound) {
+        memory.alphabetFound = false;
+      }
       // Not in UTF-16 or UTF-8: maybe in the game's own alphabet.
       if (memory.emptySearches >= EMPTY_SEARCHES_TO_LEARN) {
         void learnAlphabet(memory, read);
@@ -1044,7 +1081,28 @@ async function search(memory: GameMemory, read: string) {
     }
   } finally {
     memory.searching = false;
+    catchUp(memory, read);
   }
+}
+
+// Looks up the line OCR read while a search ran: the next in the script
+// from the line just found, or else searched for.
+function catchUp(memory: GameMemory, searched: string) {
+  const read = memory.waiting;
+  memory.waiting = null;
+  if (read === null || alike(read, searched) >= SAME_LINE) {
+    return;
+  }
+  const next = nextInScript(memory, read);
+  if (next === null) {
+    void search(memory, read);
+    return;
+  }
+  memory.corrected = { read, line: next };
+  memory.emptySearches = 0;
+  setStatus('matching');
+  log(`next in the script (after the search): "${read}" → "${next}"`);
+  correctionListener(read, next);
 }
 
 // The line OCR read as the game has it: of the copies found, the one that
@@ -1054,17 +1112,13 @@ async function search(memory: GameMemory, read: string) {
 // where a run of its words puts it, and its end where it best matches.
 function bestCopy(copies: Spot[], read: string, needles: string[]) {
   let best: string | null = null;
+  let bestSpot: Spot | null = null;
   let bestScore = MATCH;
-  // The read's writing systems: a letter from another just before the line
-  // is data before the string read as text (Ren'Py's "踁This is…"), not a
-  // word the line starts inside of, and it's trimmed off the line's ends.
-  const systems = writingSystems(read);
-  const known = (character: string | undefined) =>
-    character !== undefined &&
-    [...writingSystems(character)].every((system) => systems.has(system));
+  const known = knownTo(read);
   // Many copies are the same text: each stretch is tried once.
   const tried = new Set<string>();
-  for (const { found } of copies) {
+  for (const spot of copies) {
+    const { found } = spot;
     const text = clean(found);
     const needle = needles.find(
       (run) => text.includes(run) && read.includes(run),
@@ -1091,40 +1145,213 @@ function bestCopy(copies: Spot[], read: string, needles: string[]) {
         continue;
       }
       const rest = text.slice(start);
-      let line = tidy(rest.slice(0, endFor(rest, read)), '');
-      const characters = [...line];
-      while (characters.length > 0 && !known(characters[0])) {
-        characters.shift();
-      }
-      while (characters.length > 0 && !known(characters.at(-1))) {
-        characters.pop();
-      }
-      line = characters.join('').trim();
-      if (!read.includes('~')) {
-        line = line.replaceAll('~', ' ').replace(/\s+/g, ' ');
-      }
+      const line = polish(rest.slice(0, endFor(rest, read)), read);
       const score = alike(line, read);
       if (score > bestScore) {
         best = line;
+        bestSpot = spot;
         bestScore = score;
       }
     }
   }
-  return best === null ? null : withQuotes(best, read);
+  return best === null || bestSpot === null
+    ? null
+    : { line: withQuotes(best, read), spot: bestSpot };
+}
+
+// Whether a character is in the writing systems of the read: a letter from
+// another just before a line is data before the string read as text
+// (Ren'Py's "踁This is…"), not a word the line starts inside of, and it's
+// trimmed off a line's ends.
+function knownTo(read: string) {
+  const systems = writingSystems(read);
+  return (character: string | undefined) =>
+    character !== undefined &&
+    [...writingSystems(character)].every((system) => systems.has(system));
+}
+
+// Marks no line starts with: the end of a speaker's name stored before it
+// ("【Girl】：Also, this is…" in Aokana), or a code ("`You do know…" in The
+// Colorful World).
+const NOT_A_START = /[\s】」』）)\]：:;,、。`]/u;
+
+// A line from memory made ready to show for OCR's read: formatting codes
+// and junk out, characters from other writing systems off its ends, and a
+// "~" OCR didn't see (a line break) a space.
+function polish(text: string, read: string) {
+  const known = knownTo(read);
+  const characters = [...tidy(text, '')];
+  while (
+    characters.length > 0 &&
+    (!known(characters[0]) || NOT_A_START.test(characters[0]))
+  ) {
+    characters.shift();
+  }
+  while (characters.length > 0 && !known(characters.at(-1))) {
+    characters.pop();
+  }
+  const line = characters.join('').trim();
+  return read.includes('~')
+    ? line
+    : line.replaceAll('~', ' ').replace(/\s+/g, ' ');
+}
+
+// --- Following the script ------------------------------------------------------
+//
+// A game keeps its lines in story order, often one string after another
+// (Steins;Gate: "…anyway." 0x03ff "“What!? …”" 0x03ff "I open my eyes…"),
+// so once a line has been matched, the next one is usually the next string
+// in memory. It's checked before any search: instant, and it works even
+// when OCR reads only the start of the line.
+
+// How many strings after the last line are checked.
+const NEXT_LINES = 4;
+// The most bytes read after the last line to find them.
+const NEXT_BYTES = 4096;
+
+// The last line matched or one just after it, if OCR's read is it (or its
+// start).
+function nextInScript(memory: GameMemory, read: string) {
+  const last = memory.lastLine;
+  if (!last) {
+    return null;
+  }
+  const { codec } = last;
+  const bytes = readMemory(memory.process, last.address, NEXT_BYTES);
+  if (!bytes) {
+    return null;
+  }
+  // The last line itself first (OCR read more of it as it was typed out),
+  // then the ones after it.
+  let at = 0;
+  for (let i = 0; i <= NEXT_LINES; i++) {
+    // On to the next string's start.
+    while (
+      at + codec.width <= bytes.length &&
+      !codec.isText(codec.codeAt(bytes, at))
+    ) {
+      at += codec.width;
+    }
+    if (at + codec.width > bytes.length) {
+      return null;
+    }
+    const end = endOfString(bytes, at, codec);
+    // A game's own alphabet ends each string with a code (Steins;Gate's
+    // 0x03ff); in UTF-16 and UTF-8 a string can be followed by what's left
+    // of an older, longer one ("rude?#8c> handmade soba…" in Aokana), so the
+    // line is cut where it best matches the read, and must match all of it.
+    const ended = codec instanceof AlphabetCodec;
+    let raw = codec.decode(bytes, at, end).split('\0')[0];
+    if (!ended) {
+      raw = raw.slice(0, endFor(raw, read));
+    }
+    if (isNextLine(polish(raw, read), read, ended)) {
+      memory.lastLine = { codec, address: last.address + at };
+      // OCR's read of it (even just its start) can teach a game's own
+      // alphabet codes it didn't know yet ("“What!?").
+      if (raw.includes('\uFFFD') && codec instanceof AlphabetCodec) {
+        const codes = [...read].map((_, i) =>
+          at + (i + 1) * codec.width <= bytes.length
+            ? codec.codeAt(bytes, at + i * codec.width)
+            : -1,
+        );
+        let learned = learnFromLine(codec, codes, read);
+        raw = codec.decode(bytes, at, end).split('\0')[0];
+        learned = learnClosingQuote(codec, bytes, end, raw) || learned;
+        if (learned) {
+          log(`learned more of the alphabet from "${read}"`);
+          alphabetListener(codec.alphabet);
+          raw = codec.decode(bytes, at, end).split('\0')[0];
+        }
+      }
+      const line = polish(raw, read);
+      // When OCR read only the start, the end is as memory has it.
+      return withQuotes(line, read, alike(line, read) >= MATCH);
+    }
+    at = end;
+  }
+  return null;
+}
+
+// The closing mark of each opening quote mark.
+const CLOSING_QUOTE: Record<string, string> = {
+  '“': '”',
+  '"': '"',
+  '‘': '’',
+  '「': '」',
+  '『': '』',
+};
+
+// Learns a closing quote mark OCR didn't read (it read only the line's
+// start): a line that opens a quote and ends on a code not known yet ends
+// with the closing mark. Returns whether it was new.
+function learnClosingQuote(
+  codec: AlphabetCodec,
+  bytes: Buffer,
+  end: number,
+  raw: string,
+) {
+  const closing = CLOSING_QUOTE[raw[0]];
+  if (
+    closing === undefined ||
+    raw.slice(1).includes(closing) ||
+    !raw.endsWith('\uFFFD') ||
+    end < codec.width
+  ) {
+    return false;
+  }
+  return codec.learn(codec.codeAt(bytes, end - codec.width), closing);
+}
+
+// Where the string from `at` ends (markup inside it included, in a game's
+// own alphabet).
+function endOfString(bytes: Buffer, at: number, codec: Codec) {
+  if (codec instanceof AlphabetCodec) {
+    return codec.stringEnd(bytes, at, MAX_LINE);
+  }
+  let end = at;
+  while (
+    end + codec.width <= bytes.length &&
+    codec.isText(codec.codeAt(bytes, end))
+  ) {
+    end += codec.width;
+  }
+  return end;
+}
+
+// Whether a line is the one OCR read: alike, or (`startOnly`) OCR read
+// only its start (part of it in a colour OCR misses, or the rest still
+// being typed).
+function isNextLine(line: string, read: string, startOnly: boolean) {
+  const fromMemory = letters(line);
+  const fromOcr = letters(read);
+  if (fromOcr.length < MIN_LETTERS || fromMemory.length === 0) {
+    return false;
+  }
+  if (alike(line, read) >= MATCH) {
+    return true;
+  }
+  return (
+    startOnly &&
+    fromOcr.length >= 4 &&
+    fromOcr.length < fromMemory.length &&
+    similarity(fromOcr, fromMemory.slice(0, fromOcr.length)) >= 0.85
+  );
 }
 
 // The quote marks at a line's ends as OCR saw them: Ren'Py adds them as it
 // draws a character's line, so memory has the line without them, and a
-// copy can have a stray one from what's stored before it.
+// copy can have a stray one from what's stored before it. `atEnd`: the end
+// too (not when OCR read only the line's start).
 const QUOTE = /["“”'‘’「」『』]/u;
-function withQuotes(line: string, read: string) {
+function withQuotes(line: string, read: string, atEnd = true) {
   let quoted = line;
   const first = read[0] ?? '';
   if (QUOTE.test(first) !== QUOTE.test(quoted[0] ?? '')) {
     quoted = QUOTE.test(first) ? first + quoted : quoted.slice(1);
   }
   const last = read.at(-1) ?? '';
-  if (QUOTE.test(last) !== QUOTE.test(quoted.at(-1) ?? '')) {
+  if (atEnd && QUOTE.test(last) !== QUOTE.test(quoted.at(-1) ?? '')) {
     quoted = QUOTE.test(last) ? quoted + last : quoted.slice(0, -1);
   }
   return quoted;
@@ -1512,13 +1739,23 @@ async function copiesOf(memory: GameMemory, read: string, needles: string[]) {
   const matchingOnly = memory.noFollowing || memory.alphabet !== null;
   if (matchingOnly && memory.hotRegions.length > 0) {
     const copies = await findSpots(memory, needles, memory.hotRegions);
-    const exact = bestCopy(copies, read, needles);
-    if (exact !== null) {
-      return { copies, exact };
+    const match = bestCopy(copies, read, needles);
+    if (match !== null) {
+      return { copies, match };
+    }
+  }
+  // All of memory: with a couple of the runs first, which usually find the
+  // line (each run is a pass over all of it), then the rest if they don't.
+  if (matchingOnly && needles.length > FIRST_NEEDLES) {
+    const first = needles.slice(0, FIRST_NEEDLES);
+    const copies = await findSpots(memory, first);
+    const match = bestCopy(copies, read, first);
+    if (match !== null) {
+      return { copies, match };
     }
   }
   const copies = await findSpots(memory, needles);
-  return { copies, exact: bestCopy(copies, read, needles) };
+  return { copies, match: bestCopy(copies, read, needles) };
 }
 
 // Lets the main process handle what's waiting before going on.
@@ -1527,6 +1764,10 @@ const breather = () => new Promise((resolve) => setImmediate(resolve));
 // Where the text around `at` starts: back to just after a control character
 // (a zero, usually), at most a line's length back.
 function startOfText(bytes: Buffer, at: number, codec: Codec) {
+  // A game's own alphabet steps back over markup inside a line too.
+  if (codec instanceof AlphabetCodec) {
+    return codec.stringStart(bytes, at, MAX_LINE);
+  }
   const step = codec.width;
   let start = at;
   for (let i = 0; i < MAX_LINE && start - step >= 0; i++) {

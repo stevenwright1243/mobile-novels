@@ -18,7 +18,7 @@ export interface Codec {
   // The text as bytes, or null if a character has no known code.
   encode(text: string): Buffer | null;
   // The bytes as text: codes that aren't text become "\u0000" (which ends a
-  // string), text codes not known yet "�".
+  // string), text codes not known yet "\uFFFD".
   decode(bytes: Buffer, start?: number, end?: number): string;
 }
 
@@ -59,6 +59,9 @@ export interface Alphabet {
   // Other characters' codes (space, punctuation), as [code, character].
   extra: [number, string][];
 }
+
+// The most codes in a run of markup inside a line (see `markupEnd`).
+const MAX_MARKUP = 3;
 
 const isLower = (c: string) => c >= 'a' && c <= 'z';
 const isUpper = (c: string) => c >= 'A' && c <= 'Z';
@@ -152,11 +155,104 @@ export class AlphabetCodec implements Codec {
 
   decode(bytes: Buffer, start = 0, end = bytes.length) {
     let text = '';
-    for (let at = start; at + this.width <= end; at += this.width) {
+    for (let at = start; at + this.width <= end; ) {
       const code = this.codeAt(bytes, at);
-      text += this.isText(code) ? (this.characterOf(code) ?? '�') : '\0';
+      if (this.isText(code)) {
+        text += this.characterOf(code) ?? '\uFFFD';
+        at += this.width;
+        continue;
+      }
+      const runEnd = this.markupEnd(bytes, at, end);
+      if (runEnd !== null) {
+        at = runEnd;
+        continue;
+      }
+      text += '\0';
+      at += this.width;
     }
     return text;
+  }
+
+  // Where a run of codes that aren't text, starting at `at`, ends if it's
+  // markup inside a line, or null if it ends the line. Engines put codes in
+  // a line to change how part of it looks (Steins;Gate colours a word with
+  // 0x0482 0x0000 before it and 0x0480 0x0000 after). Markup is a short run
+  // (`MAX_MARKUP` codes) between text, after a letter, digit, space or
+  // comma: a line's end comes after its closing mark ("…move!?”" 0x03ff).
+  markupEnd(bytes: Buffer, at: number, end = bytes.length) {
+    const before =
+      at - this.width >= 0
+        ? this.characterOf(this.codeAt(bytes, at - this.width))
+        : null;
+    if (before === null || !/[\p{L}\p{N} ,-]/u.test(before)) {
+      return null;
+    }
+    let runEnd = at;
+    // Zeros alone are the gap between two strings, not a command.
+    let command = false;
+    for (let i = 0; i < MAX_MARKUP; i++) {
+      if (runEnd + this.width > end) {
+        return null;
+      }
+      const code = this.codeAt(bytes, runEnd);
+      if (this.isText(code)) {
+        break;
+      }
+      command ||= code !== 0;
+      runEnd += this.width;
+    }
+    if (runEnd === at || !command || runEnd + this.width > end) {
+      return null;
+    }
+    return this.characterOf(this.codeAt(bytes, runEnd)) !== null
+      ? runEnd
+      : null;
+  }
+
+  // Where the string around `at` starts: back to just after a code that
+  // isn't text and isn't markup (see `markupEnd`), at most `limit` codes.
+  stringStart(bytes: Buffer, at: number, limit: number) {
+    let start = at;
+    for (let i = 0; i < limit && start - this.width >= 0; i++) {
+      const before = start - this.width;
+      if (this.isText(this.codeAt(bytes, before))) {
+        start = before;
+        continue;
+      }
+      // Back over a run of markup, if that's what it is.
+      let runStart = before;
+      while (
+        runStart - this.width >= 0 &&
+        (before - runStart) / this.width < MAX_MARKUP - 1 &&
+        !this.isText(this.codeAt(bytes, runStart - this.width))
+      ) {
+        runStart -= this.width;
+      }
+      if (this.markupEnd(bytes, runStart) === start) {
+        start = runStart;
+        continue;
+      }
+      break;
+    }
+    return start;
+  }
+
+  // Where the string from `at` ends (see `stringStart`), at most `limit`
+  // codes on.
+  stringEnd(bytes: Buffer, at: number, limit: number) {
+    let end = at;
+    for (let i = 0; i < limit && end + this.width <= bytes.length; i++) {
+      if (this.isText(this.codeAt(bytes, end))) {
+        end += this.width;
+        continue;
+      }
+      const runEnd = this.markupEnd(bytes, end);
+      if (runEnd === null) {
+        break;
+      }
+      end = runEnd;
+    }
+    return end;
   }
 
   // Learns a character's code (first seen wins: a later, different guess
