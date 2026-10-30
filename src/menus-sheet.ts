@@ -1,5 +1,6 @@
 /**
- * The settings sheet under the game in the portrait's Menus mode: the look
+ * The settings sheet under the game in the portrait's Menus mode: the
+ * full-screen text switch (page-mode.ts), and the look
  * (theme, "tap to continue" arrow, border), picked with big buttons that
  * each show what they pick, and a sample message window in the current
  * look. The same app settings as the picker's Style settings: changes go
@@ -7,6 +8,7 @@
  */
 
 import { ARROWS, BORDERS, THEMES } from './look-options';
+import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
 
 // The current border and arrow, kept up to date by main.
 let style: MessageStyle = { border: 'halo', arrow: 'chevron' };
@@ -50,6 +52,22 @@ function makeChips<T extends string>(
     }
   };
 }
+
+// Full-screen text: off or on.
+const showPageMode = makeChips(
+  document.querySelector('#page-mode-chips')!,
+  [
+    ['off', 'Off'],
+    ['on', 'On'],
+  ] as const,
+  (button, _value, label) => {
+    button.textContent = label;
+  },
+  (value) => setPageMode(value === 'on'),
+);
+const pageModeChanged = (on: boolean) => showPageMode(on ? 'on' : 'off');
+onPageModeChanged(pageModeChanged);
+pageModeChanged(isPageMode());
 
 // Themes: each button is drawn in its own theme (`.theme-sample` takes that
 // theme's variables in theme.css), with its name in the theme's font.

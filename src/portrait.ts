@@ -15,6 +15,8 @@ import {
 } from './capture';
 import './history-log';
 import './menus-sheet';
+import { isPageMode, onPageModeChanged } from './page-mode';
+import { redrawPage, showPage } from './page-view';
 import { startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
@@ -110,8 +112,10 @@ window.vn.getButtonSize().then(setButtonSize);
 // other ones; the arrow also on .portrait, for the room the text leaves it.
 const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
 const nextArrow = document.querySelector<HTMLElement>('#next-arrow')!;
+const pageView = document.querySelector<HTMLElement>('#page-view')!;
 function setMessageStyle(style: MessageStyle) {
   textLine.dataset.border = style.border;
+  pageView.dataset.border = style.border;
   nextArrow.dataset.arrow = style.arrow;
   portrait.dataset.arrow = style.arrow;
 }
@@ -354,6 +358,29 @@ textLine.addEventListener('click', clickTextBox);
 // The name tag too, as it's part of the message window.
 nameTag.addEventListener('click', clickTextBox);
 
+// In full-screen text mode, a tap on the page clicks the page region's
+// bottom-right corner: anywhere moves the game on, and there the mouse
+// pointer (which the capture shows) stays clear of the text being read.
+const PAGE_CORNER = 0.98;
+pageView.addEventListener('click', (event) => {
+  if (regions) {
+    const { x, y, w, h } = regions.page;
+    showRipple(event);
+    window.vn.clickGame({ x: x + w * PAGE_CORNER, y: y + h * PAGE_CORNER });
+  }
+});
+
+// Full-screen text mode (switched in the Menus sheet): the page shows in
+// place of the line and name (the `page-mode` class), and only the page
+// region is read. There's no name box, so no speaker either.
+onPageModeChanged((on) => {
+  portrait.classList.toggle('page-mode', on);
+  if (on) {
+    window.vn.setSpeaker('');
+    redrawPage();
+  }
+});
+
 backgroundCanvas.addEventListener('click', (event) => {
   const point = tapToGame(backgroundZone, event);
   if (point) {
@@ -438,11 +465,13 @@ const findRegion = (name: RegionName) => () =>
     : null;
 // The text box is also checked by its picture: for short lines OCR isn't
 // sure of, and lines of only dots (see text-reader.ts).
+// Both rest in full-screen text mode, when the page is read instead.
+const boxesActive = () => !isPageMode();
 startTextReader(
   video,
   findRegion('text'),
   (line) => window.vn.setTextLine(line),
-  { textBox: true },
+  { textBox: true, active: boxesActive },
 );
 // Names are often light text on a shaded plate, so they get a second try
 // with the background removed.
@@ -450,8 +479,13 @@ startTextReader(
   video,
   findRegion('name'),
   (name) => window.vn.setSpeaker(tidyName(name)),
-  { retryFlattened: true },
+  { retryFlattened: true, active: boxesActive },
 );
+// The page of full-screen text, read with its paragraphs (page-view.ts).
+startTextReader(video, findRegion('page'), showPage, {
+  page: true,
+  active: isPageMode,
+});
 
 window.vn.onSourceSelected(showSource);
 window.vn.getSelectedSource().then((sourceId) => {

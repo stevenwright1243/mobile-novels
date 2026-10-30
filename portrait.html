@@ -40,6 +40,12 @@
             />
           </svg>
         </span>
+        <!-- Full-screen text mode's page (page-view.ts), in place of the
+             line and name. The glass doesn't scroll, so its border stays
+             put; the text inside it does. -->
+        <div id="page-view" class="message-window glass">
+          <div id="page-text"></div>
+        </div>
       </div>
 
       <!-- Menus mode only (the `raw-mode` class): an empty box under the
@@ -47,6 +53,17 @@
            and the settings sheet below it (menus-sheet.ts). -->
       <div id="game-slot"></div>
       <section id="menus-sheet" class="glass" aria-label="Settings">
+        <h2 id="page-mode-heading">Full-screen text</h2>
+        <p class="sheet-note">
+          For games that fill the screen with text. Reads the area set with
+          "Edit full-screen text" in the main window.
+        </p>
+        <div
+          id="page-mode-chips"
+          class="chips"
+          role="radiogroup"
+          aria-labelledby="page-mode-heading"
+        ></div>
         <h2>Look</h2>
         <!-- A sample message window in the picked look, since the real one
              is hidden in Menus mode. -->

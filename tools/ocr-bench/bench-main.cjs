@@ -63,7 +63,7 @@ app.whenReady().then(async () => {
   const results = [];
   for (const scale of scales) {
     for (const test of tests) {
-      for (const kind of ['text', 'name']) {
+      for (const kind of ['text', 'name', 'page']) {
         if (!test[kind]) {
           continue;
         }
@@ -74,7 +74,11 @@ app.whenReady().then(async () => {
         const got = await page.webContents.executeJavaScript(
           `runTest(${JSON.stringify(test.image)}, ${scale}, ${JSON.stringify(test[kind])}, ${JSON.stringify(
             // The same options the portrait gives each box (portrait.ts).
-            kind === 'text' ? { textBox: true } : { retryFlattened: true },
+            {
+              text: { textBox: true },
+              name: { retryFlattened: true },
+              page: { page: true },
+            }[kind],
           )})`,
         );
         results.push({
@@ -82,7 +86,11 @@ app.whenReady().then(async () => {
           kind,
           scale,
           got,
-          expected: kind === 'text' ? test.expectedText : test.expectedName,
+          expected: {
+            text: test.expectedText,
+            name: test.expectedName,
+            page: test.expectedPage,
+          }[kind],
           ms: Math.round(ocrMs - before),
         });
       }

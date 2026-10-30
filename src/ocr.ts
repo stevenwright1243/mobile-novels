@@ -124,6 +124,32 @@ const MAX_DROPPED_SHARE = 1 / 3;
 
 // `left` is where the word starts, in pixels from the image's left edge.
 type Word = { text: string; confidence: number; height: number; left: number };
+// A line's words, and its top and bottom edges in pixels.
+type Line = { words: Word[]; top: number; bottom: number };
+
+// --- Paragraphs ----------------------------------------------------------------
+//
+// Full-screen text is laid out in paragraphs with a bigger gap between them
+// than between the lines of one. In Katawa Shoujo, lines 38 px tall are 8-9
+// px apart inside a paragraph and 25-27 px apart between paragraphs (60+
+// where there's a blank line). A gap of more than this share of the usual
+// line height starts a new paragraph.
+const PARAGRAPH_GAP = 0.4;
+
+function splitParagraphs(lines: Line[]) {
+  const usual = median(lines.map((line) => line.bottom - line.top));
+  const paragraphs: string[][] = [];
+  lines.forEach((line, i) => {
+    const gap = i === 0 ? Infinity : line.top - lines[i - 1].bottom;
+    if (gap > PARAGRAPH_GAP * usual) {
+      paragraphs.push([]);
+    }
+    paragraphs.at(-1)!.push(line.words.map((word) => word.text).join(' '));
+  });
+  return paragraphs.map((paragraph) =>
+    fixCommonMistakes(paragraph.join(' ')).trim(),
+  );
+}
 
 function median(values: number[]) {
   return values.slice().sort((a, b) => a - b)[values.length >> 1];
@@ -136,18 +162,21 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
   // `blocks: true` also returns each line and word, with its confidence and
   // position (`bbox`, its bounding box).
   const { data } = await ocr.recognize(Buffer.from(png), {}, { blocks: true });
-  const lines: Word[][] = (data.blocks ?? []).flatMap((block) =>
+  const allLines: Line[] = (data.blocks ?? []).flatMap((block) =>
     block.paragraphs.flatMap((paragraph) =>
-      paragraph.lines.map((line) =>
-        line.words.map((word) => ({
+      paragraph.lines.map((line) => ({
+        top: line.bbox.y0,
+        bottom: line.bbox.y1,
+        words: line.words.map((word) => ({
           text: word.text,
           confidence: word.confidence,
           height: word.bbox.y1 - word.bbox.y0,
           left: word.bbox.x0,
         })),
-      ),
+      })),
     ),
   );
+  const lines = allLines.map((line) => line.words);
   const words = lines.flat();
   // The image's width: a PNG stores it in bytes 16-19 (in its "IHDR" part).
   const width = Buffer.from(png).readUInt32BE(16);
@@ -191,5 +220,10 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
     confidence: Math.round(confidence),
     ms: Math.round(performance.now() - start),
     dropped: dropped.map((word) => word.text),
+    paragraphs: splitParagraphs(
+      allLines
+        .map((line, i) => ({ ...line, words: keptLines[i] }))
+        .filter((line) => line.words.length > 0),
+    ),
   };
 }

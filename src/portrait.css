@@ -46,6 +46,12 @@ body {
   --button-font-size: clamp(1.05rem, 4.75vmin * var(--button-size, 1), 7vmin);
   /* How far the corner buttons sit from the top and sides. */
   --corner-gap: max(0.75rem, 4.5vmin);
+  /* The corner buttons' row: the gap above them, their height (48px at
+     least, or the icon's 1.2em plus 0.5em of padding top and bottom), and
+     the same gap again below. */
+  --buttons-height: calc(
+    2 * var(--corner-gap) + max(48px, 2.2 * var(--button-font-size))
+  );
   height: 100dvh;
   display: grid;
   grid-template-areas: 'stage';
@@ -770,12 +776,6 @@ body {
 
 .portrait.raw-mode {
   --sheet-gap: clamp(0.5rem, 3vw, 1rem);
-  /* The corner buttons' row: the gap above them, their height (48px at
-     least, or the icon's 1.2em plus 0.5em of padding top and bottom), and
-     the same gap again below. */
-  --buttons-height: calc(
-    2 * var(--corner-gap) + max(48px, 2.2 * var(--button-font-size))
-  );
   grid-template-areas:
     'buttons'
     'game'
@@ -850,6 +850,11 @@ body {
   font-size: 1.15em;
 }
 
+/* Space between the sheet's sections. */
+#menus-sheet h2:not(:first-child) {
+  margin-top: 0.8em;
+}
+
 #menus-sheet h3 {
   margin-top: 0.4em;
   font-size: 0.8em;
@@ -897,6 +902,10 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--chip-width), 1fr));
   gap: 0.6em;
+}
+
+#page-mode-chips {
+  --chip-width: max(6rem, 25vmin);
 }
 
 #theme-chips {
@@ -970,4 +979,84 @@ body {
   padding: 0.35em 0.5em;
   font-size: 0.85em;
   font-weight: var(--text-weight);
+}
+
+/* --- Full-screen text ---------------------------------------------------------
+   The page (`#page-view`), in place of the line and the name, while
+   full-screen text is on in the Menus sheet (the `page-mode` class, set by
+   portrait.ts). It grows upward with the text, as far as the corner buttons,
+   then scrolls; page-view.ts keeps the newest paragraph in view. */
+
+#page-view {
+  display: none;
+}
+
+.portrait.page-mode {
+  #text-line,
+  #name-tag {
+    display: none;
+  }
+
+  #page-view {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+    max-height: calc(100dvh - var(--buttons-height) - var(--gap-bottom));
+  }
+
+  /* Room for 3 lines while it's empty or short, like the message window. */
+  #page-text {
+    --padding-block: clamp(0.9rem, 4.5vw, 1.6rem);
+    --line-height: 1.5;
+    min-height: calc(
+      3 * var(--line-height) * var(--page-font-size) + 2 * var(--padding-block)
+    );
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding: var(--padding-block) var(--padding-inline);
+    /* A little smaller than the message window's text, as a page holds far
+       more of it. */
+    --page-font-size: calc(var(--chosen-font-size) * 0.85);
+    font-size: var(--page-font-size);
+    font-weight: var(--text-weight);
+    line-height: var(--line-height);
+    text-wrap: pretty;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #page-text p {
+    margin: 0 0 0.6em;
+  }
+
+  #page-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Paragraphs already read, dimmed so the new ones stand out. */
+  #page-text p.read {
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+  }
+
+  /* Room for the arrow after the last paragraph (see `#text-line::after`). */
+  #page-text p:last-child::after {
+    content: '\2060';
+    padding-right: max(
+      0px,
+      var(--arrow-width, 0px) + 0.2em -
+        (var(--padding-inline) - var(--arrow-inset))
+    );
+  }
+
+  /* The arrow shows while the page has text. */
+  #text-zone #next-arrow {
+    display: block;
+  }
+
+  #text-zone:has(#page-text:empty) #next-arrow {
+    display: none;
+  }
 }

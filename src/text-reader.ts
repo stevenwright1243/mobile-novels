@@ -252,14 +252,28 @@ function readDots({ width, median, ink, total, letter }: Ink) {
   return '…'.repeat(Math.floor(dots / 3)) + '.'.repeat(dots % 3);
 }
 
+// A page of full-screen text keeps its paragraphs, separated by a blank
+// line, each tidied into one line.
+const PARAGRAPH_BREAK = '\n\n';
+
 // Reads a box with OCR, prepared as `prep` says. `text` is what was read,
 // tidied, and `ok` whether it passes as text (garbage counts as an empty
-// box).
-async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
-  const { text, confidence } = await window.vn.readText(
+// box). With `page`, `text` keeps the paragraphs (see `PARAGRAPH_BREAK`).
+async function readBox(
+  video: HTMLVideoElement,
+  box: VideoRect,
+  prep: OcrPrep,
+  page = false,
+) {
+  const { text, confidence, paragraphs } = await window.vn.readText(
     await pngBytes(await cropForOcr(video, box, prep)),
   );
   const tidied = tidy(text);
+  if (page) {
+    const ok = tidied !== '' && looksLikeText(tidied, confidence);
+    const kept = paragraphs.map(tidy).filter((paragraph) => paragraph !== '');
+    return { text: kept.join(PARAGRAPH_BREAK), confidence, ok };
+  }
   const minConfidence =
     prep === 'flatten' ? MIN_FLATTENED_CONFIDENCE : MIN_CONFIDENCE;
   const ok = tidied !== '' && looksLikeText(tidied, confidence, minConfidence);
@@ -273,12 +287,22 @@ async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
 // background removed (see `OcrPrep`), for names on shaded plates. With
 // `textBox`, the box's picture is checked too (see "Looking at the text box
 // itself"): a less sure read is kept when the box clearly has writing, and
-// a box of only dots reads as its dots.
+// a box of only dots reads as its dots. With `page`, the box is a page of
+// full-screen text, read with its paragraphs kept (see `PARAGRAPH_BREAK`).
+// While `active` says false, the reader rests, and it reads afresh (sending
+// the box's text again) once it's active again.
 export function startTextReader(
   video: HTMLVideoElement,
   findTextBox: () => VideoRect | null,
   onRead: (text: string) => void,
-  { retryFlattened = false, textBox = false } = {},
+  {
+    retryFlattened = false,
+    textBox = false,
+    page = false,
+    // `(): boolean` so TypeScript doesn't take the default's `true` as the
+    // only value it may return.
+    active = (): boolean => true,
+  } = {},
 ) {
   // The sample at the last read, the text of the last read, and the last
   // line sent to main.
@@ -287,6 +311,12 @@ export function startTextReader(
   let confirmed: string | null = null;
 
   async function check() {
+    if (!active()) {
+      lastSample = null;
+      lastRead = null;
+      confirmed = null;
+      return;
+    }
     const box = findTextBox();
     if (box && box.sw >= 1 && box.sh >= 1) {
       const sample = takeSample(video, box);
@@ -301,7 +331,7 @@ export function startTextReader(
         dotsAppeared
       ) {
         lastSample = sample;
-        const clean = await readBox(video, box, 'clean');
+        const clean = await readBox(video, box, 'clean', page);
         let read = clean.ok ? clean.text : '';
         if (!read && textBox) {
           const ink = measureInk(video, box);

@@ -444,6 +444,16 @@ input[type='number'] {
   --color: #6d6;
 }
 
+/* The full-screen text area covers nearly the whole game, so it's only
+   shown while it's being edited. */
+.outline[data-region='page'] {
+  --color: #c6f;
+}
+
+.outline[data-region='page']:not(.editing) {
+  display: none;
+}
+
 /* Each region's name, in a corner inside its box: Background top left, Text
    bottom right (so the two don't meet where the boxes touch). */
 .outline span {
@@ -454,6 +464,11 @@ input[type='number'] {
   font-size: 0.75rem;
   color: #000;
   background: var(--color);
+}
+
+.outline[data-region='page'] > span {
+  top: auto;
+  bottom: 0;
 }
 
 .outline[data-region='text'] > span {

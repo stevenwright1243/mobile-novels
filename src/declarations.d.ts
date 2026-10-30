@@ -23,9 +23,10 @@ interface Region {
 }
 
 // The named regions the portrait view draws: the background, the text box,
-// and the name box (the speaker's name). `Record<K, V>` is an object with
-// exactly the keys K, each holding a V.
-type RegionName = 'background' | 'text' | 'name';
+// the name box (the speaker's name), and the page: where the text goes in
+// games that fill the screen with it (read in full-screen text mode).
+// `Record<K, V>` is an object with exactly the keys K, each holding a V.
+type RegionName = 'background' | 'text' | 'name' | 'page';
 type Regions = Record<RegionName, Region>;
 
 // How a tap is delivered to the game: 'message' posts click messages to its
@@ -105,6 +106,9 @@ interface OcrResult {
   // Words left out as junk (the wrong height for the line; see ocr.ts),
   // logged in debug mode.
   dropped: string[];
+  // The text split into paragraphs where the gap between lines is bigger
+  // than usual, each joined into one line (for full-screen text).
+  paragraphs: string[];
 }
 
 // An OCR test case (ocr-tests.ts), saved next to a frame of the game. The
@@ -113,9 +117,13 @@ interface OcrTest {
   game: string;
   // When it was saved, as an ISO date.
   savedAt: string;
-  text: Region;
-  // null when the name box isn't tested.
+  // null when that box isn't tested.
+  text: Region | null;
   name: Region | null;
+  // Full-screen text: where the page is, and what it should read, its
+  // paragraphs separated by a blank line. Only in tests of full-screen text.
+  page?: Region;
+  expectedPage?: string;
   // What the reader should read ('' for nothing, e.g. narration's name).
   expectedText: string;
   expectedName: string;

@@ -123,6 +123,19 @@ game's name box (the `name` region, per game).
   (`max(3.5rem, 14vmin)`) and Border (`max(5.5rem, 21vmin)`), each at least
   48px tall; the picked one has a 3px ring in the current theme's
   `--accent-deep`.
+- At the sheet's top: **Full-screen text**, Off / On buttons
+  (`max(6rem, 25vmin)` wide), with a one-line note above them.
+
+## Full-screen text (page mode)
+
+- The page (`#page-view`) replaces the message window and name tag, in the
+  same place and with the same glass and border, growing upward with the
+  text as far as the corner buttons' row, then scrolling.
+- Text: **85%** of the chosen text size, line height 1.5, `0.6em` between
+  paragraphs, the same padding as the message window; at least 3 lines tall.
+- Paragraphs already read are dimmed to 55% of `--ink`; new ones are full
+  colour and fade in. The arrow sits in the same corner, with room kept for
+  it after the last paragraph.
 
 ## Corner buttons
 

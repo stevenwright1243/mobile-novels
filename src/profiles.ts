@@ -7,11 +7,14 @@ import path from 'node:path';
 import { BACKGROUND_VIEW } from './zone-view';
 
 // Used for a game that has no saved regions yet. The name box starts just
-// above the text box's left end, where most VNs put it.
+// above the text box's left end, where most VNs put it. The page (for
+// full-screen text) is the whole game, less a small margin: text touching
+// the edge of what's read is cleared as part of the frame (see capture.ts).
 export const DEFAULT_REGIONS: Regions = {
   background: { x: 0, y: 0, w: 1, h: 0.7 },
   text: { x: 0, y: 0.7, w: 1, h: 0.3 },
   name: { x: 0.05, y: 0.63, w: 0.2, h: 0.06 },
+  page: { x: 0.01, y: 0.02, w: 0.98, h: 0.96 },
 };
 
 // Normal-sized text.

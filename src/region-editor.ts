@@ -40,6 +40,7 @@ const buttonLabels: Record<RegionName, string> = {
   background: 'Edit background',
   text: 'Edit text zone',
   name: 'Edit name box',
+  page: 'Edit full-screen text',
 };
 
 // Called once a game window is picked, since there's nothing to edit before.
@@ -384,7 +385,9 @@ function snap(value: number, axis: 'x' | 'y', event: PointerEvent) {
   }
   const targets = [0, 1];
   for (const [name, region] of Object.entries(regions)) {
-    if (name !== editing) {
+    // Not to the full-screen text area's edges, which are hidden unless
+    // it's the one being edited.
+    if (name !== editing && name !== 'page') {
       const start = axis === 'x' ? region.x : region.y;
       const size = axis === 'x' ? region.w : region.h;
       targets.push(start, start + size);

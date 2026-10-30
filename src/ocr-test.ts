@@ -59,6 +59,10 @@ const expectedText =
 const expectedName =
   document.querySelector<HTMLInputElement>('#expected-name')!;
 const testNameBox = document.querySelector<HTMLInputElement>('#test-name-box')!;
+// Full-screen text: the page region, tested only when ticked.
+const testPage = document.querySelector<HTMLInputElement>('#test-page')!;
+const expectedPage =
+  document.querySelector<HTMLTextAreaElement>('#expected-page')!;
 
 // The game's content (its client area) as a PNG, at the capture's full size.
 async function grabClientArea(video: HTMLVideoElement) {
@@ -116,6 +120,11 @@ saveTestButton.addEventListener('click', async () => {
         name: testNameBox.checked ? regions.name : null,
         expectedText: expectedText.value.trim(),
         expectedName: expectedName.value.trim(),
+        // `...` adds these only when the page is tested.
+        ...(testPage.checked && {
+          page: regions.page,
+          expectedPage: expectedPage.value.trim(),
+        }),
         shownText,
         shownName,
       });

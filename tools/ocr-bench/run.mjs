@@ -161,7 +161,9 @@ function bench(version, dir) {
 // --- Scoring ---
 // Small differences that don't matter are evened out first: curly and
 // straight quotes, "…" and "...", runs of spaces. Names are tidied like the
-// portrait does (tidyName in portrait.ts).
+// portrait does (tidyName in portrait.ts). A page of full-screen text keeps
+// its paragraph breaks (a blank line), as " ¶ ", so a missed or extra one
+// counts.
 const tidyName = (name) =>
   name.replace(/^[^\p{L}\p{N}?]+|[^\p{L}\p{N}?!]+$/gu, '');
 const even = (text) =>
@@ -169,6 +171,7 @@ const even = (text) =>
     .replace(/[“”„]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/…/g, '...')
+    .replace(/\n\s*\n/g, ' ¶ ')
     .replace(/\s+/g, ' ')
     .trim();
 // How many letters must change to turn one text into the other (the

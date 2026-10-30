@@ -13,6 +13,13 @@
       <button data-region="background" disabled>Edit background</button>
       <button data-region="text" disabled>Edit text zone</button>
       <button data-region="name" disabled>Edit name box</button>
+      <button
+        data-region="page"
+        disabled
+        title="Where the text goes in games that fill the screen with it, read when Full-screen text is on in the portrait's Menus."
+      >
+        Edit full-screen text
+      </button>
       <label>
         Taps click by
         <select id="click-method" disabled>
@@ -176,6 +183,16 @@
             >
             <input type="text" id="expected-name" />
           </label>
+          <label>
+            <span
+              ><input type="checkbox" id="test-page" /> Full-screen text</span
+            >
+            <textarea
+              id="expected-page"
+              rows="5"
+              placeholder="Its paragraphs, with a blank line between them"
+            ></textarea>
+          </label>
           <p class="dialog-hint">
             Leave a box empty if it should read nothing.
           </p>
@@ -248,6 +265,10 @@
             </div>
             <div class="outline" data-region="text"><span>Text</span></div>
             <div class="outline" data-region="name"><span>Name</span></div>
+            <!-- Shown only while it's being edited, as it covers the rest. -->
+            <div class="outline" data-region="page">
+              <span>Full-screen text</span>
+            </div>
           </div>
         </div>
       </div>
