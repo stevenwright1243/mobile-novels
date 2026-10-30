@@ -55,13 +55,14 @@ type ThemeName =
   | 'hoshimemo'
   | 'steins-gate'
   | 'ddlc'
-  | 'miside';
+  | 'miside'
+  | 'miyuki';
 
 // The look of the portrait's message window (the picker's Style settings,
 // an app setting): the effect around its edge, and the "tap to continue"
 // arrow in its corner.
 type MessageBorder = 'halo' | 'rim' | 'ribbon' | 'none';
-type NextArrow = 'chevron' | 'dots' | 'triangle' | 'hearts';
+type NextArrow = 'chevron' | 'dots' | 'triangle' | 'hearts' | 'none';
 interface MessageStyle {
   border: MessageBorder;
   arrow: NextArrow;

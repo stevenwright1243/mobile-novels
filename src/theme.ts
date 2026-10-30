@@ -8,6 +8,7 @@
 import '@fontsource-variable/nunito';
 import '@fontsource-variable/eb-garamond';
 import '@fontsource/share-tech-mono';
+import '@fontsource-variable/jura';
 
 const listeners: ((theme: ThemeName) => void)[] = [];
 

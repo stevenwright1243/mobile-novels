@@ -302,3 +302,43 @@
 :root[data-theme='miside'] :is(#text-line, #log-text) {
   text-shadow: 0 0.06em 0 rgb(0 0 0 / 45%);
 }
+
+/* Miyuki's Realm: an old-fashioned PC game window. A solid lavender-grey
+   panel, square corners, a bevelled frame (a light outer rim and a darker
+   groove inside it), soft purple text in a thin, wide, techy font, and a
+   flat triangle. Picking it in the picker also picks border None and the
+   triangle (message-style.ts). */
+:root[data-theme='miyuki'] {
+  --accent: #8a87b0;
+  --accent-deep: #5f5c88;
+  --accent-pale: #d9dae8;
+  /* A little darker than the game's purple, so it reads on a phone. */
+  --ink: #5a4290;
+  --line: #c9cadc;
+  --on-accent: #fff;
+  --surface: #b1b3ca;
+  --surface-tint: #a8aac2;
+  --shadow: #2a2840;
+  --deep: #1d1c2c;
+  --stage-top: #c4c5d8;
+  --backdrop-tint: rgb(200 200 220 / 35%);
+  --rim-light: #e2e3ee;
+  --glass-pattern: none;
+  /* Barely frosted: the game's panel is nearly solid. */
+  --glass-blur: 2px;
+  --font: 'Jura Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 500;
+  --corner: 0.12;
+  --pill: 0.15rem;
+}
+
+/* The bevelled frame, on every glass panel (the message window, the corner
+   buttons, the history log). The message window's border options still
+   draw over it (they're more specific). */
+:root[data-theme='miyuki'] .glass {
+  border: 3px solid var(--rim-light);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    inset 1px 1px 0 2px color-mix(in srgb, var(--rim-light) 35%, transparent),
+    0 0.3rem 1rem color-mix(in srgb, var(--shadow) 30%, transparent);
+}

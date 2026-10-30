@@ -254,7 +254,8 @@ body {
 /* Border "none": just the glass, with no effect around its edge. Needs no
    rules of its own. */
 
-/* #next-arrow holds every arrow shape; only the picked one shows. */
+/* #next-arrow holds every arrow shape; only the picked one shows (none, for
+   arrow "none"). */
 #next-arrow > * {
   display: none;
 }

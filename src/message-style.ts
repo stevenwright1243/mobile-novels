@@ -33,6 +33,7 @@ window.vn.getMessageStyle().then(showStyle);
 const THEME_STYLES: Partial<Record<ThemeName, Partial<MessageStyle>>> = {
   kimikano: { border: 'none', arrow: 'chevron' },
   miside: { arrow: 'hearts' },
+  miyuki: { border: 'none', arrow: 'triangle' },
 };
 
 const theme = document.querySelector<HTMLSelectElement>('#theme')!;
