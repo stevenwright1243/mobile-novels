@@ -98,7 +98,10 @@ body {
     max-height: none;
     background: none;
     --gap: clamp(0.5rem, 3vw, 1rem);
-    padding: 0 var(--gap) var(--gap);
+    /* Below it, at least 5% of the portrait's height: up off the bottom
+       edge, nearer the thumb and clear of the phone's gesture bar. A share
+       of the height, since that's what grows on a tall phone. */
+    padding: 0 var(--gap) max(var(--gap), 5dvh);
   }
 
   #text-zone canvas {

@@ -55,8 +55,10 @@ bottom, and never moves it.
 - **Maximum height:** 60% of the portrait's height; longer text scrolls inside.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right.
-- **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides and
-  bottom, so it floats.
+- **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides, so
+  it floats. At the bottom, at least 5% of the portrait's height
+  (`max(gap, 5dvh)`), so it sits up off the edge, clear of the phone's gesture
+  bar. (Before 2026-10-29: the same as the sides.)
 - **Corners:** rounded `max(0.75rem, 3vmin)` (`.glass`, shared with the
   history log's card).
 - Look: frosted white glass (`.glass`), a sky-blue ribbon on the top edge, a
