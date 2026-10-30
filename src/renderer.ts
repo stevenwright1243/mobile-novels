@@ -151,10 +151,20 @@ function stateOf(profile: ProfileSummary) {
     : 'Not running · click to start';
 }
 
-// A small square with a game's first letter, like a server icon.
+// A small square with the game's own icon (its .exe's), like a server
+// icon, or its first letter if it has none.
 function iconOf(profile: ProfileSummary) {
-  const icon = element('span', 'game-icon', nameOf(profile).trim()[0] ?? '?');
+  const icon = element('span', 'game-icon', '');
   icon.setAttribute('aria-hidden', 'true');
+  if (profile.icon) {
+    const image = document.createElement('img');
+    image.src = profile.icon;
+    image.alt = '';
+    icon.classList.add('has-icon');
+    icon.append(image);
+  } else {
+    icon.textContent = nameOf(profile).trim()[0] ?? '?';
+  }
   return icon;
 }
 

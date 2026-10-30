@@ -165,6 +165,22 @@ const hasEdits = () =>
   (profile !== null && snapshot(profile) !== savedSnapshot) ||
   buttonSizeEdited();
 
+// A game's .exe icon (the one Explorer and the taskbar show), as a `data:`
+// URL for the picker's game list, or null if it can't be read (a moved
+// .exe). Read once per .exe: the list is asked for every few seconds.
+const exeIcons = new Map<string, Promise<string | null>>();
+function exeIcon(exePath: string) {
+  let icon = exeIcons.get(exePath);
+  if (!icon) {
+    icon = app
+      .getFileIcon(exePath, { size: 'large' })
+      .then((image) => (image.isEmpty() ? null : image.toDataURL()))
+      .catch(() => null);
+    exeIcons.set(exePath, icon);
+  }
+  return icon;
+}
+
 // The first open window for each profile ID (whether or not that game has a
 // saved profile), from the windows given or, by default, the ones open now.
 // A `Map` is a lookup table: `set(key, value)` stores, `get(key)` finds.
@@ -650,15 +666,20 @@ app.whenReady().then(async () => {
   );
 
   // The saved profiles for the picker's "Your games" list, each marked with
-  // whether that game is running now (matched by .exe against open windows).
+  // whether that game is running now (matched by .exe against open windows),
+  // with its .exe's icon.
   ipcMain.handle('list-profiles', async (): Promise<ProfileSummary[]> => {
     const [profiles, openWindows] = await Promise.all([
       listProfiles(),
       openWindowsByProfile(),
     ]);
-    return profiles.map((saved) => {
+    const icons = await Promise.all(
+      profiles.map((saved) => saved.exePath && exeIcon(saved.exePath)),
+    );
+    return profiles.map((saved, index) => {
       const open = openWindows.get(saved.id);
       return {
+        icon: icons[index] || undefined,
         id: saved.id,
         exePath: saved.exePath,
         // A running game shows its current title, which may have changed.

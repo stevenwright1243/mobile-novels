@@ -190,7 +190,8 @@ interface GameProfile {
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running,
 // `openedAt` when it was first seen running this session and `pickedAt`
-// when it was last picked (milliseconds).
+// when it was last picked (milliseconds). `icon` is its .exe's icon, as a
+// `data:` URL (none if it can't be read).
 type ProfileSummary = Omit<
   GameProfile,
   | 'version'
@@ -204,6 +205,7 @@ type ProfileSummary = Omit<
   sourceId?: string;
   openedAt?: number;
   pickedAt?: number;
+  icon?: string;
 };
 
 // The phone's display, added by Apollo while the phone is streaming (see
