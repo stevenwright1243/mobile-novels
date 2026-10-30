@@ -1202,10 +1202,11 @@ body {
   cursor: default;
 }
 
-/* Save and Reset, side by side at the bottom of Sizes: Save solid in the
-   accent, Reset plain. */
+/* Save, Reset and Default, side by side at the bottom of Sizes: Save solid
+   in the accent, the others plain. */
 #sheet-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6em;
 }
 

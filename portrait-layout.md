@@ -165,8 +165,10 @@ game's name box (the `name` region, per game).
   at 100% (1% of the screen per 5% step). Under them, **Text position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
   filled with the accent for Top), "Top". A note says which
   are the game's. At the drop-down's bottom, always there while it's open,
-  **Save** (accent) and **Reset** (plain; back to the values as last
-  saved) side by side: with nothing unsaved they're dimmed to 45%, blurred
+  **Save** (accent), **Reset** (plain; back to the values as last saved)
+  and **Default** (plain; sets text and name 100%, portrait height 20%,
+  width 75%, button size 100%, text position Top, padding 0%, as unsaved
+  changes) side by side: with nothing to do they're dimmed to 45%, blurred
   1.5px and can't be pressed.
   Left of the sliders, a live miniature of the reader screen, **33vw** wide
   and the screen's shape (a third of its size each way): the picture at the

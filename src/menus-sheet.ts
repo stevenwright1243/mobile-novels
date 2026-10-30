@@ -172,7 +172,7 @@ textStyle.listen((style) =>
 // Sizes, and can be pressed while there are changes: Reset puts back the values as
 // last saved. The game's sliders are disabled while no game is picked.
 const actionButtons = document.querySelectorAll<HTMLButtonElement>(
-  '#sheet-actions button',
+  '#sheet-save, #sheet-reset',
 );
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
   '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position',
@@ -193,6 +193,45 @@ document
   .addEventListener('click', () => window.vn.revertEdits());
 window.vn.onSaveStateChanged(showSaveState);
 window.vn.getSaveState().then(showSaveState);
+
+// The Default button sets the sizes the user picked as the defaults (as
+// unsaved changes, like moving the sliders: Save keeps them, Reset undoes
+// them). It can be pressed while any size differs from these.
+const DEFAULT_SIZES = {
+  textStyle: { size: 1, nameSize: 1, position: 'top', padding: 0 },
+  backgroundY: 0.2,
+  backgroundWidth: 0.75,
+  buttonSize: 1,
+} as const satisfies {
+  textStyle: TextStyle;
+  backgroundY: number;
+  backgroundWidth: number;
+  buttonSize: number;
+};
+const defaultButton =
+  document.querySelector<HTMLButtonElement>('#sheet-default')!;
+defaultButton.addEventListener('click', () => {
+  textStyle.set({ ...DEFAULT_SIZES.textStyle });
+  backgroundY.set(DEFAULT_SIZES.backgroundY);
+  backgroundWidth.set(DEFAULT_SIZES.backgroundWidth);
+  buttonSize.set(DEFAULT_SIZES.buttonSize);
+});
+function showDefaultState() {
+  const style = textStyle.get();
+  const atDefaults =
+    style.size === DEFAULT_SIZES.textStyle.size &&
+    style.nameSize === DEFAULT_SIZES.textStyle.nameSize &&
+    style.position === DEFAULT_SIZES.textStyle.position &&
+    (style.padding ?? 0) === DEFAULT_SIZES.textStyle.padding &&
+    backgroundY.get() === DEFAULT_SIZES.backgroundY &&
+    backgroundWidth.get() === DEFAULT_SIZES.backgroundWidth &&
+    buttonSize.get() === DEFAULT_SIZES.buttonSize;
+  defaultButton.disabled = atDefaults;
+}
+textStyle.listen(showDefaultState);
+backgroundY.listen(showDefaultState);
+backgroundWidth.listen(showDefaultState);
+buttonSize.listen(showDefaultState);
 
 // --- Look ----------------------------------------------------------------------
 
