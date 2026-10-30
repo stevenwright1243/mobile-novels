@@ -176,7 +176,7 @@ function splitParagraphs(lines: Line[]) {
   );
 }
 
-// --- A lone letter after a sentence ends ---------------------------------------
+// --- A lone letter or mark after a sentence ends -------------------------------
 //
 // Text never ends on a letter on its own, with no punctuation, right after
 // a sentence has ended: "I tried to read them. I". That letter is a mark
@@ -186,15 +186,23 @@ function splitParagraphs(lines: Line[]) {
 // the next line ("them. I / wanted to..."). A "|" counts, since it's how an
 // "I" is often read before `fixCommonMistakes` turns it into one.
 const LONE_LETTER = /^[\p{L}|]$/u;
+// Nor does it end on a word of only dashes, commas, tildes and the like
+// after a sentence has ended: "to answer. -." (The Colorful World, art
+// beside the line read as "-.", "-" or "~~"). A word of only ".", "!",
+// "?", "…", quotes and brackets is kept: it can end a line ("Huh? ...!").
+const STRAY_MARK = /^[\p{P}\p{S}]+$/u;
+const ENDING_MARKS = /^[.!?…"'“”‘’()[\]]+$/u;
 // A word ending a sentence: ".", "!", "?" or "…", maybe followed by a
 // closing quote or bracket.
 const SENTENCE_END = /[.!?…]["'”’)\]]*$/u;
 
 function withoutLoneEnd(words: Word[]) {
   const n = words.length;
+  const end = words[n - 1]?.text ?? '';
   const loneEnd =
     n >= 2 &&
-    LONE_LETTER.test(words[n - 1].text) &&
+    (LONE_LETTER.test(end) ||
+      (STRAY_MARK.test(end) && !ENDING_MARKS.test(end))) &&
     SENTENCE_END.test(words[n - 2].text);
   return loneEnd ? words.slice(0, -1) : words;
 }
@@ -263,7 +271,7 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
   const keptLines = lines.map((line) =>
     isMark(line) ? [] : mainPart(line.filter(fits)),
   );
-  // A lone letter at the very end, after a sentence ends, is dropped (see
+  // A lone letter or mark at the very end, after a sentence ends, is dropped (see
   // `withoutLoneEnd`). It's always on the last line with words.
   const last = keptLines.findLastIndex((line) => line.length > 0);
   if (last >= 0) {
