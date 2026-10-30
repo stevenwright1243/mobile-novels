@@ -68,6 +68,9 @@ let selectedSource: GameWindow | null = null;
 // in milliseconds, so the Menus sheet's Close button can close the one opened
 // first. Kept up to date by the windows check below.
 const openedAt = new Map<string, number>();
+// When each game (by profile ID) was last picked this session, so the Close
+// button can close the game played before the current one.
+const pickedAt = new Map<string, number>();
 // A game launched from the Menus sheet, picked once its window opens, and
 // again if that window closes while another of the game's opens (a splash
 // screen before the game itself), for a minute after launching.
@@ -570,6 +573,7 @@ app.whenReady().then(async () => {
     profileSaved = loaded.saved;
     legacyFile = loaded.legacyFile;
     savedSnapshot = snapshot(profile);
+    pickedAt.set(profile.id, Date.now());
 
     // To both windows: the game can be picked from either (the picker's
     // cards, the Menus sheet's Visual Novels).
@@ -660,6 +664,7 @@ app.whenReady().then(async () => {
         isOpen: open !== undefined,
         sourceId: open?.id,
         openedAt: openedAt.get(saved.id),
+        pickedAt: pickedAt.get(saved.id),
       };
     });
   });

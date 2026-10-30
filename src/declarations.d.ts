@@ -175,7 +175,8 @@ interface GameProfile {
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running,
-// `openedAt` when it was first seen running this session (milliseconds).
+// `openedAt` when it was first seen running this session and `pickedAt`
+// when it was last picked (milliseconds).
 type ProfileSummary = Omit<
   GameProfile,
   'version' | 'regions' | 'textStyle' | 'backgroundY' | 'backgroundWidth'
@@ -183,6 +184,7 @@ type ProfileSummary = Omit<
   isOpen: boolean;
   sourceId?: string;
   openedAt?: number;
+  pickedAt?: number;
 };
 
 // The phone's display, added by Apollo while the phone is streaming (see

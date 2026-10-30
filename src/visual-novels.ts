@@ -4,7 +4,7 @@
  * makes it the game being played, as clicking its card in the picker does;
  * tapping one that isn't running starts it from its saved .exe (main picks
  * it once its window opens). The Close button at the bottom force-closes
- * the running game that was opened first this session.
+ * the running game played before the one being played (see `toClose`).
  */
 
 const dropdown = document.querySelector<HTMLDetailsElement>('#visual-novels')!;
@@ -83,10 +83,17 @@ async function showGames() {
     chips.append(element('p', 'sheet-note', 'No saved games yet.'));
   }
 
-  // The running game opened first (smallest `openedAt`).
-  toClose = profiles
-    .filter((profile) => profile.isOpen)
-    .sort((a, b) => (a.openedAt ?? 0) - (b.openedAt ?? 0))[0];
+  // The game played before the one being played: of the other running
+  // games, the one picked last (or, if none was picked, opened last). With
+  // no other game running, the one being played.
+  const lastActive = (profile: ProfileSummary) =>
+    profile.pickedAt ?? profile.openedAt ?? 0;
+  const running = profiles.filter((profile) => profile.isOpen);
+  toClose =
+    running
+      .filter((profile) => profile.sourceId !== selected)
+      .sort((a, b) => lastActive(b) - lastActive(a))[0] ??
+    running.find((profile) => profile.sourceId === selected);
   closeGameButton.disabled = !toClose;
   closeGameButton.textContent = toClose
     ? `Close ${nameOf(toClose)}`
