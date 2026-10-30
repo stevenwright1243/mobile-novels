@@ -9,12 +9,12 @@
 
 import { BACKGROUND_VIEW } from './zone-view';
 
-// Text and name at their normal size, the message window hanging under the
-// picture, with no extra padding.
+// Text and name at their normal size, the message window at the bottom of
+// the screen, with no extra padding.
 export const DEFAULT_TEXT_STYLE: TextStyle = {
   size: 1,
   nameSize: 1,
-  position: 'top',
+  position: 'bottom',
   padding: 0,
 };
 
