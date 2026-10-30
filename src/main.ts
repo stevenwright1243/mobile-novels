@@ -37,6 +37,7 @@ import {
   hwndFromSourceId,
   isMinimized,
   postClick,
+  pressKey,
   processIdOf,
   restoreBehind,
   sendClick,
@@ -44,6 +45,7 @@ import {
   setMutes,
   showInTaskbar,
   startTimeOf,
+  VK_F12,
   blockEdgeSwipesWhenFullScreen,
   windowExists,
 } from './win32';
@@ -720,6 +722,21 @@ app.whenReady().then(async () => {
         : postClick(hwnd, point);
     },
   );
+
+  // The Menus sheet's Screenshot button. All the games are Steam games for
+  // now, so Steam takes it, on its screenshot key (F12, the user's) pressed
+  // in the game. (Non-Steam games are for later.)
+  ipcMain.handle('screenshot-game', async () => {
+    if (!selectedSource) {
+      return;
+    }
+    const hwnd = hwndFromSourceId(selectedSource.id);
+    if (isMinimized(hwnd)) {
+      restoreBehind(hwnd);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    await pressKey(hwnd, VK_F12);
+  });
 
   // The way to get the game out of sight without minimizing it.
   ipcMain.handle('send-game-to-back', () => {

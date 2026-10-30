@@ -1269,8 +1269,51 @@ body {
   border-color: var(--accent-deep);
 }
 
+/* Full-screen text and Screenshot share the sheet's top row, half each,
+   their buttons lined up along the bottom. */
+#sheet-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1em;
+}
+
+.sheet-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+
+  h2 {
+    text-wrap: balance;
+  }
+
+  .sheet-note {
+    margin: 0;
+  }
+
+  /* The buttons along the bottom, however the text above them wraps. */
+  > :last-child {
+    margin-top: auto;
+  }
+}
+
 #page-mode-chips {
-  --chip-width: max(6rem, 25vmin);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4em;
+}
+
+#screenshot-button {
+  display: flex;
+  justify-content: center;
+  gap: 0.4em;
+
+  svg {
+    width: 1.3em;
+    height: 1.3em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
 }
 
 /* Visual Novels: a button per saved game, its title over whether it's

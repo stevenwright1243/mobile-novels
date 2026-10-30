@@ -61,17 +61,32 @@
            and the settings sheet below it (menus-sheet.ts). -->
       <div id="game-slot"></div>
       <section id="menus-sheet" class="glass" aria-label="Settings">
-        <h2 id="page-mode-heading">Full-screen text</h2>
-        <p class="sheet-note">
-          For games that fill the screen with text. Reads the area set with
-          "Edit full-screen text" in the main window.
-        </p>
-        <div
-          id="page-mode-chips"
-          class="chips"
-          role="radiogroup"
-          aria-labelledby="page-mode-heading"
-        ></div>
+        <!-- Full-screen text and Screenshot, side by side. -->
+        <div id="sheet-tools">
+          <div class="sheet-tool">
+            <h2 id="page-mode-heading">Full-screen text</h2>
+            <p class="sheet-note">For games that fill the screen with text.</p>
+            <div
+              id="page-mode-chips"
+              class="chips"
+              role="radiogroup"
+              aria-labelledby="page-mode-heading"
+            ></div>
+          </div>
+          <div class="sheet-tool">
+            <h2>Screenshot</h2>
+            <p class="sheet-note">Taken by Steam, with its F12 key.</p>
+            <!-- Presses F12 in the game (menus-sheet.ts). -->
+            <button id="screenshot-button" class="chip">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"
+                />
+              </svg>
+              <span>Take</span>
+            </button>
+          </div>
+        </div>
         <h2>Look</h2>
         <!-- A sample message window in the picked look, since the real one
              is hidden in Menus mode. -->

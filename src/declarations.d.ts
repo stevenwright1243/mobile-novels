@@ -226,6 +226,8 @@ interface Window {
     onRegionsChanged(callback: (regions: Regions) => void): void;
     // Clicks the game at a point given as fractions of its client area.
     clickGame(point: { x: number; y: number }): Promise<void>;
+    // Has Steam screenshot the game (presses its F12 key in the game).
+    screenshotGame(): Promise<void>;
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
     onClickMethodChanged(callback: (method: ClickMethod) => void): void;

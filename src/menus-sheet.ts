@@ -83,6 +83,19 @@ const pageModeChanged = (on: boolean) => showPageMode(on ? 'on' : 'off');
 onPageModeChanged(pageModeChanged);
 pageModeChanged(isPageMode());
 
+// Screenshot: Steam takes it, on its screenshot key (F12) pressed in the
+// game. The button says "Taken" for a moment after.
+const screenshotButton =
+  document.querySelector<HTMLButtonElement>('#screenshot-button')!;
+const screenshotLabel = screenshotButton.querySelector('span')!;
+screenshotButton.addEventListener('click', async () => {
+  await window.vn.screenshotGame();
+  screenshotLabel.textContent = 'Taken';
+  setTimeout(() => {
+    screenshotLabel.textContent = 'Take';
+  }, 1500);
+});
+
 // --- Sizes ---------------------------------------------------------------------
 
 // Wires a slider to a size: it shows the size (as a percent, in its

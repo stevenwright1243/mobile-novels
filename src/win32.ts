@@ -487,6 +487,43 @@ export async function sendClick(hwnd: number, point: { x: number; y: number }) {
   SetCursorPos(previousCursor.x, previousCursor.y);
 }
 
+// --- Pressing keys -------------------------------------------------------------
+
+export const VK_F12 = 0x7b;
+const INPUT_KEYBOARD = 1;
+const KEYEVENTF_KEYUP = 0x0002;
+const MapVirtualKey = user32.func(
+  'uint32_t __stdcall MapVirtualKeyW(uint32_t uCode, uint32_t uMapType)',
+);
+const MAPVK_VK_TO_VSC = 0;
+
+/**
+ * Presses a key (a "virtual-key code", e.g. `VK_F12`) in the game, with
+ * simulated real input: brings the game to the front first, since real key
+ * presses go to whichever window is in front. Real input is what overlays
+ * like Steam's watch for.
+ */
+export async function pressKey(hwnd: number, key: number) {
+  const keyEvent = (flags: number) => ({
+    type: INPUT_KEYBOARD,
+    u: {
+      ki: {
+        wVk: key,
+        // The key's hardware code too, which some programs read instead.
+        wScan: MapVirtualKey(key, MAPVK_VK_TO_VSC),
+        dwFlags: flags,
+        time: 0,
+        dwExtraInfo: 0,
+      },
+    },
+  });
+  SetForegroundWindow(hwnd);
+  await sleep(50);
+  SendInput(1, [keyEvent(0)], koffi.sizeof(INPUT));
+  await sleep(50);
+  SendInput(1, [keyEvent(KEYEVENTF_KEYUP)], koffi.sizeof(INPUT));
+}
+
 /**
  * The name of the graphics adapter driving the display at a point on screen
  * (in real pixels), e.g. "NVIDIA GeForce RTX 5090", or null if there's no
