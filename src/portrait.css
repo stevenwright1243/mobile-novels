@@ -988,9 +988,9 @@ body {
   gap: 0.6em;
 }
 
-/* The Sizes drop-down: its heading is the button that opens it, with a
-   chevron that turns when it's open. */
-#sizes summary {
+/* The Sizes and Visual Novels drop-downs: each heading is the button that
+   opens it, with a chevron that turns when it's open. */
+:is(#sizes, #visual-novels) summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1000,11 +1000,11 @@ body {
   cursor: pointer;
 }
 
-#sizes summary::-webkit-details-marker {
+:is(#sizes, #visual-novels) summary::-webkit-details-marker {
   display: none;
 }
 
-#sizes summary::after {
+:is(#sizes, #visual-novels) summary::after {
   content: '';
   width: 0.5em;
   height: 0.5em;
@@ -1016,12 +1016,12 @@ body {
   transition: rotate 0.2s;
 }
 
-#sizes[open] summary::after {
+:is(#sizes, #visual-novels)[open] summary::after {
   rotate: 225deg;
   translate: 0 0.15em;
 }
 
-#sizes h2 {
+:is(#sizes, #visual-novels) h2 {
   margin: 0;
 }
 
@@ -1271,6 +1271,32 @@ body {
 
 #page-mode-chips {
   --chip-width: max(6rem, 25vmin);
+}
+
+/* Visual Novels: a button per saved game, its title over whether it's
+   running. Games that aren't running are dimmed and can't be picked. */
+#game-chips {
+  --chip-width: max(9rem, 40vmin);
+}
+
+.chip.game-chip {
+  gap: 0.15em;
+  text-align: center;
+  text-wrap: balance;
+
+  .game-state {
+    font-size: 0.75em;
+    color: var(--accent-deep);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+
+    .game-state {
+      color: inherit;
+    }
+  }
 }
 
 #theme-chips {

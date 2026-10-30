@@ -485,7 +485,9 @@ app.whenReady().then(async () => {
     legacyFile = loaded.legacyFile;
     savedSnapshot = snapshot(profile);
 
-    portraitWindow?.webContents.send('source-selected', source.id);
+    // To both windows: the game can be picked from either (the picker's
+    // cards, the Menus sheet's Visual Novels).
+    broadcast('source-selected', source.id);
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-style-changed', profile.textStyle);

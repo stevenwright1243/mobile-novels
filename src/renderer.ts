@@ -33,12 +33,15 @@ const clickMethodSelect =
   document.querySelector<HTMLSelectElement>('#click-method')!;
 
 // Picks a window as the game: from its thumbnail, or from its profile card.
-async function pickWindow(source: GameWindow) {
-  // Main may ask about unsaved edits first; stop if the user cancels.
-  if (!(await window.vn.selectSource(source))) {
-    return;
-  }
-  playCapture(preview, source.id);
+// Main may ask about unsaved edits first; if the pick goes ahead, it sends
+// `source-selected`, which shows it (below).
+function pickWindow(source: GameWindow) {
+  window.vn.selectSource(source);
+}
+
+// Shows the picked game: picked here, or from the portrait's Menus sheet.
+function showPicked(sourceId: string) {
+  playCapture(preview, sourceId);
   enableRegionEditing();
   enableOcrTest(preview);
   enableTextStyle();
@@ -187,10 +190,13 @@ window.vn.onWindowsChanged(refresh);
 window.addEventListener('focus', refresh);
 refresh();
 
-// The game was closed (main sends `null`): stop the blank preview and unfold
-// the window list, ready to pick the next game.
+// A game was picked (here or in the portrait), or the game was closed (main
+// sends `null`): then stop the blank preview and unfold the window list,
+// ready to pick the next game.
 window.vn.onSourceSelected((sourceId) => {
-  if (sourceId === null) {
+  if (sourceId !== null) {
+    showPicked(sourceId);
+  } else {
     stopCapture(preview);
     windowsSection.open = true;
     sendToBackButton.disabled = true;

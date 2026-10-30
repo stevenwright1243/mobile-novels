@@ -83,21 +83,21 @@
           </p>
         </div>
         <!-- Each row is filled with a button per option (menus-sheet.ts). -->
-        <h3 id="theme-heading">Theme</h3>
+        <h3 id="theme-heading">Themes</h3>
         <div
           id="theme-chips"
           class="chips"
           role="radiogroup"
           aria-labelledby="theme-heading"
         ></div>
-        <h3 id="arrow-heading">Arrow</h3>
+        <h3 id="arrow-heading">Icons</h3>
         <div
           id="arrow-chips"
           class="chips"
           role="radiogroup"
           aria-labelledby="arrow-heading"
         ></div>
-        <h3 id="border-heading">Border</h3>
+        <h3 id="border-heading">Borders</h3>
         <div
           id="border-chips"
           class="chips"
@@ -237,6 +237,19 @@
               <button id="sheet-default" class="chip" disabled>Default</button>
             </div>
           </div>
+        </details>
+        <!-- The saved games (the picker's "Your games"), folded away until
+             opened: tapping a running one makes it the game being played
+             (visual-novels.ts). -->
+        <details id="visual-novels">
+          <summary><h2>Visual Novels</h2></summary>
+          <div
+            id="game-chips"
+            class="chips"
+            role="radiogroup"
+            aria-label="Visual Novels"
+          ></div>
+          <p class="sheet-note">Start a game on the PC to pick it here.</p>
         </details>
       </section>
 

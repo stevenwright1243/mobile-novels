@@ -149,8 +149,9 @@ game's name box (the `name` region, per game).
 - In a window wider than tall, the sheet goes beside the game instead
   (`minmax(16rem, 38%)` wide).
 - Sheet contents: **Look**: a sample message window (name tag, text, arrow),
-  then buttons for Theme (at least `max(7.5rem, 30vmin)` wide), Arrow
-  (`max(3.5rem, 14vmin)`) and Border (`max(5.5rem, 21vmin)`), each at least
+  then buttons for Themes (at least `max(7.5rem, 30vmin)` wide), Icons
+  (the "next" arrows, `max(3.5rem, 14vmin)`) and Borders
+  (`max(5.5rem, 21vmin)`), each at least
   48px tall; the picked one has a 3px ring in the current theme's
   `--accent-deep`.
 - At the sheet's top: **Full-screen text**, Off / On buttons
@@ -180,6 +181,12 @@ game's name box (the `name` region, per game).
   on the phone; on a narrow PC window the cap leaves it a little shorter): the picture at the
   chosen height, the line and name at the chosen sizes, and the corner
   buttons, all exactly in proportion, as they're dragged.
+- Under Sizes, **Visual Novels**, a drop-down like it (closed at first;
+  opening it scrolls the sheet to it): a button per saved game
+  (`max(9rem, 40vmin)` wide, at least 48px tall), its title over "Open" or
+  "Not running" (75%, in `--accent-deep`); the game being played has the
+  3px ring, and games that aren't running are dimmed to 45% and can't be
+  pressed. A note under them says to start a game on the PC to pick it.
 
 ## Full-screen text (page mode)
 
