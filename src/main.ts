@@ -135,15 +135,14 @@ const broadcast = (channel: string, value?: unknown, skip?: WebContents) => {
   }
 };
 
-// Tells the picker whether there's anything to save, for its Save button.
-const sendSaveState = () => {
-  const state: SaveState = {
-    hasGame: profile !== null,
-    edited: hasEdits(),
-    saved: profileSaved,
-  };
-  broadcast('save-state-changed', state);
-};
+// Whether there's anything to save, for the Save buttons (the picker's and
+// the portrait's Menus sheet).
+const saveState = (): SaveState => ({
+  hasGame: profile !== null,
+  edited: hasEdits(),
+  saved: profileSaved,
+});
+const sendSaveState = () => broadcast('save-state-changed', saveState());
 
 const saveCurrentProfile = async () => {
   if (!profile) {
@@ -452,6 +451,7 @@ app.whenReady().then(async () => {
 
   // The picker's "Save profile" button (or Ctrl+S).
   ipcMain.handle('save-profile', saveCurrentProfile);
+  ipcMain.handle('get-save-state', saveState);
 
   // Right-clicking a game card shows a native Windows menu. Resolves to
   // 'pick' if the user chose to pick the game (the picker does that part),

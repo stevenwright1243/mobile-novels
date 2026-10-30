@@ -21,4 +21,6 @@ slider.addEventListener('input', () => {
   window.vn.setButtonSize(slider.valueAsNumber);
 });
 
+// It can also be changed in the portrait's Menus sheet.
+window.vn.onButtonSizeChanged(showSize);
 window.vn.getButtonSize().then(showSize);

@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('vn', {
     ipcRenderer.on('profiles-changed', () => callback());
   },
   saveProfile: () => ipcRenderer.invoke('save-profile'),
+  getSaveState: () => ipcRenderer.invoke('get-save-state'),
   showProfileMenu: (card) => ipcRenderer.invoke('show-profile-menu', card),
   onSaveStateChanged: (callback) => {
     ipcRenderer.on('save-state-changed', (_event, state: SaveState) =>

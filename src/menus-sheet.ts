@@ -1,6 +1,7 @@
 /**
  * The settings sheet under the game in the portrait's Menus mode: the
- * full-screen text switch (page-mode.ts), and the look
+ * full-screen text switch (page-mode.ts), the sizes (portrait-sizes.ts),
+ * and the look
  * (theme, "tap to continue" arrow, border), picked with big buttons that
  * each show what they pick, and a sample message window in the current
  * look. The same app settings as the picker's Style settings: changes go
@@ -9,6 +10,7 @@
 
 import { ARROWS, BORDERS, THEMES } from './look-options';
 import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
+import { backgroundY, buttonSize, textStyle } from './portrait-sizes';
 
 // The current border and arrow, kept up to date by main.
 let style: MessageStyle = { border: 'halo', arrow: 'chevron' };
@@ -68,6 +70,80 @@ const showPageMode = makeChips(
 const pageModeChanged = (on: boolean) => showPageMode(on ? 'on' : 'off');
 onPageModeChanged(pageModeChanged);
 pageModeChanged(isPageMode());
+
+// --- Sizes ---------------------------------------------------------------------
+
+// Wires a slider to a size: it shows the size (as a percent, in its
+// <output>) and changes it while dragged. The slider moves in 5% steps;
+// a size set more exactly in the picker shows as it is until moved.
+function linkSlider(
+  id: string,
+  get: () => number,
+  set: (value: number) => void,
+  listen: (callback: () => void) => void,
+) {
+  const slider = document.querySelector<HTMLInputElement>(`#${id}`)!;
+  const output = slider.parentElement!.querySelector('output')!;
+  const show = () => {
+    const value = get();
+    slider.value = String(value);
+    output.value = `${Math.round(value * 100)}%`;
+    // How far along the track the thumb is, for the filled part of the
+    // track in portrait.css.
+    const min = Number(slider.min);
+    const share = (value - min) / (Number(slider.max) - min);
+    slider.style.setProperty('--fill', `${Math.round(share * 100)}%`);
+  };
+  // Rounded to whole percents: steps of 0.05 can add up to 0.6500000001.
+  slider.addEventListener('input', () =>
+    set(Math.round(slider.valueAsNumber * 100) / 100),
+  );
+  listen(show);
+}
+
+linkSlider(
+  'sheet-text-size',
+  () => textStyle.get().size,
+  (size) => textStyle.set({ ...textStyle.get(), size }),
+  textStyle.listen,
+);
+linkSlider(
+  'sheet-name-size',
+  () => textStyle.get().nameSize,
+  (nameSize) => textStyle.set({ ...textStyle.get(), nameSize }),
+  textStyle.listen,
+);
+linkSlider(
+  'sheet-background-y',
+  backgroundY.get,
+  backgroundY.set,
+  backgroundY.listen,
+);
+linkSlider(
+  'sheet-button-size',
+  buttonSize.get,
+  buttonSize.set,
+  buttonSize.listen,
+);
+
+// The game's sizes are part of its profile, which is only saved when asked
+// (as in the picker), so a Save button shows while there are changes. The
+// game's sliders are disabled while no game is picked.
+const saveButton = document.querySelector<HTMLButtonElement>('#sheet-save')!;
+const gameSliders = document.querySelectorAll<HTMLInputElement>(
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y',
+);
+function showSaveState({ hasGame, edited }: SaveState) {
+  saveButton.hidden = !hasGame || !edited;
+  for (const slider of gameSliders) {
+    slider.disabled = !hasGame;
+  }
+}
+saveButton.addEventListener('click', () => window.vn.saveProfile());
+window.vn.onSaveStateChanged(showSaveState);
+window.vn.getSaveState().then(showSaveState);
+
+// --- Look ----------------------------------------------------------------------
 
 // Themes: each button is drawn in its own theme (`.theme-sample` takes that
 // theme's variables in theme.css), with its name in the theme's font.

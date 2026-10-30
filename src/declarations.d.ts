@@ -227,6 +227,7 @@ interface Window {
     ): Promise<'pick' | null>;
     // Writes the picked game's profile to its file.
     saveProfile(): Promise<void>;
+    getSaveState(): Promise<SaveState>;
     onSaveStateChanged(callback: (state: SaveState) => void): void;
     // Puts the game behind all other windows without minimizing it.
     sendGameToBack(): Promise<void>;

@@ -17,6 +17,7 @@ import './history-log';
 import './menus-sheet';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
+import { backgroundY, buttonSize, textStyle } from './portrait-sizes';
 import { startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
@@ -31,22 +32,15 @@ interface Zone {
 const backgroundCanvas = document.querySelector<HTMLCanvasElement>(
   '#background-zone canvas',
 )!;
-// Where the background sits, top to bottom (the game's `backgroundY`), set
-// in the picker and kept up to date by main.
-let backgroundY = BACKGROUND_VIEW.y;
-window.vn.onBackgroundYChanged((y) => {
-  backgroundY = y;
-});
-window.vn.getBackgroundY().then((y) => {
-  backgroundY = y;
-});
 
 // The only zone drawn from the capture: the game's text and name are read
 // by OCR and shown as text, not as pictures.
 const backgroundZone: Zone = {
   canvas: backgroundCanvas,
   region: 'background',
-  view: () => ({ ...BACKGROUND_VIEW, y: backgroundY }),
+  // `backgroundY`: where the background sits, top to bottom (the game's
+  // own, set in the picker or the Menus sheet; portrait-sizes.ts).
+  view: () => ({ ...BACKGROUND_VIEW, y: backgroundY.get() }),
 };
 
 // The current regions, kept up to date by main. Null until they arrive.
@@ -95,16 +89,14 @@ function setTextStyle(style: TextStyle) {
   portrait.style.setProperty('--text-size', String(style.size));
   portrait.style.setProperty('--name-size', String(style.nameSize ?? 1));
 }
-window.vn.onTextStyleChanged(setTextStyle);
-window.vn.getTextStyle().then(setTextStyle);
+textStyle.listen(setTextStyle);
 
 // The corner buttons' size (an app setting), passed to portrait.css as
 // `--button-size`.
 function setButtonSize(size: number) {
   portrait.style.setProperty('--button-size', String(size));
 }
-window.vn.onButtonSizeChanged(setButtonSize);
-window.vn.getButtonSize().then(setButtonSize);
+buttonSize.listen(setButtonSize);
 
 // The message window's border and arrow (an app setting), set as
 // `data-border` and `data-arrow` attributes that portrait.css styles by. On

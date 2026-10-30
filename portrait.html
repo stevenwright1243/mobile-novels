@@ -64,6 +64,64 @@
           role="radiogroup"
           aria-labelledby="page-mode-heading"
         ></div>
+        <!-- The sizes, folded away until opened (menus-sheet.ts). The same
+             settings as the picker's sliders, in 5% steps here, as a finger
+             can't be more exact. -->
+        <details id="sizes">
+          <summary><h2>Sizes</h2></summary>
+          <label class="slider">
+            <span>Text size</span>
+            <output></output>
+            <input
+              type="range"
+              id="sheet-text-size"
+              min="0.6"
+              max="2"
+              step="0.05"
+            />
+          </label>
+          <label class="slider">
+            <span>Name size</span>
+            <output></output>
+            <input
+              type="range"
+              id="sheet-name-size"
+              min="0.5"
+              max="2"
+              step="0.05"
+            />
+          </label>
+          <label class="slider">
+            <span>Portrait height</span>
+            <output></output>
+            <input
+              type="range"
+              id="sheet-background-y"
+              min="0"
+              max="1"
+              step="0.05"
+            />
+          </label>
+          <label class="slider">
+            <span>Button size</span>
+            <output></output>
+            <input
+              type="range"
+              id="sheet-button-size"
+              min="0.5"
+              max="1.5"
+              step="0.05"
+            />
+          </label>
+          <p class="sheet-note">
+            Text size, name size and portrait height are this game's; button
+            size is for every game and saves by itself.
+          </p>
+          <!-- Shown while the game has unsaved changes. -->
+          <button id="sheet-save" class="chip" hidden>
+            Save for this game
+          </button>
+        </details>
         <h2>Look</h2>
         <!-- A sample message window in the picked look, since the real one
              is hidden in Menus mode. -->
