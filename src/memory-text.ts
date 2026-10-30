@@ -65,10 +65,13 @@ const POLL_EVERY = 150;
 const MAX_LINE = 1024;
 // How alike two reads must be to count as the same line read again.
 const SAME_LINE = 0.85;
-// Searches allowed without finding the buffer, per run of the game: each
-// reads all its memory, so a game that doesn't keep its line in one place
-// stops being searched.
+// Searches for a name allowed without finding its copy, per run of the
+// game: each reads all its memory.
 const MAX_SEARCHES = 6;
+// Line searches in a row that find no copy of the line before the game's
+// memory stops being searched (it doesn't keep its lines as UTF-16 or
+// UTF-8 text). Each reads all of it, 0.15 to 1 s in the background.
+const MAX_EMPTY_SEARCHES = 8;
 // OCR lines in a row that aren't in the buffer before it's dropped and
 // searched for again (the game may have moved it).
 const MAX_MISSES = 5;
@@ -79,8 +82,11 @@ const MAX_FAILED_READS = 5;
 const FOLLOW_WAIT = 600;
 // The most candidates kept from one search.
 const MAX_CANDIDATES = 300;
-// Runs of this many letters or more are searched for.
+// Runs of this many letters or more are searched for, or this many when
+// OCR got so many words wrong that there's no longer run ("in for them" in
+// "eventual1y c0me as a fami1y, but I'm fi1ling in for them t0day").
 const MIN_NEEDLE = 12;
+const MIN_SHORT_NEEDLE = 8;
 // Reads with fewer letters than this (a line of "......") aren't matched
 // against memory: every text with as few letters is alike to them.
 const MIN_LETTERS = 2;
@@ -108,6 +114,12 @@ function setStatus(next: MemoryTextStatus) {
 let lineListener: (line: string) => void = () => {};
 export const onMemoryLine = (listener: (line: string) => void) =>
   (lineListener = listener);
+// The game's own text for a line OCR read, found a moment after the read
+// (see `search`), while no buffer is followed.
+let correctionListener: (read: string, line: string) => void = () => {};
+export const onMemoryCorrection = (
+  listener: (read: string, line: string) => void,
+) => (correctionListener = listener);
 
 // Debug mode prints what the reader finds.
 let debug = false;
@@ -156,6 +168,10 @@ interface GameMemory {
   buffer: LineBuffer | null;
   misses: number;
   searches: number;
+  emptySearches: number;
+  // The last line corrected from its copies, and OCR's read of it, so a
+  // re-read of it (OCR reads it a little differently each time) keeps it.
+  corrected: { read: string; line: string } | null;
   searching: boolean;
   // The speaker's name copies (see "Speakers"), and finding them.
   names: Spot[];
@@ -199,6 +215,8 @@ function memoryOf(processId: number) {
       buffer: null,
       misses: 0,
       searches: 0,
+      emptySearches: 0,
+      corrected: null,
       searching: false,
       names: [],
       nameCandidates: [],
@@ -266,10 +284,19 @@ function endFor(text: string, read: string) {
   return best + (CLOSING.exec(compared.slice(best))?.[0].length ?? 0);
 }
 
-// A line as shown: the end mark off its end, the same mark inside it a
-// space, and spacing tidied.
+// Formatting codes engines mix into their text: Unity's rich text
+// ("<alpha=#f8>", "<color=#fff>…</color>", its typewriter effect redrawing
+// the line with them) and Ren'Py's ("{w}", "{i}…{/i}").
+const MARKUP = /<\/?[a-z][^<>]{0,40}>|\{\/?[a-z]+(?:=[^{}]{0,20})?\}/gi;
+// Characters no game shows: undecodable bytes (a length byte just before
+// a UTF-8 line), invisible formatting and private-use characters.
+const JUNK = /[\uFFFD\p{Cf}\p{Co}]/gu;
+const clean = (text: string) => text.replace(MARKUP, '').replace(JUNK, '');
+
+// A line as shown: formatting codes out, the end mark off its end, the same
+// mark inside it a space, and spacing tidied.
 function tidy(line: string, end: string) {
-  let text = line;
+  let text = clean(line);
   if (end) {
     while (text.endsWith(end)) {
       text = text.slice(0, -end.length);
@@ -368,6 +395,10 @@ export function lineForRead(processId: number, read: string): string | null {
   }
   if (letters(read).length < MIN_LETTERS) {
     return read;
+  }
+  const { corrected } = memory;
+  if (corrected && alike(read, corrected.read) >= SAME_LINE) {
+    return corrected.line;
   }
   // Checking the last search's candidates happens straight away, so the
   // buffer may be found for this very line; a new search runs on its own.
@@ -809,8 +840,7 @@ async function search(memory: GameMemory, read: string) {
   if (alike(read, memory.searchedFor) >= SAME_LINE) {
     return;
   }
-  if (memory.searches >= MAX_SEARCHES) {
-    setStatus('not-found');
+  if (memory.emptySearches >= MAX_EMPTY_SEARCHES) {
     return;
   }
   const needles = needlesFrom(read);
@@ -823,20 +853,90 @@ async function search(memory: GameMemory, read: string) {
   try {
     memory.candidates = await findSpots(memory, needles);
     memory.searchedFor = read;
+    // Until a buffer is followed, each line is matched with its copies
+    // straight away: in engines where every line is a new string (Unity,
+    // Ren'Py), none is ever rewritten for the next line.
+    const exact = bestCopy(memory.candidates, read, needles);
     log(
-      `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms`,
+      `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms${exact === null ? '' : `: "${exact}"`}`,
     );
+    if (exact === null) {
+      memory.emptySearches++;
+      if (memory.emptySearches >= MAX_EMPTY_SEARCHES && !memory.buffer) {
+        log('lines are not found in memory; leaving them to OCR');
+        setStatus('not-found');
+      }
+    } else {
+      memory.emptySearches = 0;
+      if (!memory.buffer) {
+        memory.corrected = { read, line: exact };
+        setStatus('matching');
+        correctionListener(read, exact);
+      }
+    }
   } finally {
     memory.searching = false;
   }
 }
 
+// The line OCR read as the game has it: of the copies found, the one that
+// best matches the read (`MATCH`), formatting codes left out, or null. A
+// copy can have other text before and after the line (a script with every
+// language's version in a row), so the line's start is looked for around
+// where a run of its words puts it, and its end where it best matches.
+function bestCopy(copies: Spot[], read: string, needles: string[]) {
+  let best: string | null = null;
+  let bestScore = MATCH;
+  // Many copies are the same text: each stretch is tried once.
+  const tried = new Set<string>();
+  for (const { found } of copies) {
+    const text = clean(found);
+    const needle = needles.find(
+      (run) => text.includes(run) && read.includes(run),
+    );
+    if (needle === undefined) {
+      continue;
+    }
+    const guess = text.indexOf(needle) - read.indexOf(needle);
+    const stretch = text.slice(
+      Math.max(0, guess - 8),
+      guess + read.length * 1.5 + 20,
+    );
+    if (tried.has(stretch)) {
+      continue;
+    }
+    tried.add(stretch);
+    for (let start = Math.max(0, guess - 8); start <= guess + 8; start++) {
+      // Not from inside a word.
+      if (isWordCharacter(text[start - 1]) && isWordCharacter(text[start])) {
+        continue;
+      }
+      const rest = text.slice(start);
+      let line = tidy(rest.slice(0, endFor(rest, read)), '');
+      if (!read.includes('~')) {
+        line = line.replaceAll('~', ' ').replace(/\s+/g, ' ');
+      }
+      const score = alike(line, read);
+      if (score > bestScore) {
+        best = line;
+        bestScore = score;
+      }
+    }
+  }
+  return best;
+}
+
 // Runs of whole words from the read to search for, at least `MIN_NEEDLE`
-// long, from different parts of the line. Only plain letters: OCR's
-// punctuation may be wrong, and games may write apostrophes curly. A word's
-// punctuation is left off, but ends the run there ("too seriously." gives
-// "too seriously").
+// long (or `MIN_SHORT_NEEDLE` if there are none), from different parts of
+// the line. Only plain letters: OCR's punctuation may be wrong, and games
+// may write apostrophes curly. A word's punctuation is left off, but ends
+// the run there ("too seriously." gives "too seriously").
 function needlesFrom(read: string) {
+  const runs = runsOf(read, MIN_NEEDLE);
+  return runs.length > 0 ? runs : runsOf(read, MIN_SHORT_NEEDLE);
+}
+
+function runsOf(read: string, minLength: number) {
   const words = read.split(/\s+/).map((word) => ({
     letters: word.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, ''),
     before: /^[^A-Za-z]/.test(word),
@@ -851,7 +951,7 @@ function needlesFrom(read: string) {
         break;
       }
       run.push(word.letters);
-      if (run.join(' ').length >= MIN_NEEDLE) {
+      if (run.join(' ').length >= minLength) {
         runs.push(run.join(' '));
         break;
       }

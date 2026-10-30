@@ -107,6 +107,7 @@ window.vn.getTextFromMemory().then(showTextFromMemory);
 // How finding the text is going.
 const statusNotes: Record<MemoryTextStatus, string> = {
   found: 'Found: lines now come from the game.',
+  matching: 'Found: each line OCR reads is corrected from the game.',
   searching: 'Looking for it…',
   'not-found': 'Not found in this game: lines come from OCR.',
   off: '',

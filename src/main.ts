@@ -21,6 +21,7 @@ import {
   lineForRead,
   memoryTextStatus,
   nameForRead,
+  onMemoryCorrection,
   onMemoryLine,
   onMemoryTextStatus,
   setMemoryTextDebug,
@@ -1056,6 +1057,19 @@ app.whenReady().then(async () => {
   onMemoryLine((line) => {
     if (profile?.textFromMemory && selectedSource) {
       showLine(line);
+    }
+  });
+  // The game's own text for a line OCR read, found a moment later: it
+  // replaces the read if that's still shown, in the history log too.
+  onMemoryCorrection((read, line) => {
+    if (!profile?.textFromMemory || !selectedSource || textLine !== read) {
+      return;
+    }
+    textLine = line;
+    broadcast('text-line-changed', textLine);
+    const last = textHistory.at(-1);
+    if (last?.line === read) {
+      textHistory = [...textHistory.slice(0, -1), { ...last, line }];
     }
   });
   function showLine(line: string) {

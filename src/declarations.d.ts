@@ -47,8 +47,15 @@ type Points = Record<PointName, GamePoint | null>;
 type ClickMethod = 'message' | 'mouse';
 
 // How reading the game's lines from its memory is going (memory-text.ts):
-// found its line buffer, still looking, gave up, or not in use.
-type MemoryTextStatus = 'found' | 'searching' | 'not-found' | 'off';
+// following its line buffer, matching each line OCR reads with its copies
+// (engines that never rewrite a buffer), still looking, gave up, or not in
+// use.
+type MemoryTextStatus =
+  | 'found'
+  | 'matching'
+  | 'searching'
+  | 'not-found'
+  | 'off';
 
 // How the text is styled in the portrait's message window. `size` scales
 // the text (1 = normal, 1.5 = half as big again); the window grows with it.
