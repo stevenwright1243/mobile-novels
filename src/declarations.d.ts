@@ -45,6 +45,17 @@ interface TextStyle {
   oversizedSize: number | null;
 }
 
+// The colour scheme of both windows (the picker's Style settings, an app
+// setting). Each is a block of variables in theme.css.
+type ThemeName =
+  | 'aokana'
+  | 'kimikano'
+  | 'katawa-shoujo'
+  | 'mahoyo'
+  | 'hoshimemo'
+  | 'steins-gate'
+  | 'ddlc';
+
 // The look of the portrait's message window (the picker's Style settings,
 // an app setting): the effect around its edge, and the "tap to continue"
 // arrow in its corner.
@@ -207,6 +218,10 @@ interface Window {
     getButtonSize(): Promise<number>;
     setButtonSize(size: number): Promise<void>;
     onButtonSizeChanged(callback: (size: number) => void): void;
+    // The colour scheme of both windows. Saved as an app setting.
+    getTheme(): Promise<ThemeName>;
+    setTheme(theme: ThemeName): Promise<void>;
+    onThemeChanged(callback: (theme: ThemeName) => void): void;
     // The message window's border and arrow. Saved as an app setting.
     getMessageStyle(): Promise<MessageStyle>;
     setMessageStyle(style: MessageStyle): Promise<void>;

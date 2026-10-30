@@ -3,8 +3,12 @@
 body {
   font-family: var(--font);
   color: var(--ink);
-  /* A pale sky, fading to white. */
-  background: linear-gradient(to bottom, var(--sky-pale), #fff 40%);
+  /* The theme's pale accent, fading to the surface colour. */
+  background: linear-gradient(
+    to bottom,
+    var(--accent-pale),
+    var(--surface) 40%
+  );
   margin: 0;
   padding: 1rem;
   box-sizing: border-box;
@@ -63,7 +67,7 @@ header {
 h1 {
   font-size: 1.35rem;
   margin: 0;
-  color: var(--sky-deep);
+  color: var(--accent-deep);
 }
 
 /* --- Controls ------------------------------------------------------------------ */
@@ -76,12 +80,12 @@ input {
   color: inherit;
 }
 
-/* Soft, rounded "pill" buttons with a sky-blue glow on hover. */
+/* Soft, rounded "pill" buttons with an accent glow on hover. */
 button {
   padding: 0.3rem 0.9rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: linear-gradient(#fff, var(--sky-pale));
+  border-radius: var(--pill);
+  background: linear-gradient(var(--surface), var(--accent-pale));
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -89,12 +93,12 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--sky);
-  box-shadow: 0 0 0 3px rgb(108 196 245 / 25%);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 button:active:not(:disabled) {
-  background: var(--sky-pale);
+  background: var(--accent-pale);
 }
 
 button:disabled {
@@ -104,9 +108,9 @@ button:disabled {
 
 /* Save stands out while there's something to save. */
 #save-profile:not(:disabled) {
-  border-color: var(--sky-deep);
-  background: linear-gradient(var(--sky), var(--sky-deep));
-  color: #fff;
+  border-color: var(--accent-deep);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
 }
 
 select,
@@ -114,12 +118,12 @@ input[type='number'] {
   padding: 0.15rem 0.4rem;
   border: 1px solid var(--line);
   border-radius: 0.4rem;
-  background: #fff;
+  background: var(--surface);
 }
 
 /* A clear ring when moving around with the keyboard (not on mouse clicks). */
 :focus-visible {
-  outline: 2px solid var(--sky-deep);
+  outline: 2px solid var(--accent-deep);
   outline-offset: 2px;
 }
 
@@ -132,7 +136,7 @@ input[type='number'] {
 h2 {
   font-size: 1rem;
   margin: 0 0 0.25rem;
-  color: var(--sky-deep);
+  color: var(--accent-deep);
 }
 
 #game-list {
@@ -162,8 +166,8 @@ h2 {
 .game-card,
 #window-list button {
   border-radius: 0.75rem;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(30 90 150 / 12%);
+  background: var(--surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--shadow) 12%, transparent);
 }
 
 .game-card[aria-disabled='true'] {
@@ -193,13 +197,13 @@ h2 {
   padding: 0 0.5rem;
   border-radius: 1rem;
   font-size: 0.75rem;
-  background: var(--sky-pale);
+  background: var(--accent-pale);
   color: var(--ink);
 }
 
 .badge.open {
-  background: var(--sky-deep);
-  color: #fff;
+  background: var(--accent-deep);
+  color: var(--on-accent);
 }
 
 #windows {
@@ -209,7 +213,7 @@ h2 {
 /* The fold-out line, styled like the "Your games" heading. */
 #windows > summary {
   cursor: pointer;
-  color: var(--sky-deep);
+  color: var(--accent-deep);
   font-weight: bold;
   margin-bottom: 0.25rem;
 }
@@ -288,8 +292,8 @@ h2 {
 
 #preview-area {
   position: relative;
-  /* Deep navy rather than black, around the game picture. */
-  background: #142338;
+  /* The theme's deep colour rather than black, around the game picture. */
+  background: var(--deep);
   border-radius: 0.75rem;
   /* Scrollbars appear when zoomed in. */
   overflow: auto;
@@ -480,7 +484,7 @@ h2 {
   gap: 0.25rem 0.75rem;
   padding: 0.2rem 0.3rem 0.2rem 0.75rem;
   border: 1px dashed var(--line);
-  border-radius: 999px;
+  border-radius: var(--pill);
   font-size: 0.9rem;
 }
 
@@ -493,11 +497,11 @@ h2 {
 #text-shrink-note {
   margin-left: 0.5rem;
   padding: 0.1rem 0.6rem;
-  border-radius: 999px;
-  background: var(--sky-pale);
+  border-radius: var(--pill);
+  background: var(--accent-pale);
   border: 1px solid var(--line);
   font-size: 0.85rem;
-  color: var(--sky-deep);
+  color: var(--accent-deep);
 }
 
 #text-shrink-note[hidden] {
@@ -507,29 +511,29 @@ h2 {
 /* "On phone" / "Phone not connected" (phone-status.ts). */
 #phone-status {
   padding: 0.1rem 0.6rem;
-  border-radius: 999px;
+  border-radius: var(--pill);
   border: 1px solid var(--line);
   font-size: 0.85rem;
   color: var(--ink);
   opacity: 0.6;
 
   &.connected {
-    background: var(--sky-pale);
-    color: var(--sky-deep);
+    background: var(--accent-pale);
+    color: var(--accent-deep);
     opacity: 1;
   }
 }
 
-/* A choice of two or more drawn as one pill, the chosen part filled in sky
-   blue (the portrait's PC / Phone switch). Underneath it's radio buttons, so
+/* A choice of two or more drawn as one pill, the chosen part filled in the
+   accent colour (the portrait's PC / Phone switch). Underneath it's radio buttons, so
    arrow keys and screen readers work; the round dots are hidden. A single
    row, so flexbox. */
 .switch {
   display: inline-flex;
   padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #fff;
+  border-radius: var(--pill);
+  background: var(--surface);
   font-size: 0.9rem;
 
   &[hidden] {
@@ -538,18 +542,18 @@ h2 {
 
   & label {
     padding: 0.15rem 0.8rem;
-    border-radius: 999px;
+    border-radius: var(--pill);
     cursor: pointer;
   }
 
   & label:has(:checked) {
-    background: linear-gradient(var(--sky), var(--sky-deep));
-    color: #fff;
+    background: linear-gradient(var(--accent), var(--accent-deep));
+    color: var(--on-accent);
   }
 
   /* The keyboard ring goes round the part, since the dot is hidden. */
   & label:has(:focus-visible) {
-    outline: 2px solid var(--sky-deep);
+    outline: 2px solid var(--accent-deep);
     outline-offset: 1px;
   }
 

@@ -673,6 +673,14 @@ app.whenReady().then(async () => {
     clearTimeout(buttonSizeSaveTimer);
     buttonSizeSaveTimer = setTimeout(() => saveSettings(settings), 500);
   });
+  // The colour scheme, saved straight away. Sent to every window, the
+  // picker included, since both are themed.
+  ipcMain.handle('get-theme', () => settings.theme);
+  ipcMain.handle('set-theme', async (_event, theme: ThemeName) => {
+    settings = { ...settings, theme };
+    broadcast('theme-changed', theme);
+    await saveSettings(settings);
+  });
   // The message window's border and arrow, saved straight away.
   ipcMain.handle('get-message-style', () => settings.messageStyle);
   ipcMain.handle('set-message-style', async (event, style: MessageStyle) => {

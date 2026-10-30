@@ -4,8 +4,8 @@
  * of it into the layout's zones.
  */
 
-// The rounded font, bundled with the app (works offline).
-import '@fontsource-variable/nunito';
+// The colour scheme and its fonts (theme.ts).
+import { onThemeApplied } from './theme';
 import './portrait.css';
 import {
   getClientArea,
@@ -267,11 +267,16 @@ const BACKDROP_SHRINK = 24;
 const backdrop = document.createElement('canvas');
 const backdropContext = backdrop.getContext('2d')!;
 
-// The colour washed over the backdrop, from the theme in portrait.css.
-const backdropTint =
+// The colour washed over the backdrop, from the theme in theme.css. Read
+// again whenever the theme changes.
+const readBackdropTint = () =>
   getComputedStyle(document.documentElement)
     .getPropertyValue('--backdrop-tint')
     .trim() || 'rgb(0 0 0 / 55%)';
+let backdropTint = readBackdropTint();
+onThemeApplied(() => {
+  backdropTint = readBackdropTint();
+});
 
 function drawBackdrop(
   context: CanvasRenderingContext2D,

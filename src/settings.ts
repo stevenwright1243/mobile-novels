@@ -15,6 +15,8 @@ export type Settings = {
   // The size of the portrait's corner buttons, as a multiple of normal (the
   // picker's "Button size" slider).
   buttonSize: number;
+  // The colour scheme of both windows (the picker's Style settings).
+  theme: ThemeName;
   // The message window's border and arrow (the picker's Style settings).
   messageStyle: MessageStyle;
 };
@@ -22,6 +24,7 @@ export type Settings = {
 const DEFAULT_SETTINGS: Settings = {
   portraitOnPhone: true,
   buttonSize: 1,
+  theme: 'aokana',
   messageStyle: { border: 'halo', arrow: 'chevron' },
 };
 

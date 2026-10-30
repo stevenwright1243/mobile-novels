@@ -101,6 +101,13 @@ contextBridge.exposeInMainWorld('vn', {
       callback(size),
     );
   },
+  getTheme: () => ipcRenderer.invoke('get-theme'),
+  setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
+  onThemeChanged: (callback) => {
+    ipcRenderer.on('theme-changed', (_event, theme: ThemeName) =>
+      callback(theme),
+    );
+  },
   getMessageStyle: () => ipcRenderer.invoke('get-message-style'),
   setMessageStyle: (style) => ipcRenderer.invoke('set-message-style', style),
   onMessageStyleChanged: (callback) => {

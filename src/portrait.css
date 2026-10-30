@@ -1,9 +1,6 @@
 @import './theme.css';
 
-/* Laid over the blurred copy of the background around a zoomed-out picture
-   (read by portrait.ts). A pale sky wash keeps it bright. */
 :root {
-  --backdrop-tint: rgb(214 236 255 / 35%);
   /* The text size at 100% in the picker: follows the window's width, within
      limits. Used by the message window and the history log. (Raised by half
      from 1.125rem / 5vw / 2rem, so 100% now reads comfortably on a phone.) */
@@ -12,28 +9,31 @@
 
 body {
   margin: 0;
-  /* A clear sky, seen before the game is picked. */
-  background: linear-gradient(to bottom, #8fd3ff, var(--sky-pale));
+  /* Seen before the game is picked. */
+  background: linear-gradient(to bottom, var(--stage-top), var(--accent-pale));
   color: var(--ink);
   font-family: var(--font);
 }
 
-/* Frosted white glass with a sky-blue edge: the message window, the Log
+/* Frosted glass with an accent-coloured edge (colours from the theme): the message window, the Log
    button and the history log share this look. */
 .glass {
-  border-radius: max(0.75rem, 3vmin);
-  /* Mostly white, a touch of sky toward the bottom. `backdrop-filter` blurs
+  border-radius: calc(max(0.75rem, 3vmin) * var(--corner));
+  /* The theme's surface colour, a touch tinted toward the bottom, over its
+     `--glass-pattern` (if any). `backdrop-filter` blurs
      whatever is behind the element: the frosted-glass effect. */
-  background: linear-gradient(
-    to bottom,
-    rgb(255 255 255 / 90%),
-    rgb(236 247 255 / 86%)
-  );
-  backdrop-filter: blur(10px) saturate(1.3);
-  border: 1px solid rgb(255 255 255 / 90%);
+  background:
+    var(--glass-pattern),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--surface) 90%, transparent),
+      color-mix(in srgb, var(--surface-tint) 86%, transparent)
+    );
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+  border: 1px solid color-mix(in srgb, var(--surface) 90%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgb(108 196 245 / 35%),
-    0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 0.4rem 1.5rem color-mix(in srgb, var(--shadow) 25%, transparent);
   color: var(--ink);
 }
 
@@ -113,7 +113,7 @@ body {
     display: none;
   }
 
-  /* The message window: frosted white glass with a sky-blue edge. */
+  /* The message window: frosted glass (`.glass`). */
   #text-line {
     display: block;
     position: relative;
@@ -136,7 +136,7 @@ body {
     /* The chosen size, times `--fit`: below 1 when portrait.ts shrinks a line
        that's too long for the window (see `fitText()`). */
     font-size: calc(var(--chosen-font-size) * var(--fit, 1));
-    font-weight: 600;
+    font-weight: var(--text-weight);
     line-height: var(--line-height);
     letter-spacing: 0.01em;
     /* Avoids a lone word on the last line where it can. */
@@ -167,23 +167,23 @@ body {
    `data-border` and `data-arrow` on .portrait. The default is the halo
    with the chevron. */
 
-/* Border "halo": a soft sky glow all the way round, slowly breathing. */
+/* Border "halo": a soft accent glow all the way round, slowly breathing. */
 .portrait[data-border='halo'] #text-line {
   box-shadow:
-    inset 0 0 0 1px rgb(108 196 245 / 45%),
-    0 0 0 2px rgb(255 255 255 / 70%),
-    0 0 1.2rem 0.3rem rgb(108 196 245 / 55%),
-    0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--surface) 70%, transparent),
+    0 0 1.2rem 0.3rem color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0.4rem 1.5rem color-mix(in srgb, var(--shadow) 25%, transparent);
   animation: breathe 3.2s ease-in-out infinite;
 }
 
 @keyframes breathe {
   50% {
     box-shadow:
-      inset 0 0 0 1px rgb(108 196 245 / 65%),
-      0 0 0 2px rgb(255 255 255 / 90%),
-      0 0 2.4rem 0.8rem rgb(108 196 245 / 75%),
-      0 0.4rem 1.5rem rgb(30 90 150 / 25%);
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 65%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--surface) 90%, transparent),
+      0 0 2.4rem 0.8rem color-mix(in srgb, var(--accent) 75%, transparent),
+      0 0.4rem 1.5rem color-mix(in srgb, var(--shadow) 25%, transparent);
   }
 }
 
@@ -211,11 +211,11 @@ body {
   padding: 5px;
   background: conic-gradient(
     from var(--rim-angle),
-    var(--sky-deep),
-    var(--sky),
-    #fff,
-    var(--sky),
-    var(--sky-deep)
+    var(--accent-deep),
+    var(--accent),
+    var(--rim-light),
+    var(--accent),
+    var(--accent-deep)
   );
   mask:
     linear-gradient(#000 0 0) content-box,
@@ -231,7 +231,7 @@ body {
   }
 }
 
-/* Border "ribbon": a thin sky ribbon along the top edge, fading out at the
+/* Border "ribbon": a thin accent ribbon along the top edge, fading out at the
    ends (the original look). */
 .portrait[data-border='ribbon'] #text-line::before {
   content: '';
@@ -244,9 +244,9 @@ body {
   background: linear-gradient(
     to right,
     transparent,
-    var(--sky) 20%,
-    var(--sky-deep) 50%,
-    var(--sky) 80%,
+    var(--accent) 20%,
+    var(--accent-deep) 50%,
+    var(--accent) 80%,
     transparent
   );
 }
@@ -262,7 +262,7 @@ body {
   width: 0.85em;
   height: 0.85em;
   fill: none;
-  stroke: var(--sky-deep);
+  stroke: var(--accent-deep);
   stroke-width: 3.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -281,7 +281,7 @@ body {
   width: 0.22em;
   height: 0.22em;
   border-radius: 50%;
-  background: var(--sky-deep);
+  background: var(--accent-deep);
   animation: hop 1.2s ease-in-out infinite;
 }
 
@@ -306,14 +306,14 @@ body {
   }
 }
 
-/* Arrow "triangle": a sky triangle, bobbing (the original look). */
+/* Arrow "triangle": an accent triangle, bobbing (the original look). */
 .portrait[data-arrow='triangle'] #next-arrow .triangle {
   display: block;
   width: 0.7em;
   height: 0.5em;
   /* A downward triangle, cut out of a plain box. */
   clip-path: polygon(0 0, 100% 0, 50% 100%);
-  background: linear-gradient(var(--sky), var(--sky-deep));
+  background: linear-gradient(var(--accent), var(--accent-deep));
   animation: bob 1.2s ease-in-out infinite;
 }
 
@@ -367,7 +367,7 @@ body {
 #log button {
   font-weight: 700;
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: var(--pill);
 }
 
 /* The corner buttons (Menus top-left, Log top-right): frosted pills over
@@ -434,9 +434,9 @@ body {
   font-family: var(--font);
 }
 
-/* The page behind an open dialog: blurred and washed with deep sky. */
+/* The page behind an open dialog: blurred and washed with the theme's deep colour. */
 #log::backdrop {
-  background: rgb(20 60 110 / 45%);
+  background: color-mix(in srgb, var(--deep) 60%, transparent);
   backdrop-filter: blur(6px);
 }
 
@@ -481,7 +481,7 @@ body {
   margin: 0 0 0.75em;
   font-size: max(0.85rem, 3.5vmin);
   font-weight: 700;
-  color: var(--sky-deep);
+  color: var(--accent-deep);
   letter-spacing: 0.05em;
 }
 
@@ -489,20 +489,20 @@ body {
 #log-text {
   margin: 0;
   font-size: calc(var(--base-font-size) * var(--text-size, 1));
-  font-weight: 600;
+  font-weight: var(--text-weight);
   line-height: 1.55;
   text-wrap: pretty;
 }
 
-/* The big arrow buttons: solid sky blue, white arrows. */
+/* The big arrow buttons: solid accent colour, arrows in `--on-accent`. */
 .log-arrow {
   display: grid;
   place-items: center;
   min-height: max(4rem, 14vmin);
-  border: 1px solid rgb(255 255 255 / 70%);
-  background: linear-gradient(var(--sky), var(--sky-deep));
-  box-shadow: 0 0.4rem 1.5rem rgb(30 90 150 / 35%);
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--on-accent) 50%, transparent);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  box-shadow: 0 0.4rem 1.5rem color-mix(in srgb, var(--shadow) 35%, transparent);
+  color: var(--on-accent);
   font-size: max(1.75rem, 7vmin);
 }
 
@@ -550,19 +550,19 @@ body {
   place-items: center;
   text-align: center;
   font-size: max(1rem, 5vmin);
-  font-weight: 600;
+  font-weight: var(--text-weight);
   color: var(--ink);
 }
 
-/* Tap feedback: a sky-blue ring that grows and fades where you tapped. */
+/* Tap feedback: an accent ring that grows and fades where you tapped. */
 .ripple {
   position: fixed;
   width: max(3rem, 11vmin);
   height: max(3rem, 11vmin);
   translate: -50% -50%;
   border-radius: 50%;
-  border: 2px solid var(--sky);
-  box-shadow: 0 0 0.75rem rgb(108 196 245 / 70%);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--accent) 70%, transparent);
   pointer-events: none;
   animation: ripple 0.4s ease-out forwards;
 }

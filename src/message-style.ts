@@ -1,6 +1,7 @@
 /**
- * The picker's Style settings: the portrait message window's border and
- * "tap to continue" arrow. An app setting, the same for every game. Changes
+ * The picker's Style settings: the colour scheme of both windows (applied
+ * by theme.ts), and the portrait message window's border and "tap to
+ * continue" arrow. An app setting, the same for every game. Changes
  * go to main, which passes them on to the portrait and saves them.
  */
 
@@ -25,3 +26,11 @@ border.addEventListener('change', styleChanged);
 arrow.addEventListener('change', styleChanged);
 
 window.vn.getMessageStyle().then(showStyle);
+
+// The theme. Main sends the change to every window, this one included.
+const theme = document.querySelector<HTMLSelectElement>('#theme')!;
+theme.addEventListener('change', () =>
+  window.vn.setTheme(theme.value as ThemeName),
+);
+window.vn.onThemeChanged((name) => (theme.value = name));
+window.vn.getTheme().then((name) => (theme.value = name));

@@ -31,7 +31,7 @@ bottom, and never moves it.
   longer save their own (older saved values are ignored).
 - The percentages are the same scale the old sliders used, for reference.
 - Space around a zoomed-out picture shows a blurred copy of it, washed with
-  pale sky (`--backdrop-tint` in `portrait.css`).
+  the theme's `--backdrop-tint` (in `src/theme.css`; pale sky in Aokana).
 - The zoom blends between "show all" and "fill" evenly: each slider step
   zooms by the same factor (see `placeInZone()`).
 
@@ -61,12 +61,14 @@ bottom, and never moves it.
   bar. (Before 2026-10-29: the same as the sides.)
 - **Corners:** rounded `max(0.75rem, 3vmin)` (`.glass`, shared with the
   history log's card).
-- Look: frosted white glass (`.glass`). The edge and the "tap to continue"
+- Look: frosted glass (`.glass`), coloured by the theme (Style settings ›
+  Theme; see `src/theme.css`). Corners are `max(0.75rem, 3vmin)` × the
+  theme's `--corner`; the glass blur is its `--glass-blur`. The edge and the "tap to continue"
   arrow are picked in the picker's **Style settings** (an app setting, the
   same for every game):
-  - Border: **Halo** (default; a soft sky glow all round, slowly breathing),
+  - Border: **Halo** (default; a soft accent glow all round, slowly breathing),
     **Turning rim** (a 5px gradient ring that turns once every 6s), or
-    **Ribbon** (the original 3px sky ribbon on the top edge).
+    **Ribbon** (the original 3px accent ribbon on the top edge).
   - Arrow: **Chevron** (default; a rounded ⌄ that bobs), **Dots** (three dots
     hopping in turn), or **Triangle** (the original bobbing ▼).
   - The arrow (`#next-arrow`) is sized in `em` of the chosen text size and
@@ -132,4 +134,4 @@ old background settings are no longer used.)
 | Smallest shrink for long lines     | `SMALLEST_SIZE` in `src/portrait.ts`              |
 | Corner button size and gaps        | `.corner-button` in `src/portrait.css`            |
 | Slider ranges                      | `min` / `max` on the inputs in `index.html`       |
-| Colours and font                   | `src/theme.css`                                   |
+| Colours, fonts and shapes (themes) | `src/theme.css`                                   |

@@ -3,8 +3,8 @@
  * anything from main has to come through `window.vn` (see preload.ts).
  */
 
-// The rounded font, bundled with the app (works offline).
-import '@fontsource-variable/nunito';
+// The colour scheme and its fonts (theme.ts).
+import './theme';
 import './index.css';
 import { playCapture, stopCapture } from './capture';
 // The "Shown in portrait" box in the preview.

@@ -1,16 +1,233 @@
-/* The app's theme, shared by both windows: a bright, airy sky-blue and white
-   look (in the spirit of Aokana). Retune the whole app from here. */
+/* The app's themes, shared by both windows. Every colour, the font and the
+   shape of things (rounded corners, pills, glass) come from the variables
+   below, so a theme is one block of them. The picker's Theme setting sets
+   `data-theme` on <html> (theme.ts); plain `:root` is the default theme,
+   Aokana, and each other theme redefines every variable.
+
+   - --accent, --accent-deep, --accent-pale: the main colour, a stronger
+     shade, and a pale one for backgrounds.
+   - --ink: text. --line: thin borders. --on-accent: text on the accent.
+   - --surface: cards, controls and the message window's glass;
+     --surface-tint: the glass's lower edge.
+   - --shadow: the colour of shadows. --deep: the darkest colour (around the
+     game picture in the picker, behind the history log).
+   - --stage-top: the portrait's background before a game is picked.
+   - --backdrop-tint: laid over the blurred copy of the background around a
+     zoomed-out picture (read by portrait.ts).
+   - --rim-light: the bright part of the "Turning rim" border.
+   - --glass-pattern: a picture laid under the glass's colour (or `none`).
+   - --glass-blur: how much the glass blurs what's behind it.
+   - --font, --text-weight: the font, and the message window's weight.
+   - --corner: a multiple of the normal corner rounding (0 = square).
+   - --pill: the corner radius of buttons (999px = fully round ends). */
+
+/* Aokana: a bright, airy sky-blue and white look. */
 :root {
-  --sky: #6cc4f5;
-  --sky-deep: #2f86d6;
-  --sky-pale: #e8f6ff;
+  --accent: #6cc4f5;
+  --accent-deep: #2f86d6;
+  --accent-pale: #e8f6ff;
   /* Dark navy for text: softer than black on white. */
   --ink: #23364f;
-  /* Thin borders and dividers. */
   --line: #b9dcf5;
-  /* The rounded font, bundled with the app (imported in renderer.ts and
-     portrait.ts). */
+  --on-accent: #fff;
+  --surface: #fff;
+  --surface-tint: #ecf7ff;
+  --shadow: #1e5a96;
+  --deep: #142338;
+  --stage-top: #8fd3ff;
+  --backdrop-tint: rgb(214 236 255 / 35%);
+  --rim-light: #fff;
+  --glass-pattern: none;
+  --glass-blur: 10px;
+  /* The fonts are bundled with the app (imported in theme.ts). */
   --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 600;
+  --corner: 1;
+  --pill: 999px;
+  color-scheme: light;
   /* Colours native controls (checkboxes, sliders) to match. */
-  accent-color: var(--sky-deep);
+  accent-color: var(--accent-deep);
+}
+
+/* You and Me and Her: candy pink and white, with a cyan glitch running
+   through it (faint diagonal stripes, a cyan rim). */
+:root[data-theme='kimikano'] {
+  --accent: #ff7eb3;
+  --accent-deep: #e0457f;
+  --accent-pale: #fff0f6;
+  --ink: #3a2a3f;
+  --line: #ffc4dc;
+  --on-accent: #fff;
+  --surface: #fff;
+  --surface-tint: #fff0f7;
+  --shadow: #8a2d5a;
+  --deep: #241a2e;
+  --stage-top: #ffc0da;
+  --backdrop-tint: rgb(255 228 240 / 35%);
+  --rim-light: #6fe0e8;
+  --glass-pattern: repeating-linear-gradient(
+    135deg,
+    rgb(111 224 232 / 9%) 0 6px,
+    transparent 6px 14px
+  );
+  --glass-blur: 10px;
+  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 600;
+  --corner: 1.2;
+  --pill: 999px;
+}
+
+/* Katawa Shoujo: quiet and warm, like a spring afternoon at school: cream
+   paper, a dusty coral accent, gently squared corners. */
+:root[data-theme='katawa-shoujo'] {
+  --accent: #e39a8b;
+  --accent-deep: #b9604f;
+  --accent-pale: #fbf1ea;
+  --ink: #3d3a3f;
+  --line: #e8cfc4;
+  --on-accent: #fff;
+  --surface: #fffaf6;
+  --surface-tint: #f8ede6;
+  --shadow: #6b4a40;
+  --deep: #2b2522;
+  --stage-top: #f3d6c9;
+  --backdrop-tint: rgb(250 236 226 / 40%);
+  --rim-light: #fffaf6;
+  --glass-pattern: none;
+  --glass-blur: 4px;
+  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 600;
+  --corner: 0.5;
+  --pill: 0.6rem;
+}
+
+/* Witch on the Holy Night: a winter night in an old town. Deep navy, gold
+   trim, cream text in a book serif, nearly square corners. */
+:root[data-theme='mahoyo'] {
+  /* A dark theme: native scrollbars and dropdowns go dark to match. */
+  color-scheme: dark;
+  --accent: #c9a45c;
+  --accent-deep: #9c7a35;
+  --accent-pale: #263052;
+  --ink: #f1e8d6;
+  --line: #4a5478;
+  --on-accent: #161d33;
+  --surface: #161d33;
+  --surface-tint: #1d2541;
+  --shadow: #000;
+  --deep: #0b0f1d;
+  --stage-top: #1f2a4d;
+  --backdrop-tint: rgb(12 18 38 / 45%);
+  --rim-light: #f6e3b4;
+  /* Lamplight from the top edge. */
+  --glass-pattern: linear-gradient(
+    to bottom,
+    rgb(201 164 92 / 14%),
+    transparent 35%
+  );
+  --glass-blur: 8px;
+  --font: 'EB Garamond Variable', Georgia, serif;
+  --text-weight: 500;
+  --corner: 0.3;
+  --pill: 0.3rem;
+}
+
+/* Hoshizora no Memoria: a starry evening sky. Indigo glass scattered with
+   tiny stars, lavender accents, a star-gold rim. */
+:root[data-theme='hoshimemo'] {
+  /* A dark theme: native scrollbars and dropdowns go dark to match. */
+  color-scheme: dark;
+  --accent: #b9a4ff;
+  --accent-deep: #8a6fe8;
+  --accent-pale: #3a3270;
+  --ink: #f3eeff;
+  --line: #5a4f95;
+  --on-accent: #1d1840;
+  --surface: #2a2550;
+  --surface-tint: #322b62;
+  --shadow: #0c0820;
+  --deep: #120f2a;
+  --stage-top: #3d3580;
+  --backdrop-tint: rgb(30 24 70 / 40%);
+  --rim-light: #ffe58a;
+  /* Stars: tiny dots of light in a repeating tile. */
+  --glass-pattern:
+    radial-gradient(
+        circle at 15% 25%,
+        rgb(255 236 170 / 80%) 0 1px,
+        transparent 2px
+      )
+      0 0 / 7rem 5rem,
+    radial-gradient(
+        circle at 60% 70%,
+        rgb(255 255 255 / 60%) 0 1px,
+        transparent 2px
+      )
+      0 0 / 5rem 4rem,
+    radial-gradient(
+        circle at 85% 20%,
+        rgb(255 236 170 / 50%) 0 1.5px,
+        transparent 2.5px
+      )
+      0 0 / 9rem 6rem;
+  --glass-blur: 10px;
+  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 600;
+  --corner: 1.2;
+  --pill: 999px;
+}
+
+/* Steins;Gate: a cluttered lab at night. Charcoal, the amber glow of a
+   Nixie tube, terminal type, faint scanlines, sharp corners. */
+:root[data-theme='steins-gate'] {
+  /* A dark theme: native scrollbars and dropdowns go dark to match. */
+  color-scheme: dark;
+  --accent: #ff8a2b;
+  --accent-deep: #d9661a;
+  --accent-pale: #2e2a26;
+  --ink: #e8e2d8;
+  --line: #4a443d;
+  --on-accent: #1a1917;
+  --surface: #1a1917;
+  --surface-tint: #22201d;
+  --shadow: #000;
+  --deep: #0d0c0b;
+  --stage-top: #2a2724;
+  --backdrop-tint: rgb(20 18 16 / 50%);
+  --rim-light: #ffd08a;
+  --glass-pattern: repeating-linear-gradient(
+    to bottom,
+    rgb(255 138 43 / 6%) 0 1px,
+    transparent 1px 4px
+  );
+  --glass-blur: 3px;
+  --font: 'Share Tech Mono', Consolas, monospace;
+  --text-weight: 400;
+  --corner: 0.15;
+  --pill: 0.2rem;
+}
+
+/* Doki Doki Literature Club!: sweet pink and white, with the polka dots of
+   the club's menus. */
+:root[data-theme='ddlc'] {
+  --accent: #ff8fc8;
+  --accent-deep: #e8559f;
+  --accent-pale: #ffe6f4;
+  --ink: #4a3a40;
+  --line: #ffbde1;
+  --on-accent: #fff;
+  --surface: #fff;
+  --surface-tint: #ffe1f1;
+  --shadow: #a23e74;
+  --deep: #2a1a24;
+  --stage-top: #ffd1ea;
+  --backdrop-tint: rgb(255 230 244 / 40%);
+  --rim-light: #fff;
+  --glass-pattern: radial-gradient(rgb(255 143 200 / 16%) 22%, transparent 24%)
+    0 0 / 1.6rem 1.6rem;
+  --glass-blur: 8px;
+  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 600;
+  --corner: 1;
+  --pill: 999px;
 }

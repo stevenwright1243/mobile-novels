@@ -88,15 +88,27 @@
         <input type="range" id="button-size" min="0.5" max="1.5" step="0.05" />
         <output id="button-size-percent" for="button-size">100%</output>
       </span>
-      <!-- The look of the portrait's message window, for every game
-           (message-style.ts). -->
+      <!-- The colour scheme, and the look of the portrait's message window,
+           for every game (message-style.ts). -->
       <span
         id="message-style"
         role="group"
         aria-label="Style settings"
-        title="The look of the portrait's message window, for every game. Saved straight away."
+        title="The colour scheme of both windows, and the look of the portrait's message window, for every game. Saved straight away."
       >
         Style settings:
+        <label>
+          Theme
+          <select id="theme">
+            <option value="aokana">Aokana</option>
+            <option value="kimikano">You and Me and Her</option>
+            <option value="katawa-shoujo">Katawa Shoujo</option>
+            <option value="mahoyo">Witch on the Holy Night</option>
+            <option value="hoshimemo">Hoshizora no Memoria</option>
+            <option value="steins-gate">Steins;Gate</option>
+            <option value="ddlc">Doki Doki Literature Club!</option>
+          </select>
+        </label>
         <label>
           Border
           <select id="message-border">
