@@ -70,6 +70,9 @@ body {
        with a little space around it so it floats. */
     align-self: end;
     z-index: 1;
+    /* The arrow (`#next-arrow`) is placed against it, so it stays in the
+       message window's corner wherever the zone sits (see text position). */
+    position: relative;
     --gap: clamp(0.5rem, 3vw, 1rem);
     /* The text size chosen in the picker: the base size (100%) times the size
        setting. Set here so the arrow (`#next-arrow`) is sized by it too. */
@@ -212,6 +215,15 @@ body {
     max(var(--picture-bottom, 0px) + var(--gap), var(--buttons-height)),
     60dvh
   );
+}
+
+/* There, the name tag's room is kept while there's no name (narration),
+   just not shown, so a name coming or going never moves the window: its
+   top edge stays put. */
+.portrait[data-text-position='top']
+  :is(#name-tag, .text-zone .name-tag):has(:is(#name-text, .name-text):empty) {
+  display: block;
+  visibility: hidden;
 }
 
 /* --- Message window styles ------------------------------------------------------

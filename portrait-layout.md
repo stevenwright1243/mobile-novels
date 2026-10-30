@@ -55,7 +55,10 @@ bottom, and never moves it.
 - **Position** (per game, the Menus sheet's Text position): **Bottom**
   (default) puts it at the bottom of the screen, growing upward as the text
   gets longer or bigger. **Top** hangs it just under the picture's bottom
-  edge, a `clamp(0.5rem, 3vw, 1rem)` gap below it, growing downward; never
+  edge, a `clamp(0.5rem, 3vw, 1rem)` gap below it, growing downward. The
+  name tag's room above the window is always kept there (invisible during
+  narration), so the window's top edge never moves when a name comes or
+  goes. Never
   above the corner buttons' row, and at most 60% of the way down, so there's
   room for it when the picture is tall.
 
