@@ -63,7 +63,14 @@ type ThemeName =
 // an app setting): the effect around its edge, and the "tap to continue"
 // arrow in its corner.
 type MessageBorder = 'halo' | 'rim' | 'ribbon' | 'none';
-type NextArrow = 'chevron' | 'dots' | 'triangle' | 'hearts' | 'none';
+type NextArrow =
+  | 'chevron'
+  | 'dots'
+  | 'triangle'
+  | 'hearts'
+  | 'ember'
+  | 'drop'
+  | 'none';
 interface MessageStyle {
   border: MessageBorder;
   arrow: NextArrow;

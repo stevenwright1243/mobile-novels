@@ -77,8 +77,9 @@ bottom, and never moves it.
   - Arrow: **Chevron** (default; a rounded ⌄ that bobs), **Dots** (three dots
     hopping in turn), **Triangle** (the original bobbing ▼), or **Hearts** (a
     big heart and a small one, like MiSide's menu cursor, beating gently;
-    1.3em; picked automatically with the MiSide theme), or **None** (no
-    arrow).
+    1.3em; picked automatically with the MiSide theme), **Ember** (a glowing
+    accent dot that pulses), **Drop** (a drop that forms, falls 0.12em and
+    fades; it never leaves the window), or **None** (no arrow).
   - The Miyuki's Realm theme gives every glass panel a bevelled frame: a 3px
     light rim with a 1px accent groove inside it. Picking that theme picks
     border None and the triangle.
