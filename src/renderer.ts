@@ -337,7 +337,7 @@ function showPage(name: string) {
     document.querySelector<HTMLElement>(`#page-${tab.dataset.page}`)!.hidden =
       !shown;
   }
-  if (name === 'sizes') {
+  if (name === 'style') {
     refreshSizesPage();
   }
 }

@@ -1,6 +1,6 @@
 /**
  * The Sizes panel, in the portrait's Menus sheet (a drop-down) and on the
- * picker's Sizes page: a small copy of the reader screen (drawn by
+ * picker's Style page: a small copy of the reader screen (drawn by
  * sizes-sample.ts) beside sliders for the text size, name size, portrait
  * height and width, button size and text padding, in 5% steps, and the
  * Text position switch; under them Save, Reset and Default. Each page has

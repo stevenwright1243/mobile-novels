@@ -129,13 +129,10 @@
         <button role="tab" aria-selected="true" data-page="regions">
           Regions
         </button>
-        <button role="tab" aria-selected="false" data-page="sizes">
-          Sizes
+        <button role="tab" aria-selected="false" data-page="style">
+          Style
         </button>
         <button role="tab" aria-selected="false" data-page="look">Look</button>
-        <button role="tab" aria-selected="false" data-page="input">
-          Input
-        </button>
         <button role="tab" aria-selected="false" data-page="debug" hidden>
           Debug
         </button>
@@ -245,12 +242,18 @@
         </section>
       </section>
 
-      <!-- Sizes: the same panel as the portrait's Menus sheet, filled in by
-           sizes-panel.ts (its sample drawn by picker-sizes.ts). -->
-      <section id="page-sizes" class="page" role="tabpanel" hidden>
+      <!-- Style: the portrait's Sizes and Input Settings, the same panels as
+           its Menus sheet (where they're separate drop-downs), filled in by
+           sizes-panel.ts (its sample drawn by picker-sizes.ts) and
+           input-settings.ts. -->
+      <section id="page-style" class="page" role="tabpanel" hidden>
         <div id="sizes" class="card">
           <h2>Sizes</h2>
           <div class="sizes-body"></div>
+        </div>
+        <div id="input-settings" class="card">
+          <h2>Input Settings</h2>
+          <div class="input-body"></div>
         </div>
       </section>
 
@@ -281,15 +284,6 @@
             The colour scheme of both windows, and the look of the portrait's
             message window. For every game, saved straight away.
           </p>
-        </div>
-      </section>
-
-      <!-- Input: the same panel as the portrait's Menus sheet, filled in by
-           input-settings.ts. -->
-      <section id="page-input" class="page" role="tabpanel" hidden>
-        <div id="input-settings" class="card">
-          <h2>Input Settings</h2>
-          <div class="input-body"></div>
         </div>
       </section>
 

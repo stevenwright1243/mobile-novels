@@ -4,7 +4,7 @@ The sizes and positions of everything in the portrait view (what the phone
 sees), in one place. Read this before tuning the layout, especially the text
 box, which is meant to be adjusted against the background defaults below.
 
-Percentages are what the Sizes sliders show (the picker's Sizes page and the
+Percentages are what the Sizes sliders show (the picker's Style page and the
 Menus sheet's Sizes, one shared panel). "vw" is a percent of the portrait's
 width, so sizes follow the screen; "vmin" is a percent of its shorter side
 (the width, in portrait); `clamp(min, preferred, max)` keeps them within
@@ -168,7 +168,7 @@ game's name box (the `name` region, per game).
   `--accent-deep`.
 - At the sheet's top: **Full-screen text**, Off / On buttons
   (`max(6rem, 25vmin)` wide), with a one-line note above them.
-- At the bottom, **Sizes** (the same panel as the picker's Sizes page,
+- At the bottom, **Sizes** (the same panel as the picker's Style page,
   `src/sizes-panel.ts` and `src/sizes-sample.ts`, styled in
   `src/settings-panel.css`), a drop-down (closed at first; its heading is a
   48px-tall button with a turning chevron; opening it scrolls the sheet to

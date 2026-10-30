@@ -1,5 +1,5 @@
 /**
- * The picker's Sizes page: the same Sizes panel as the portrait's Menus
+ * The Sizes card on the picker's Style page: the same Sizes panel as the portrait's Menus
  * sheet (sizes-panel.ts), with its small copy of the reader screen
  * (sizes-sample.ts) drawn from the picker's preview of the game. The copy is
  * laid out at the portrait's own size, which the portrait reports (its
@@ -75,7 +75,7 @@ Promise.all([window.vn.getTextLine(), window.vn.getSpeaker()]).then(
 );
 
 // The game's regions. Main doesn't send this window back its own changes
-// (made in the region editor), so they're fetched again whenever the Sizes
+// (made in the region editor), so they're fetched again whenever the Style
 // page is shown (`refreshSizesPage`).
 let regions: Regions | null = null;
 window.vn.onRegionsChanged((newRegions) => {

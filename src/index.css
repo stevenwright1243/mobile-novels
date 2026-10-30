@@ -1,6 +1,6 @@
 @import './theme.css';
 /* The reader screen and the Sizes and Input panels, shared with the
-   portrait, for the Sizes and Input pages. */
+   portrait, for the Style page. */
 @import './reader.css';
 @import './settings-panel.css';
 
@@ -656,8 +656,16 @@ details[open] > summary.side-heading > span::before {
   }
 }
 
-#sizes {
+#sizes,
+#input-settings {
   max-width: 54rem;
+}
+
+/* On the Style page, the Sizes card's Save and Reset, just above, cover the
+   click method too (they save and reset every edit), so Input Settings'
+   own pair, which the portrait's separate drop-down needs, is left out. */
+#input-settings .sheet-actions:has(.save-button) {
+  display: none;
 }
 
 /* A setting's name and its control, lined up in two columns. */

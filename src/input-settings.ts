@@ -1,6 +1,6 @@
 /**
  * Input Settings, in the portrait's Menus sheet (a drop-down) and on the
- * picker's Input page: how taps reach the game, a switch between sending
+ * picker's Style page: how taps reach the game, a switch between sending
  * messages (off) and simulating the mouse (on) (see win32.ts's `postClick`
  * and `sendClick`), part of the game's profile, so it's an unsaved edit
  * until Save, with its own Save and Reset. Under them, buttons that bring

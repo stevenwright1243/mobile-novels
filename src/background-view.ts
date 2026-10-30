@@ -3,7 +3,7 @@
  * background region in the preview, the part of the background that makes
  * it onto the phone. The background is centered left to right
  * (`BACKGROUND_VIEW`); how much of its width shows and its height are the
- * game's own, set with Portrait width and Portrait height on the Sizes page
+ * game's own, set with Portrait width and Portrait height on the Style page
  * (or in the portrait's Menus sheet). What's shown depends on those and on
  * the shape of the portrait's background zone, which the portrait reports
  * through main.
@@ -55,7 +55,7 @@ function showVisibleArea() {
 }
 
 // The game's sizes (portrait-sizes.ts), so changes made on this window's
-// Sizes page show here too.
+// Style page show here too.
 backgroundY.listen(showVisibleArea);
 backgroundYCap.listen(showVisibleArea);
 backgroundWidth.listen(showVisibleArea);
