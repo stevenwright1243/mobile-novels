@@ -419,8 +419,10 @@ body {
   }
 }
 
-/* Arrow "hearts": a big heart and a small one (MiSide's menu cursor), pale
-   accent with a soft glow, beating gently. */
+/* Arrow "hearts": a big heart and a small one (MiSide's menu cursor), beating
+   gently. In the accent with a deep-accent outline, so they stay sharp on
+   light glass; dark themes give them MiSide's pale glow instead (theme.css),
+   which only stands out on a dark window. */
 .portrait[data-arrow='hearts'] {
   --arrow-width: 1.3em;
 }
@@ -429,8 +431,13 @@ body {
   display: block;
   width: 1.3em;
   height: 1.3em;
-  fill: color-mix(in srgb, var(--accent) 55%, #fff);
-  filter: drop-shadow(0 0 0.12em var(--accent));
+  fill: var(--accent);
+  stroke: var(--accent-deep);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  filter: drop-shadow(
+    0 0.03em 0.04em color-mix(in srgb, var(--accent-deep) 45%, transparent)
+  );
   animation: heartbeat 1.4s ease-in-out infinite;
 }
 

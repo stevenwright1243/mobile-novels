@@ -117,6 +117,22 @@
   stroke-width: 2;
 }
 
+/* Dark themes: the hearts arrow glows pale, as in MiSide, since a pale heart
+   stands out on a dark window (an outline would only dull it). */
+:root:is(
+    [data-theme='mahoyo'],
+    [data-theme='hoshimemo'],
+    [data-theme='steins-gate'],
+    [data-theme='miside']
+  )
+  .portrait
+  :is(#next-arrow, .next-arrow)
+  .hearts {
+  fill: color-mix(in srgb, var(--accent) 55%, #fff);
+  stroke: none;
+  filter: drop-shadow(0 0 0.12em var(--accent));
+}
+
 /* Katawa Shoujo: quiet and warm, like a spring afternoon at school: cream
    paper, a dusty coral accent, gently squared corners. */
 :root[data-theme='katawa-shoujo'],
