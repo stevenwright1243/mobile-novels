@@ -306,6 +306,31 @@ body {
   }
 }
 
+/* Arrow "hearts": a big heart and a small one (MiSide's menu cursor), pale
+   accent with a soft glow, beating gently. */
+.portrait[data-arrow='hearts'] #next-arrow .hearts {
+  display: block;
+  width: 1.3em;
+  height: 1.3em;
+  fill: color-mix(in srgb, var(--accent) 55%, #fff);
+  filter: drop-shadow(0 0 0.12em var(--accent));
+  animation: heartbeat 1.4s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%,
+  40%,
+  100% {
+    scale: 1;
+  }
+  15% {
+    scale: 1.12;
+  }
+  28% {
+    scale: 1.05;
+  }
+}
+
 /* Arrow "triangle": an accent triangle, bobbing (the original look). */
 .portrait[data-arrow='triangle'] #next-arrow .triangle {
   display: block;

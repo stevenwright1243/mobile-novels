@@ -70,7 +70,9 @@ bottom, and never moves it.
     **Turning rim** (a 5px gradient ring that turns once every 6s), or
     **Ribbon** (the original 3px accent ribbon on the top edge).
   - Arrow: **Chevron** (default; a rounded ⌄ that bobs), **Dots** (three dots
-    hopping in turn), or **Triangle** (the original bobbing ▼).
+    hopping in turn), **Triangle** (the original bobbing ▼), or **Hearts** (a
+    big heart and a small one, like MiSide's menu cursor, beating gently;
+    1.3em; picked automatically with the MiSide theme).
   - The arrow (`#next-arrow`) is sized in `em` of the chosen text size and
     sits `clamp(0.75rem, 3.5vw, 1.25rem)` in from the window's right edge,
     `clamp(0.5rem, 2.5vw, 0.9rem)` up from its bottom.

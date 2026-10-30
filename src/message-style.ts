@@ -29,8 +29,13 @@ window.vn.getMessageStyle().then(showStyle);
 
 // The theme. Main sends the change to every window, this one included.
 const theme = document.querySelector<HTMLSelectElement>('#theme')!;
-theme.addEventListener('change', () =>
-  window.vn.setTheme(theme.value as ThemeName),
-);
+theme.addEventListener('change', () => {
+  window.vn.setTheme(theme.value as ThemeName);
+  // MiSide comes with its two-hearts arrow (it can still be changed after).
+  if (theme.value === 'miside') {
+    arrow.value = 'hearts';
+    styleChanged();
+  }
+});
 window.vn.onThemeChanged((name) => (theme.value = name));
 window.vn.getTheme().then((name) => (theme.value = name));
