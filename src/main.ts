@@ -41,7 +41,9 @@ import {
   restoreBehind,
   sendClick,
   sendToBack,
+  setMutes,
   showInTaskbar,
+  startTimeOf,
   blockEdgeSwipesWhenFullScreen,
   windowExists,
 } from './win32';
@@ -173,6 +175,41 @@ async function openWindowsByProfile(
     }
   }
   return openWindows;
+}
+
+// The open saved game whose program started last, if any.
+async function mostRecentlyOpenedGame(openWindows: Map<string, GameWindow>) {
+  let latest: GameWindow | null = null;
+  let latestStart = -1;
+  for (const game of await listProfiles()) {
+    const open = openWindows.get(game.id);
+    const start = open ? startTimeOf(hwndFromSourceId(open.id)) : -1;
+    if (open && start > latestStart) {
+      latest = open;
+      latestStart = start;
+    }
+  }
+  return latest;
+}
+
+// The saved games' profile IDs, as of the last `muteOtherGames`.
+let gameIds = new Set<string>();
+
+// Mutes every saved game except the one picked, and unmutes the picked one.
+// With no game window picked, or with `unmuteAll`, every game is unmuted.
+// Programs not saved as games are left alone.
+async function muteOtherGames(unmuteAll = false) {
+  if (!unmuteAll) {
+    gameIds = new Set((await listProfiles()).map((game) => game.id));
+  }
+  const active = selectedSource && profile ? profile.id : null;
+  setMutes((_processId, exePath) => {
+    const id = exePath ? profileId(exePath, '') : null;
+    if (!id || !gameIds.has(id)) {
+      return null;
+    }
+    return !unmuteAll && active !== null && id !== active;
+  });
 }
 
 // Sends a message to every window, except `skip`: the window that made the
@@ -312,6 +349,13 @@ const confirmDeleteProfile = async (
 let quitting = false;
 app.on('before-quit', () => {
   quitting = true;
+});
+
+// Leave no game muted once the app's gone. (If the app is killed instead,
+// e.g. Ctrl+C on `npm start`, a game can stay muted until the app runs
+// again, or it's unmuted in Windows' Volume mixer.)
+app.on('will-quit', () => {
+  muteOtherGames(true);
 });
 
 // Loads one of the renderer's HTML pages: from the Vite dev server in
@@ -542,6 +586,7 @@ app.whenReady().then(async () => {
     broadcast('text-line-changed', textLine);
     broadcast('speaker-changed', speaker);
     sendSaveState();
+    muteOtherGames();
     return true;
   };
 
@@ -700,11 +745,16 @@ app.whenReady().then(async () => {
         broadcast('source-selected', null);
         broadcast('text-line-changed', textLine);
         broadcast('speaker-changed', speaker);
+        muteOtherGames();
       } else if (isMinimized(hwnd)) {
         restoreBehind(hwnd);
       }
     }
   }, 1000);
+
+  // Keep games other than the picked one muted. Checked every 2 seconds,
+  // since a game only shows up in Windows' Volume mixer once it plays sound.
+  setInterval(muteOtherGames, 2000);
 
   // Tell the picker when windows open or close, so its lists stay current.
   // Asking for the windows without thumbnails is cheap, so check every 2
@@ -727,8 +777,9 @@ app.whenReady().then(async () => {
     const firstCheck = windowIds === '';
     windowIds = ids;
 
-    // Which games are open now, for `openedAt`, and to pick a game launched
-    // from the Menus sheet once its window appears.
+    // Which games are open now, for `openedAt`, to pick a game launched
+    // from the Menus sheet once its window appears, and otherwise, while no
+    // game is picked, to pick the game opened last.
     const openWindows = await openWindowsByProfile(sources);
     const now = Date.now();
     for (const id of openWindows.keys()) {
@@ -748,6 +799,13 @@ app.whenReady().then(async () => {
     if (launched && (!pendingLaunch!.picked || !selectedSource)) {
       pendingLaunch!.picked = true;
       selectGame(launched, portraitWindow);
+    } else if (!pendingLaunch && !selectedSource && !hasEdits()) {
+      // (Not with unsaved edits to a closed game's profile: picking would
+      // ask what to do with them, out of the blue.)
+      const latest = await mostRecentlyOpenedGame(openWindows);
+      if (latest) {
+        selectGame(latest, portraitWindow);
+      }
     }
     if (!firstCheck) {
       broadcast('windows-changed');

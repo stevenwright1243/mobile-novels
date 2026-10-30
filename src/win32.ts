@@ -141,6 +141,10 @@ const QueryFullProcessImageName = kernel32.func(
 const CloseHandle = kernel32.func(
   'bool __stdcall CloseHandle(intptr_t hObject)',
 );
+// Windows' FILETIMEs (a 64-bit count) are read as plain 64-bit numbers.
+const GetProcessTimes = kernel32.func(
+  'bool __stdcall GetProcessTimes(intptr_t hProcess, _Out_ uint64_t *lpCreationTime, _Out_ uint64_t *lpExitTime, _Out_ uint64_t *lpKernelTime, _Out_ uint64_t *lpUserTime)',
+);
 // Enough access to read a process's name, even for most other users' apps.
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 
@@ -296,10 +300,15 @@ export function processIdOf(hwnd: number) {
  * administrator and this app doesn't.
  */
 export function exePathOf(hwnd: number): string | null {
+  return exePathOfProcess(processIdOf(hwnd));
+}
+
+// The same, from the process's ID.
+export function exePathOfProcess(processId: number): string | null {
   const process = OpenProcess(
     PROCESS_QUERY_LIMITED_INFORMATION,
     false,
-    processIdOf(hwnd),
+    processId,
   );
   if (!process) {
     return null;
@@ -314,6 +323,30 @@ export function exePathOf(hwnd: number): string | null {
       : null;
   } finally {
     // `finally` runs even after `return`, so the handle is always released.
+    CloseHandle(process);
+  }
+}
+
+/**
+ * When the program that owns a window started, in Windows' own units (100
+ * nanoseconds since 1601; only for comparing), or 0 if it can't be read.
+ */
+export function startTimeOf(hwnd: number) {
+  const process = OpenProcess(
+    PROCESS_QUERY_LIMITED_INFORMATION,
+    false,
+    processIdOf(hwnd),
+  );
+  if (!process) {
+    return 0;
+  }
+  try {
+    const created = [0n];
+    const unused = [0n];
+    return GetProcessTimes(process, created, unused, unused, unused)
+      ? Number(created[0])
+      : 0;
+  } finally {
     CloseHandle(process);
   }
 }
@@ -486,5 +519,243 @@ export function displayAdapterAt(point: { x: number; y: number }) {
     if (device.DeviceName === info.szDevice) {
       return device.DeviceString ?? null;
     }
+  }
+}
+
+// --- Muting games ---------------------------------------------------------------
+// Each program playing sound has an "audio session" on each sound device,
+// the rows of Windows' Volume mixer. Sessions are COM objects too (see the
+// property store above): we list the devices, then each device's sessions,
+// and mute or unmute a session by the program it belongs to.
+const ole32 = koffi.load('ole32.dll');
+const CoInitializeEx = ole32.func(
+  'long __stdcall CoInitializeEx(void *pvReserved, uint32_t dwCoInit)',
+);
+const CoCreateInstance = ole32.func(
+  'long __stdcall CoCreateInstance(const GUID *rclsid, void *pUnkOuter, uint32_t dwClsContext, const GUID *riid, _Out_ void **ppv)',
+);
+const CLSID_MMDeviceEnumerator = guid('BCDE0395-E52F-467C-8E3D-C4579291692E');
+const IID_IMMDeviceEnumerator = guid('A95664D2-9614-4F35-A746-DE8DB63617E6');
+const IID_IAudioSessionManager2 = guid('77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F');
+const IID_IAudioSessionControl2 = guid('BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D');
+const IID_ISimpleAudioVolume = guid('87CE5498-68D6-44E5-9215-6DA47EF883D8');
+const CLSCTX_ALL = 0x17;
+const COINIT_APARTMENTTHREADED = 0x2;
+const E_RENDER = 0; // Sound devices that play (not record).
+const DEVICE_STATE_ACTIVE = 0x1;
+
+// The COM methods used, each with the object itself first.
+const ComRelease = koffi.proto('uint32_t __stdcall ComRelease(void *self)');
+const ComQueryInterface = koffi.proto(
+  'long __stdcall ComQueryInterface(void *self, const GUID *riid, _Out_ void **ppv)',
+);
+const EnumAudioEndpoints = koffi.proto(
+  'long __stdcall EnumAudioEndpoints(void *self, int dataFlow, uint32_t stateMask, _Out_ void **ppDevices)',
+);
+const GetCount = koffi.proto(
+  'long __stdcall GetCount(void *self, _Out_ uint32_t *pcount)',
+);
+const Item = koffi.proto(
+  'long __stdcall Item(void *self, uint32_t index, _Out_ void **ppItem)',
+);
+const GetSessionEnumerator = koffi.proto(
+  'long __stdcall GetSessionEnumerator(void *self, _Out_ void **ppEnum)',
+);
+const Activate = koffi.proto(
+  'long __stdcall Activate(void *self, const GUID *iid, uint32_t clsCtx, void *params, _Out_ void **ppInterface)',
+);
+const GetProcessId = koffi.proto(
+  'long __stdcall GetProcessId(void *self, _Out_ uint32_t *pid)',
+);
+const SetMute = koffi.proto(
+  'long __stdcall SetMute(void *self, int mute, const GUID *context)',
+);
+const GetMute = koffi.proto(
+  'long __stdcall GetMute(void *self, _Out_ int *mute)',
+);
+// Positions in each vtable (0–2 are IUnknown's QueryInterface, AddRef,
+// Release).
+const QUERY_INTERFACE = 0;
+const ENUM_AUDIO_ENDPOINTS = 3; // IMMDeviceEnumerator
+const GET_COUNT = 3; // IMMDeviceCollection, IAudioSessionEnumerator
+const ITEM = 4; // the same two: Item, GetSession
+const ACTIVATE = 3; // IMMDevice
+const GET_SESSION_ENUMERATOR = 5; // IAudioSessionManager2
+const GET_PROCESS_ID = 14; // IAudioSessionControl2
+const SET_MUTE = 5; // ISimpleAudioVolume
+const GET_MUTE = 6;
+
+// Calls method number `index` of a COM object.
+function comCall(
+  self: unknown,
+  index: number,
+  proto: ReturnType<typeof koffi.proto>,
+  ...args: unknown[]
+) {
+  const methods = koffi.decode(
+    koffi.decode(self, 'void *'),
+    koffi.array('void *', index + 1),
+  );
+  return koffi.call(methods[index], proto, self, ...args) as number;
+}
+const release = (self: unknown) => comCall(self, RELEASE, ComRelease);
+
+// Gets a COM object through a call that fills in a pointer, or null if it
+// failed. `get` makes the call with the "output variable" it's given.
+function comGet(get: (out: unknown[]) => number) {
+  const out: unknown[] = [null];
+  return get(out) === 0 && out[0] ? out[0] : null;
+}
+
+// The items of a COM list (a device collection or session enumerator),
+// each passed to `use` and released after.
+function forEachItem(list: unknown, use: (item: unknown) => void) {
+  const count = [0];
+  if (comCall(list, GET_COUNT, GetCount, count) !== 0) {
+    return;
+  }
+  for (let i = 0; i < count[0]; i++) {
+    const item = comGet((out) => comCall(list, ITEM, Item, i, out));
+    if (item) {
+      try {
+        use(item);
+      } finally {
+        release(item);
+      }
+    }
+  }
+}
+
+let comReady = false;
+
+/**
+ * Mutes or unmutes programs' sound, on every sound device. `decide` gets the
+ * ID and .exe path of each program playing sound, and returns true to mute
+ * it, false to unmute it, or null to leave it as it is.
+ */
+export function setMutes(
+  decide: (processId: number, exePath: string | null) => boolean | null,
+) {
+  if (!comReady) {
+    // Main's thread already has COM set up (Chromium does it), in which
+    // case this does nothing.
+    CoInitializeEx(null, COINIT_APARTMENTTHREADED);
+    comReady = true;
+  }
+  const enumerator = comGet((out) =>
+    CoCreateInstance(
+      CLSID_MMDeviceEnumerator,
+      null,
+      CLSCTX_ALL,
+      IID_IMMDeviceEnumerator,
+      out,
+    ),
+  );
+  if (!enumerator) {
+    return;
+  }
+  try {
+    const devices = comGet((out) =>
+      comCall(
+        enumerator,
+        ENUM_AUDIO_ENDPOINTS,
+        EnumAudioEndpoints,
+        E_RENDER,
+        DEVICE_STATE_ACTIVE,
+        out,
+      ),
+    );
+    if (!devices) {
+      return;
+    }
+    try {
+      forEachItem(devices, (device) => muteOnDevice(device, decide));
+    } finally {
+      release(devices);
+    }
+  } finally {
+    release(enumerator);
+  }
+}
+
+function muteOnDevice(
+  device: unknown,
+  decide: (processId: number, exePath: string | null) => boolean | null,
+) {
+  const manager = comGet((out) =>
+    comCall(
+      device,
+      ACTIVATE,
+      Activate,
+      IID_IAudioSessionManager2,
+      CLSCTX_ALL,
+      null,
+      out,
+    ),
+  );
+  if (!manager) {
+    return;
+  }
+  try {
+    const sessions = comGet((out) =>
+      comCall(manager, GET_SESSION_ENUMERATOR, GetSessionEnumerator, out),
+    );
+    if (!sessions) {
+      return;
+    }
+    try {
+      forEachItem(sessions, (session) => {
+        const control = comGet((out) =>
+          comCall(
+            session,
+            QUERY_INTERFACE,
+            ComQueryInterface,
+            IID_IAudioSessionControl2,
+            out,
+          ),
+        );
+        if (!control) {
+          return;
+        }
+        const processId = [0];
+        try {
+          comCall(control, GET_PROCESS_ID, GetProcessId, processId);
+        } finally {
+          release(control);
+        }
+        // Process 0 is Windows' own sounds.
+        const mute = processId[0]
+          ? decide(processId[0], exePathOfProcess(processId[0]))
+          : null;
+        if (mute === null) {
+          return;
+        }
+        const volume = comGet((out) =>
+          comCall(
+            session,
+            QUERY_INTERFACE,
+            ComQueryInterface,
+            IID_ISimpleAudioVolume,
+            out,
+          ),
+        );
+        if (!volume) {
+          return;
+        }
+        try {
+          const muted = [0];
+          comCall(volume, GET_MUTE, GetMute, muted);
+          if (Boolean(muted[0]) !== mute) {
+            comCall(volume, SET_MUTE, SetMute, mute ? 1 : 0, null);
+          }
+        } finally {
+          release(volume);
+        }
+      });
+    } finally {
+      release(sessions);
+    }
+  } finally {
+    release(manager);
   }
 }
