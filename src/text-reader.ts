@@ -92,10 +92,11 @@ const MIN_CONFIDENCE = 55;
 const MIN_FLATTENED_CONFIDENCE = 80;
 const MIN_WORD_SHARE = 0.7;
 // One word: letters or digits, joined by apostrophes or dashes ("don't",
-// "clean-up", "inch—of"), maybe in quotes or brackets, maybe followed by
-// punctuation. `\p{L}` is any letter, `\p{N}` any digit.
+// "clean-up", "inch—of"), maybe in quotes or brackets or after trailing-off
+// dots ("...I"), maybe followed by punctuation. `\p{L}` is any letter,
+// `\p{N}` any digit.
 const WORD =
-  /^["'“‘(]*[\p{L}\p{N}]+(?:['’\-–—][\p{L}\p{N}]+)*[.,!?…:;"'”’)\-–—]*$/u;
+  /^["'“‘(.…\-–—]*[\p{L}\p{N}]+(?:['’\-–—][\p{L}\p{N}]+)*[.,!?…:;"'”’)\-–—]*$/u;
 // Punctuation on its own ("...", "—") is normal in dialogue, so it counts
 // neither for nor against.
 const PUNCTUATION = /^[.,!?…"'“”‘’\-–—]+$/u;
@@ -116,14 +117,19 @@ function looksLikeText(
   return real / words.length >= MIN_WORD_SHARE;
 }
 
-// --- Lines of just dots -------------------------------------------------------
+// --- Looking at the text box itself -------------------------------------------
 
-// OCR can't read a line that's only dots, like "..." (it sees nothing there
-// at all), so such a line is spotted by looking at the box itself: a light
-// box with a few small, separate dark marks on it. Each mark is a dot, and
-// the line is shown with as many dots ("…" for each three). Measured in
-// Aokana at full size: three dots are 42 dark pixels, an empty box 6, a line
-// of text over 12,000, and the bare art (no text box) is darker overall.
+// Two things OCR gets wrong are caught by looking at the text box's picture:
+// a light box, with dark writing ("ink") on it.
+//  - A line of only dots, like "...": OCR sees nothing there at all. Each
+//    separate small dark mark is a dot, and the line is shown with as many
+//    ("…" for each three).
+//  - A short line, like "...I see.": OCR reads it right but isn't sure
+//    (51%, under `MIN_CONFIDENCE`), since the dots drag its score down.
+//    When the box clearly has writing on it, a less sure read is kept.
+// Measured in Aokana at full size: three dots are 42 dark pixels, an empty
+// box 6, a line of text over 12,000 (4% of the box), and the bare art (no
+// text box) is darker overall or far busier.
 // "Dark" is this much darker than the box's usual brightness (0 to 255).
 const INK_CONTRAST = 60;
 // The box must be at least this bright, so dark boxes and bare art don't
@@ -140,18 +146,35 @@ const MAX_DOTS_INK = 1.5;
 // when it's empty, about 0.013.
 const MIN_DOT = 0.02;
 const MAX_DOT = 0.2;
+// Writing: more dark than dots, but at most this share of the box (a full
+// line is about 4%, three lines about 12%; busy art can be 24%).
+const MAX_WRITING_SHARE = 0.15;
+// How sure OCR must be about a line in a box that clearly has writing.
+const MIN_WRITING_CONFIDENCE = 35;
 
-const dotsCanvas = document.createElement('canvas');
-const dotsContext = dotsCanvas.getContext('2d', { willReadFrequently: true })!;
+const inkCanvas = document.createElement('canvas');
+const inkContext = inkCanvas.getContext('2d', { willReadFrequently: true })!;
 
-// The line's dots, e.g. "……" for six, or '' when the box isn't just dots.
-function readDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
+// The box's picture, measured: its usual brightness, which pixels are dark
+// (1 in `ink`), how many, and a letter's size in pixels.
+interface Ink {
+  width: number;
+  median: number;
+  ink: Uint8Array;
+  total: number;
+  letter: number;
+}
+
+function measureInk(
+  video: HTMLVideoElement,
+  { sx, sy, sw, sh }: VideoRect,
+): Ink {
   // Full size, since each dot is only a few pixels across.
-  dotsCanvas.width = Math.max(1, Math.round(sw));
-  dotsCanvas.height = Math.max(1, Math.round(sh));
-  const { width, height } = dotsCanvas;
-  dotsContext.drawImage(video, sx, sy, sw, sh, 0, 0, width, height);
-  const { data } = dotsContext.getImageData(0, 0, width, height);
+  inkCanvas.width = Math.max(1, Math.round(sw));
+  inkCanvas.height = Math.max(1, Math.round(sh));
+  const { width, height } = inkCanvas;
+  inkContext.drawImage(video, sx, sy, sw, sh, 0, 0, width, height);
+  const { data } = inkContext.getImageData(0, 0, width, height);
   // Each pixel's brightness, weighted the way eyes see colour.
   const brightness = new Uint8Array(width * height);
   for (let i = 0; i < brightness.length; i++) {
@@ -159,22 +182,35 @@ function readDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
       data[i * 4] * 0.3 + data[i * 4 + 1] * 0.59 + data[i * 4 + 2] * 0.11;
   }
   // The box's usual brightness: the middle value (the "median"), which a
-  // few dark dots can't shift.
+  // little writing can't shift.
   const median = brightness.slice().sort()[brightness.length >> 1];
-  if (median < MIN_BOX_BRIGHTNESS) {
-    return '';
-  }
-  // Which pixels are dark ("ink").
   const ink = new Uint8Array(brightness.length);
-  let inkTotal = 0;
+  let total = 0;
   for (let i = 0; i < brightness.length; i++) {
     if (brightness[i] < median - INK_CONTRAST) {
       ink[i] = 1;
-      inkTotal++;
+      total++;
     }
   }
-  const letter = (height / 10) ** 2;
-  if (inkTotal < MIN_DOTS_INK * letter || inkTotal > MAX_DOTS_INK * letter) {
+  return { width, median, ink, total, letter: (height / 10) ** 2 };
+}
+
+// Whether the box is a light text box with writing on it (more than dots).
+function hasWriting({ median, ink, total, letter }: Ink) {
+  return (
+    median >= MIN_BOX_BRIGHTNESS &&
+    total > MAX_DOTS_INK * letter &&
+    total <= MAX_WRITING_SHARE * ink.length
+  );
+}
+
+// The line's dots, e.g. "……" for six, or '' when the box isn't just dots.
+// (It marks counted pixels as 2, so each measurement is used for it once.)
+function readDots({ width, median, ink, total, letter }: Ink) {
+  if (median < MIN_BOX_BRIGHTNESS) {
+    return '';
+  }
+  if (total < MIN_DOTS_INK * letter || total > MAX_DOTS_INK * letter) {
     return '';
   }
   // Count the separate marks: from each dark pixel not counted yet, follow
@@ -216,8 +252,9 @@ function readDots(video: HTMLVideoElement, { sx, sy, sw, sh }: VideoRect) {
   return '…'.repeat(Math.floor(dots / 3)) + '.'.repeat(dots % 3);
 }
 
-// Reads a box with OCR, prepared as `prep` says. Garbage counts as an
-// empty box: ''.
+// Reads a box with OCR, prepared as `prep` says. `text` is what was read,
+// tidied, and `ok` whether it passes as text (garbage counts as an empty
+// box).
 async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
   const { text, confidence } = await window.vn.readText(
     await pngBytes(await cropForOcr(video, box, prep)),
@@ -225,9 +262,8 @@ async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
   const tidied = tidy(text);
   const minConfidence =
     prep === 'flatten' ? MIN_FLATTENED_CONFIDENCE : MIN_CONFIDENCE;
-  return tidied && looksLikeText(tidied, confidence, minConfidence)
-    ? tidied
-    : '';
+  const ok = tidied !== '' && looksLikeText(tidied, confidence, minConfidence);
+  return { text: tidied, confidence, ok };
 }
 
 // Starts reading. `findTextBox` says where the box is in the video right
@@ -235,13 +271,14 @@ async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
 // `onRead` gets each confirmed read ('' when the box is empty). With
 // `retryFlattened`, a box that reads as nothing is read again with its
 // background removed (see `OcrPrep`), for names on shaded plates. With
-// `spotDots`, a box that reads as nothing but has a few dots in it reads as
-// its dots (see `readDots`), for the text box.
+// `textBox`, the box's picture is checked too (see "Looking at the text box
+// itself"): a less sure read is kept when the box clearly has writing, and
+// a box of only dots reads as its dots.
 export function startTextReader(
   video: HTMLVideoElement,
   findTextBox: () => VideoRect | null,
   onRead: (text: string) => void,
-  { retryFlattened = false, spotDots = false } = {},
+  { retryFlattened = false, textBox = false } = {},
 ) {
   // The sample at the last read, the text of the last read, and the last
   // line sent to main.
@@ -256,7 +293,7 @@ export function startTextReader(
       // Dots are too small to change the sample, so while the box is
       // empty, look for them each time too.
       const dotsAppeared =
-        spotDots && confirmed === '' && readDots(video, box) !== '';
+        textBox && confirmed === '' && readDots(measureInk(video, box)) !== '';
       // Read when a new line has started, or to confirm an unconfirmed read.
       if (
         hasChanged(sample, lastSample) ||
@@ -264,12 +301,19 @@ export function startTextReader(
         dotsAppeared
       ) {
         lastSample = sample;
-        let read = await readBox(video, box, 'clean');
-        if (!read && retryFlattened) {
-          read = await readBox(video, box, 'flatten');
+        const clean = await readBox(video, box, 'clean');
+        let read = clean.ok ? clean.text : '';
+        if (!read && textBox) {
+          const ink = measureInk(video, box);
+          const sureEnough =
+            clean.text !== '' &&
+            hasWriting(ink) &&
+            looksLikeText(clean.text, clean.confidence, MIN_WRITING_CONFIDENCE);
+          read = sureEnough ? clean.text : readDots(ink);
         }
-        if (!read && spotDots) {
-          read = readDots(video, box);
+        if (!read && retryFlattened) {
+          const flattened = await readBox(video, box, 'flatten');
+          read = flattened.ok ? flattened.text : '';
         }
         if (read === lastRead && read !== confirmed) {
           confirmed = read;
