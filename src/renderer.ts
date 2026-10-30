@@ -7,7 +7,7 @@
 import './theme';
 import './index.css';
 import { playCapture, stopCapture } from './capture';
-// The "Portrait view" box in the preview, and the "Background height" slider.
+// The "Portrait view" box in the preview, and the "Portrait height" slider.
 import { enableBackgroundY } from './background-view';
 import './button-size';
 import './message-style';

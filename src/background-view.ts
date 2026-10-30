@@ -3,7 +3,7 @@
  * background region in the preview, the part of the background that makes
  * it onto the phone. The background's zoom and left/right position are fixed
  * (`BACKGROUND_VIEW`); its height is the game's own, set with the
- * "Background height" slider here (a slider with an exact percent field;
+ * "Portrait height" slider here (a slider with an exact percent field;
  * changes go to main, which passes them on to the portrait). What's shown
  * depends on those and on the shape of the portrait's background zone, which
  * the portrait reports through main.

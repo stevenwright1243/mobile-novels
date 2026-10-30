@@ -28,7 +28,7 @@ bottom, and never moves it.
 - The zoom and Left ↔ Right are **fixed in code**, on purpose, so the text
   box can be tuned against them: `BACKGROUND_VIEW` in `src/zone-view.ts`, the
   only place they're defined.
-- Top ↔ Bottom is the picker's **Background height** slider (0–100%), saved
+- Top ↔ Bottom is the picker's **Portrait height** slider (0–100%), saved
   per game in its profile (`backgroundY`; slider in
   `src/background-view.ts`). `BACKGROUND_VIEW.y` (20%) is the default for a
   game that hasn't set one. Older profiles' saved `backgroundView` (all three
@@ -161,7 +161,7 @@ old background settings are no longer used.)
 | What                               | Where                                             |
 | ---------------------------------- | ------------------------------------------------- |
 | Background zoom and position       | `BACKGROUND_VIEW` in `src/zone-view.ts`           |
-| Background height (per game)       | Background height slider in the picker            |
+| Portrait height (per game)         | Portrait height slider in the picker              |
 | Base text size                     | `--base-font-size` in `src/portrait.css`          |
 | Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
 | Name tag size and position         | `#name-tag` in `src/portrait.css`                 |
