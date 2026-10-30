@@ -99,6 +99,16 @@ type ProfileSummary = Omit<
   sourceId?: string;
 };
 
+// The phone's display, added by Apollo while the phone is streaming (see
+// phone-display.ts). Width and height are in real pixels; `scale` is the
+// display's Windows scaling (e.g. 3 for 300%).
+interface PhoneDisplay {
+  label: string;
+  width: number;
+  height: number;
+  scale: number;
+}
+
 // For the picker's Save button: whether a game is picked, whether its profile
 // has unsaved edits, and whether it has a profile file at all yet.
 interface SaveState {
@@ -172,5 +182,9 @@ interface Window {
     onTextLineChanged(callback: (line: string) => void): void;
     // The history log: the last 30 lines read, oldest first.
     getTextHistory(): Promise<string[]>;
+    // The phone's display while one is connected (the portrait is full
+    // screen on it), or null.
+    getPhoneDisplay(): Promise<PhoneDisplay | null>;
+    onPhoneDisplayChanged(callback: (phone: PhoneDisplay | null) => void): void;
   };
 }

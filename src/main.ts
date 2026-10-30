@@ -13,6 +13,7 @@ import {
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
+import { followPhoneDisplay } from './phone-display';
 import {
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
@@ -45,7 +46,7 @@ if (started) {
 // Debug mode, switched on by starting with `npm run start:debug`, which
 // passes this flag to the app: OCR reads are logged in the terminal, and the
 // picker shows its debug tools (see `is-debug`).
-const DEBUG = process.argv.includes('--debug');
+const DEBUG = process.argv.includes('--vn-debug');
 
 // The game window the user picked. Its ID lets the portrait window capture it
 // too.
@@ -66,6 +67,10 @@ let textLine = '';
 // game is picked.
 const HISTORY_LENGTH = 30;
 let textHistory: string[] = [];
+
+// The phone's display while the phone is streaming (the portrait is full
+// screen on it), or null. See phone-display.ts.
+let phoneDisplay: PhoneDisplay | null = null;
 
 // The picked game's profile: its regions, click method and so on (see
 // profiles.ts). Null until a game is picked. Changes apply live, but are only
@@ -289,6 +294,20 @@ const createPortraitWindow = (bounds: Rectangle) => {
     portraitWindow = null;
   });
   loadPage(portrait, 'portrait.html');
+
+  // While the phone is streaming, the portrait fills the phone's display.
+  followPhoneDisplay(portrait, (phone) => {
+    phoneDisplay = phone;
+    broadcast('phone-display-changed', phoneDisplay);
+    if (DEBUG) {
+      const displays = screen.getAllDisplays().map((display) => ({
+        label: display.label,
+        bounds: display.bounds,
+        scale: display.scaleFactor,
+      }));
+      console.log('Phone display:', phoneDisplay, 'All displays:', displays);
+    }
+  });
 };
 
 // For now, open the two windows docked side by side and centered on the main
@@ -616,6 +635,8 @@ app.whenReady().then(() => {
     }
   });
   ipcMain.handle('get-text-history', () => textHistory);
+
+  ipcMain.handle('get-phone-display', () => phoneDisplay);
 
   createWindows();
 
