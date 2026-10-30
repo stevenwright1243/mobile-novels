@@ -137,6 +137,12 @@ saveTestButton.addEventListener('click', async () => {
 
 showTestsButton.addEventListener('click', () => window.vn.showOcrTests());
 
+// Whether each OCR read is printed in the terminal (on until the app
+// restarts, or this is unticked).
+const logOcr = document.querySelector<HTMLInputElement>('#log-ocr')!;
+logOcr.addEventListener('change', () => window.vn.setLogOcr(logOcr.checked));
+window.vn.getLogOcr().then((on) => (logOcr.checked = on));
+
 button.addEventListener('click', async () => {
   if (!video || video.videoWidth === 0) {
     return;

@@ -333,6 +333,10 @@ interface Window {
     saveOcrTest(png: Uint8Array, test: Omit<OcrTest, 'game'>): Promise<string>;
     // Opens the folder of OCR test cases in Explorer.
     showOcrTests(): Promise<void>;
+    // Whether each OCR read is printed in the terminal in debug mode (on
+    // until switched off; not saved).
+    getLogOcr(): Promise<boolean>;
+    setLogOcr(on: boolean): Promise<void>;
     // The game's current line of text, as read by OCR (text-reader.ts).
     // Main keeps it and passes changes on to every window.
     getTextLine(): Promise<string>;

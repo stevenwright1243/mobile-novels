@@ -1024,9 +1024,17 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle('show-ocr-tests', showOcrTests);
 
+  // Each read's log line can be switched off from the Debug page, for a
+  // quieter terminal (on again at the next start).
+  let logOcr = true;
+  ipcMain.handle('get-log-ocr', () => logOcr);
+  ipcMain.handle('set-log-ocr', (_event, on: boolean) => {
+    logOcr = on;
+  });
+
   ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
     const result = await readText(png);
-    if (DEBUG) {
+    if (DEBUG && logOcr) {
       const dropped =
         result.dropped.length > 0
           ? ` (dropped: ${result.dropped.join(' ')})`

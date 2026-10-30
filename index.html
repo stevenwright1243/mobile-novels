@@ -306,6 +306,11 @@
           </label>
           <button id="save-ocr-test" disabled>Save as OCR test…</button>
           <button id="show-ocr-tests">Show OCR tests</button>
+          <!-- Each OCR read is printed in the terminal; this quiets it
+               (until the app restarts). -->
+          <label>
+            <input type="checkbox" id="log-ocr" checked /> Log OCR reads
+          </label>
         </div>
         <!-- The name and line read automatically, and the test button's
              results. -->
