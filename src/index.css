@@ -586,6 +586,7 @@ input[type='number'] {
 }
 
 /* Spans every column, above the test results. */
+#live-name,
 #live-text {
   grid-column: 1 / -1;
   margin: 0;

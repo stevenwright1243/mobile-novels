@@ -1,6 +1,6 @@
 /**
- * OCR in the picker window. Shows the line read automatically by the
- * portrait (text-reader.ts), and, in debug mode, has a test button that
+ * OCR in the picker window. Shows the speaker's name and the line read
+ * automatically by the portrait (text-reader.ts), and, in debug mode, has a test button that
  * reads the text region once and shows the image that was read next to what
  * came back.
  */
@@ -14,6 +14,7 @@ const panel = document.querySelector<HTMLElement>('#ocr-test')!;
 const image = document.querySelector<HTMLImageElement>('#ocr-image')!;
 const stats = document.querySelector<HTMLElement>('#ocr-stats')!;
 const output = document.querySelector<HTMLElement>('#ocr-output')!;
+const liveName = document.querySelector<HTMLElement>('#live-name span')!;
 const liveText = document.querySelector<HTMLElement>('#live-text span')!;
 
 // Copies the text region out of the preview, ready for OCR.
@@ -65,6 +66,14 @@ window.vn.onTextLineChanged((line) => {
   liveText.textContent = line || '(waiting for text…)';
   panel.hidden = false;
 });
+
+// The name shown on the portrait's name tag, which changes along with the
+// line (see `setSpeaker` in main.ts). Empty means narration.
+function showName(name: string) {
+  liveName.textContent = name || '(none: narration)';
+}
+window.vn.onSpeakerChanged(showName);
+window.vn.getSpeaker().then(showName);
 
 // The test button and its checkbox are debug tools: only shown when the app
 // was started with `npm run start:debug`.
