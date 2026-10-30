@@ -18,6 +18,7 @@ import { saveOcrTest, showOcrTests } from './ocr-tests';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import {
+  DEFAULT_BACKGROUND_WIDTH,
   DEFAULT_BACKGROUND_Y,
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
@@ -121,6 +122,7 @@ const snapshot = (current: GameProfile) =>
     clickMethod: current.clickMethod,
     textStyle: current.textStyle,
     backgroundY: current.backgroundY,
+    backgroundWidth: current.backgroundWidth,
   });
 
 // The corner buttons' size is an app setting, the same for every game, but
@@ -191,6 +193,7 @@ const revertEdits = () => {
     broadcast('click-method-changed', reverted.clickMethod);
     broadcast('text-style-changed', reverted.textStyle);
     broadcast('background-y-changed', reverted.backgroundY);
+    broadcast('background-width-changed', reverted.backgroundWidth);
   }
   revertButtonSize();
   sendSaveState();
@@ -487,6 +490,7 @@ app.whenReady().then(async () => {
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-style-changed', profile.textStyle);
     broadcast('background-y-changed', profile.backgroundY);
+    broadcast('background-width-changed', profile.backgroundWidth);
     // The last game's line no longer applies.
     textLine = '';
     speaker = '';
@@ -685,6 +689,18 @@ app.whenReady().then(async () => {
     if (profile) {
       profile = { ...profile, backgroundY: y };
       broadcast('background-y-changed', y, event.sender);
+      sendSaveState();
+    }
+  });
+  // How much of the background's width the portrait shows, likewise.
+  ipcMain.handle(
+    'get-background-width',
+    () => profile?.backgroundWidth ?? DEFAULT_BACKGROUND_WIDTH,
+  );
+  ipcMain.handle('set-background-width', (event, width: number) => {
+    if (profile) {
+      profile = { ...profile, backgroundWidth: width };
+      broadcast('background-width-changed', width, event.sender);
       sendSaveState();
     }
   });

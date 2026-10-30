@@ -40,6 +40,14 @@ contextBridge.exposeInMainWorld('vn', {
       callback(style),
     );
   },
+  getBackgroundWidth: () => ipcRenderer.invoke('get-background-width'),
+  setBackgroundWidth: (width) =>
+    ipcRenderer.invoke('set-background-width', width),
+  onBackgroundWidthChanged: (callback) => {
+    ipcRenderer.on('background-width-changed', (_event, width: number) =>
+      callback(width),
+    );
+  },
   getBackgroundY: () => ipcRenderer.invoke('get-background-y'),
   setBackgroundY: (y) => ipcRenderer.invoke('set-background-y', y),
   onBackgroundYChanged: (callback) => {

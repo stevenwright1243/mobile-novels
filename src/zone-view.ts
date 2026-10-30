@@ -11,7 +11,7 @@
 // portrait-layout.md). `y` is only the default: each game sets its own with
 // the picker's "Portrait height" slider (`backgroundY` in its profile).
 // Used by the portrait and the picker's "Portrait view".
-export const BACKGROUND_VIEW: ZoneView = { fill: 0.2, x: 0.5, y: 0.2 };
+export const BACKGROUND_VIEW: ZoneView = { width: 0.75, x: 0.5, y: 0.2 };
 
 // The whole region fits, centered, with space around it if the shapes
 // differ. Used for the text box picture, where no text may be cut off.
@@ -32,8 +32,12 @@ export function placeInZone(
   const showAll = Math.min(width / sw, height / sh);
   const fill = Math.max(width / sw, height / sh);
   // Blend between them. Blending the powers (rather than the scales
-  // themselves) makes each step of the slider zoom by the same amount.
-  const scale = showAll * (fill / showAll) ** view.fill;
+  // themselves) makes each step of the slider zoom by the same amount. Or,
+  // with `width`, the scale that shows that share of the region's width.
+  const scale =
+    view.width === undefined
+      ? showAll * (fill / showAll) ** (view.fill ?? 0)
+      : width / (sw * view.width);
   const dw = sw * scale;
   const dh = sh * scale;
   // `x` / `y` line it up: 0 = left / top edges together, 1 = right / bottom.

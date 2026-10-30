@@ -14,20 +14,26 @@ A cap in `rem`/px doesn't mean the same size everywhere: the phone's display
 twice as many CSS pixels wide as the portrait window on the PC (150%), and a
 `rem` cap that's reached there looks small.
 
-## Background (zoom fixed for every game; height per game)
+## Background (width and height per game)
 
 The background fills the whole portrait. The message window lies over its
 bottom, and never moves it.
 
-| Setting               | Default | Meaning                                                                                                                           |
-| --------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Zoom: Show all ↔ Fill | **20%** | 0% = the whole background region fits (space around it); 100% = it fills the portrait (edges trimmed)                             |
-| Left ↔ Right          | **50%** | 0% = left edges together, 50% = centered, 100% = right edges together                                                             |
-| Top ↔ Bottom          | **20%** | 0% = top edges together, 100% = bottom edges together. At 20% a zoomed-out picture sits near the top, clear of the message window |
+| Setting        | Default | Meaning                                                                                                                           |
+| -------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Portrait width | **75%** | How much of the background region's width shows, 50–100%: 100% = all of it, 50% = the middle half, twice as big                   |
+| Left ↔ Right   | **50%** | 0% = left edges together, 50% = centered, 100% = right edges together                                                             |
+| Top ↔ Bottom   | **20%** | 0% = top edges together, 100% = bottom edges together. At 20% a zoomed-out picture sits near the top, clear of the message window |
 
-- The zoom and Left ↔ Right are **fixed in code**, on purpose, so the text
-  box can be tuned against them: `BACKGROUND_VIEW` in `src/zone-view.ts`, the
-  only place they're defined.
+- Left ↔ Right is **fixed in code** (centered): `BACKGROUND_VIEW` in
+  `src/zone-view.ts`.
+- Portrait width is the **Portrait width** slider (picker: 50–100% in 1%
+  steps with a percent field; Menus sheet: 5% steps), saved per game
+  (`backgroundWidth`). `BACKGROUND_VIEW.width` (75%) is the default.
+  Measured as a share of the width, so a given % looks the same in every
+  game. (Until 2026-10-30 the zoom was fixed for every game, 20% of the way
+  from "show all" to "fill", which showed 74% of Aokana's width, 77% of You
+  and Me and Her's and 79% of Katawa Shoujo's.)
 - Top ↔ Bottom is the picker's **Portrait height** slider (0–100%), saved
   per game in its profile (`backgroundY`; slider in
   `src/background-view.ts`). `BACKGROUND_VIEW.y` (20%) is the default for a
@@ -35,8 +41,8 @@ bottom, and never moves it.
   values) is ignored.
 - Space around a zoomed-out picture shows a blurred copy of it, washed with
   the theme's `--backdrop-tint` (in `src/theme.css`; pale sky in Aokana).
-- The zoom blends between "show all" and "fill" evenly: each slider step
-  zooms by the same factor (see `placeInZone()`).
+- `placeInZone()` zooms by `width` when a view has one (the background),
+  otherwise by `fill`, blended between "show all" and "fill" evenly.
 
 ## Text (per game, saved in the profile)
 
@@ -138,7 +144,8 @@ game's name box (the `name` region, per game).
 - At the bottom, **Sizes**, a drop-down (closed at first; its heading is a
   48px-tall button with a turning chevron; opening it scrolls the sheet to
   it): Text size (60–200%), Name size
-  (50–200%), Portrait height (0–100%) and Button size (50–150%), each a
+  (50–200%), Portrait height (0–100%), Portrait width (50–100%) and Button
+  size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
   input is 48px tall, the track 0.45em, the thumb 1.6em. Under them, **Text
   position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,

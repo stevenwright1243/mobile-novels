@@ -17,7 +17,12 @@ import './history-log';
 import './menus-sheet';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
-import { backgroundY, buttonSize, textStyle } from './portrait-sizes';
+import {
+  backgroundWidth,
+  backgroundY,
+  buttonSize,
+  textStyle,
+} from './portrait-sizes';
 import { startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
@@ -40,7 +45,12 @@ const backgroundZone: Zone = {
   region: 'background',
   // `backgroundY`: where the background sits, top to bottom (the game's
   // own, set in the picker or the Menus sheet; portrait-sizes.ts).
-  view: () => ({ ...BACKGROUND_VIEW, y: backgroundY.get() }),
+  // And `backgroundWidth`: how much of its width shows.
+  view: () => ({
+    ...BACKGROUND_VIEW,
+    width: backgroundWidth.get(),
+    y: backgroundY.get(),
+  }),
 };
 
 // The current regions, kept up to date by main. Null until they arrive.

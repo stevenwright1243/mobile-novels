@@ -10,7 +10,12 @@
 
 import { ARROWS, BORDERS, THEMES } from './look-options';
 import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
-import { backgroundY, buttonSize, textStyle } from './portrait-sizes';
+import {
+  backgroundWidth,
+  backgroundY,
+  buttonSize,
+  textStyle,
+} from './portrait-sizes';
 
 // The current border and arrow, kept up to date by main.
 let style: MessageStyle = { border: 'halo', arrow: 'chevron' };
@@ -120,6 +125,12 @@ linkSlider(
   backgroundY.listen,
 );
 linkSlider(
+  'sheet-background-width',
+  backgroundWidth.get,
+  backgroundWidth.set,
+  backgroundWidth.listen,
+);
+linkSlider(
   'sheet-button-size',
   buttonSize.get,
   buttonSize.set,
@@ -149,7 +160,7 @@ textStyle.listen((style) =>
 // are disabled while no game is picked.
 const actions = document.querySelector<HTMLElement>('#sheet-actions')!;
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #text-position',
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #text-position',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
   actions.hidden = !edited;

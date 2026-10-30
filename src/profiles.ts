@@ -26,6 +26,8 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
 
 // The background sits 20% of the way down (see `BACKGROUND_VIEW`).
 export const DEFAULT_BACKGROUND_Y = BACKGROUND_VIEW.y;
+// Three quarters of the background's width shows (see `BACKGROUND_VIEW`).
+export const DEFAULT_BACKGROUND_WIDTH = BACKGROUND_VIEW.width!;
 
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
@@ -128,6 +130,7 @@ function newProfile(
     clickMethod: 'message',
     textStyle: DEFAULT_TEXT_STYLE,
     backgroundY: DEFAULT_BACKGROUND_Y,
+    backgroundWidth: DEFAULT_BACKGROUND_WIDTH,
     regions: DEFAULT_REGIONS,
     window: null,
     lastPlayed: new Date().toISOString(),

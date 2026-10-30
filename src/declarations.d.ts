@@ -83,8 +83,12 @@ interface MessageStyle {
 // with its edges trimmed). `x` and `y` line it up: 0 = left / top, 0.5 =
 // middle, 1 = right / bottom. When it's trimmed, that chooses which part
 // shows; when there's space around it, where in that space it sits.
+// `width`, when set, zooms by how much of the region's width shows instead
+// (1 = all of it, 0.75 = three quarters; the portrait's background, the
+// game's `backgroundWidth`).
 interface ZoneView {
-  fill: number;
+  fill?: number;
+  width?: number;
   x: number;
   y: number;
 }
@@ -150,6 +154,9 @@ interface GameProfile {
   // Where the background sits in the portrait, top (0) to bottom (1): the
   // `y` of its `ZoneView` (the zoom and left/right are fixed).
   backgroundY: number;
+  // How much of the background's width the portrait shows, 0.5 to 1 (the
+  // "Portrait width" sliders).
+  backgroundWidth: number;
   regions: Regions;
   // The game's content size in pixels when last played.
   window: Size | null;
@@ -161,7 +168,7 @@ interface GameProfile {
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
 type ProfileSummary = Omit<
   GameProfile,
-  'version' | 'regions' | 'textStyle' | 'backgroundY'
+  'version' | 'regions' | 'textStyle' | 'backgroundY' | 'backgroundWidth'
 > & {
   isOpen: boolean;
   sourceId?: string;
@@ -217,6 +224,11 @@ interface Window {
     getBackgroundY(): Promise<number>;
     setBackgroundY(y: number): Promise<void>;
     onBackgroundYChanged(callback: (y: number) => void): void;
+    // How much of the background's width the portrait shows, part of the
+    // game's profile like its height.
+    getBackgroundWidth(): Promise<number>;
+    setBackgroundWidth(width: number): Promise<void>;
+    onBackgroundWidthChanged(callback: (width: number) => void): void;
     // The size of the portrait's background zone, sent by the portrait so
     // the picker can outline the part of the background that's shown.
     getBackgroundZoneSize(): Promise<Size | null>;

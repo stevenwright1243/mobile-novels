@@ -100,6 +100,29 @@
           disabled
         />%
       </span>
+      <span
+        class="slider-field"
+        title="How much of the game's picture shows across the portrait: 100% is all of its width, 50% half of it, bigger. Saved with the game's profile."
+      >
+        <label for="background-width">Portrait width</label>
+        <input
+          type="range"
+          id="background-width"
+          min="0.5"
+          max="1"
+          step="0.01"
+          disabled
+        />
+        <input
+          type="number"
+          id="background-width-percent"
+          min="50"
+          max="100"
+          step="1"
+          aria-label="Portrait width, percent of the picture's width"
+          disabled
+        />%
+      </span>
       <!-- The size of the portrait's corner buttons, for every game
            (button-size.ts). -->
       <span

@@ -47,7 +47,7 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Live window list:** the picker's window list and game cards update by themselves when windows open or close; closing the picked game clears the portrait (with a message) and unfolds the window list.
 
-**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** zoom and position are fixed for every game (Zoom 20%, Left↔Right 50%, Top↔Bottom 20%; `BACKGROUND_VIEW` in `src/zone-view.ts`), with no sliders; a "Portrait view" box in the preview marks the part that's visible; space around the zoomed-out background shows a blurred copy instead of black bars. The text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
+**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** centered left to right; how much of its width shows (Portrait width, 50–100%, default 75%) and its height (Portrait height, default 20%) are set per game with sliders in the picker and the portrait's Menus sheet; a "Portrait view" box in the preview marks the part that's visible; space around the zoomed-out background shows a blurred copy instead of black bars. The text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
 
 **Text size:** a per-game slider (60–200%, with an exact percent field). Bigger text makes the message window (3 lines) taller, over the background picture (the picture never moves because of the text: it fills the portrait, and the window lies on top). The background sliders and the text settings never affect each other.
 
@@ -62,7 +62,7 @@ Done from 3b: text zone sizing (in picture mode the text row takes the text regi
 - 4c: taps from the phone reach the portrait (Artemis touch → Apollo → mouse or touch input) and go on to the game; check the virtual display's Windows scaling (the text is tuned for a portrait window about 500 px wide; 200–300% scaling on a 1080-wide phone gives the same proportions).
 - 4d: Tailscale on both, then stream on mobile data.
 
-**Layout reference:** `portrait-layout.md` holds the portrait's sizes and positions. The background's zoom and position are fixed for every game: Zoom 20%, Left↔Right 50%, Top↔Bottom 20% (`BACKGROUND_VIEW` in `src/zone-view.ts`).
+**Layout reference:** `portrait-layout.md` holds the portrait's sizes and positions. The background is centered; its width (default 75%) and height (default 20%) are per game (`BACKGROUND_VIEW` in `src/zone-view.ts` holds the defaults).
 
 **Working agreement:** small steps the user can test and commit; explain TypeScript and Electron patterns briefly; when the user suggests something and a better current practice exists, say so and explain before building (see `CLAUDE.md`).
 

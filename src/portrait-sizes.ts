@@ -54,6 +54,15 @@ export const textStyle = shared<TextStyle>(
   (style) => window.vn.setTextStyle(style),
 );
 
+// How much of the background's width shows (the game's
+// `backgroundWidth`).
+export const backgroundWidth = shared<number>(
+  BACKGROUND_VIEW.width!,
+  () => window.vn.getBackgroundWidth(),
+  (callback) => window.vn.onBackgroundWidthChanged(callback),
+  (width) => window.vn.setBackgroundWidth(width),
+);
+
 // Where the background sits, top to bottom (the game's `backgroundY`).
 export const backgroundY = shared<number>(
   BACKGROUND_VIEW.y,
