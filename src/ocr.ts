@@ -39,6 +39,13 @@ function fixCommonMistakes(text: string) {
       // any letter, `\p{N}` any digit; `(?<!...)` and `(?!...)` check the
       // neighbours without including them in the match.
       .replace(/(?<![\p{L}\p{N}])l(?![\p{L}\p{N}])/gu, 'I')
+      // Capital "O"s straight after a small letter are small o's: OCR read
+      // Aokana's drawn-out "sooooooooo" as "soOOOOOOOO". Only a run of two
+      // or more, so a name like "McOwen" stays as it is.
+      .replace(
+        /\p{Ll}[oO0]{2,}/gu,
+        (run) => run[0] + run.slice(1).replace(/[O0]/g, 'o'),
+      )
       // A "0" in a word that's otherwise letters is an "o": "so00000000"
       // is a drawn-out "sooooooooo". Capital "O" in a capitalised word
       // ("NO0O"). Words with other digits ("2000s", "10am") stay as they are,
