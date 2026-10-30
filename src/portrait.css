@@ -143,16 +143,12 @@ body {
     box-sizing: border-box;
     margin: 0;
     --line-height: 1.55;
-    /* Room for 3 lines, so the window stays the same size for most lines.
-       A longer line makes it grow, over the background picture; very long
-       text scrolls inside it. */
+    /* Room for 3 lines, so the window stays the same size. */
     --padding-block: clamp(0.9rem, 4.5vw, 1.6rem);
     min-height: calc(
       3 * var(--line-height) * var(--chosen-font-size) + 2 *
         var(--padding-block)
     );
-    max-height: 60dvh;
-    overflow-y: auto;
     padding: var(--padding-block) clamp(1.1rem, 5.5vw, 2rem);
     font-family: var(--font);
     font-size: var(--chosen-font-size);
@@ -651,7 +647,7 @@ body {
   translate: 0 20vmin;
 }
 
-/* The line, centered in a glass card. Long lines scroll inside it. */
+/* The line, centered in a glass card, kept inside the log's middle row. */
 #log-message {
   grid-area: message;
   align-self: center;

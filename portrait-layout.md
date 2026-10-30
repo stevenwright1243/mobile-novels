@@ -49,10 +49,7 @@ bottom, and never moves it.
 
 ## Message window (text mode)
 
-- **Resting height:** room for **3 lines** at the chosen text size, plus
-  padding. Most lines fit, so the window stays the same size; a longer line
-  makes it grow over the background picture.
-- **Maximum height:** 60% of the portrait's height; longer text scrolls inside.
+- **Height:** room for **3 lines** at the chosen text size, plus padding.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right.
 - **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides, so
@@ -156,8 +153,6 @@ old background settings are no longer used.)
 | ------------------ | --------- |
 | Aokana             | 170%      |
 | YOU and ME and HER | 150%      |
-
-(The Long lines setting they also had was removed on 2026-10-30.)
 
 ## Where to change things
 

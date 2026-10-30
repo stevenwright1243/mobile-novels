@@ -85,10 +85,8 @@ export async function loadProfile(
       textStyle: { ...DEFAULT_TEXT_STYLE, ...saved.textStyle },
     };
     // The background's zoom and position used to be saved per game; they're
-    // fixed now (see `BACKGROUND_VIEW`), so drop any old saved ones. The
-    // same for the long-line size, which was removed.
+    // fixed now (see `BACKGROUND_VIEW`), so drop any old saved ones.
     delete profile.backgroundView;
-    delete profile.textStyle.oversizedSize;
     return { profile, saved: true, legacyFile: null };
   }
 
