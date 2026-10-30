@@ -179,7 +179,9 @@ const togglePosition = () =>
     position: textStyle.get().position === 'top' ? 'bottom' : 'top',
   });
 positionSwitch.addEventListener('click', togglePosition);
-for (const side of document.querySelectorAll('.toggle-side')) {
+for (const side of positionSwitch.parentElement!.querySelectorAll(
+  '.toggle-side',
+)) {
   side.addEventListener('click', togglePosition);
 }
 textStyle.listen((style) =>
@@ -188,13 +190,14 @@ textStyle.listen((style) =>
 
 // The sizes are only saved when asked (as in the picker; the button size
 // too, though it's for every game), so Save and Reset sit at the bottom of
-// Sizes, and can be pressed while there are changes: Reset puts back the values as
-// last saved. The game's sliders are disabled while no game is picked.
+// Sizes (and of Input Settings), and can be pressed while there are
+// changes: Reset puts back the values as last saved. The game's sliders
+// and switches are disabled while no game is picked.
 const actionButtons = document.querySelectorAll<HTMLButtonElement>(
-  '#sheet-save, #sheet-reset',
+  '.save-button, .reset-button',
 );
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position',
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position, #click-method',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
   for (const button of actionButtons) {
@@ -204,12 +207,12 @@ function showSaveState({ hasGame, edited }: SaveState) {
     slider.disabled = !hasGame;
   }
 }
-document
-  .querySelector('#sheet-save')!
-  .addEventListener('click', () => window.vn.saveProfile());
-document
-  .querySelector('#sheet-reset')!
-  .addEventListener('click', () => window.vn.revertEdits());
+for (const button of document.querySelectorAll('.save-button')) {
+  button.addEventListener('click', () => window.vn.saveProfile());
+}
+for (const button of document.querySelectorAll('.reset-button')) {
+  button.addEventListener('click', () => window.vn.revertEdits());
+}
 window.vn.onSaveStateChanged(showSaveState);
 window.vn.getSaveState().then(showSaveState);
 

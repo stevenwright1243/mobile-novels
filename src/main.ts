@@ -841,11 +841,14 @@ app.whenReady().then(async () => {
     }
   }, 2000);
 
-  // How taps reach the game (see win32.ts), part of the game's profile.
+  // How taps reach the game (see win32.ts), part of the game's profile. Set
+  // from the picker or the Menus sheet's Input Settings; every window
+  // follows, the sender included.
   ipcMain.handle('get-click-method', () => profile?.clickMethod ?? 'message');
   ipcMain.handle('set-click-method', (_event, method: ClickMethod) => {
     if (profile) {
       profile = { ...profile, clickMethod: method };
+      broadcast('click-method-changed', method);
       sendSaveState();
     }
   });

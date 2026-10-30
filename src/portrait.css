@@ -988,9 +988,9 @@ body {
   gap: 0.6em;
 }
 
-/* The Sizes and Visual Novels drop-downs: each heading is the button that
-   opens it, with a chevron that turns when it's open. */
-:is(#sizes, #visual-novels) summary {
+/* The Sizes, Visual Novels and Input Settings drop-downs: each heading is
+   the button that opens it, with a chevron that turns when it's open. */
+:is(#sizes, #visual-novels, #input-settings) summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1000,11 +1000,11 @@ body {
   cursor: pointer;
 }
 
-:is(#sizes, #visual-novels) summary::-webkit-details-marker {
+:is(#sizes, #visual-novels, #input-settings) summary::-webkit-details-marker {
   display: none;
 }
 
-:is(#sizes, #visual-novels) summary::after {
+:is(#sizes, #visual-novels, #input-settings) summary::after {
   content: '';
   width: 0.5em;
   height: 0.5em;
@@ -1016,12 +1016,12 @@ body {
   transition: rotate 0.2s;
 }
 
-:is(#sizes, #visual-novels)[open] summary::after {
+:is(#sizes, #visual-novels, #input-settings)[open] summary::after {
   rotate: 225deg;
   translate: 0 0.15em;
 }
 
-:is(#sizes, #visual-novels) h2 {
+:is(#sizes, #visual-novels, #input-settings) h2 {
   margin: 0;
 }
 
@@ -1168,9 +1168,10 @@ body {
   cursor: default;
 }
 
-/* Text position: "Bottom", an on/off switch, "Top". The switch is a pill
-   track with a round knob that slides right (and fills with the accent)
-   for Top. */
+/* An on/off switch between two words: Text position ("Bot" / "Top") and
+   Input Settings' "Taps click by" ("Messages" / "Mouse"). The switch is a
+   pill track with a round knob that slides right (and fills with the
+   accent) for the second word. */
 /* The name, and the switch at the right; when the column is too narrow
    for both (a narrow PC window), the switch goes under the name. */
 .toggle-row {
@@ -1202,7 +1203,7 @@ body {
 }
 
 /* Sized in the sheet's text size (a button doesn't take it by itself). */
-#text-position {
+.toggle-switch {
   font-size: inherit;
   position: relative;
   width: 2.3em;
@@ -1215,7 +1216,7 @@ body {
   transition: background 0.2s;
 }
 
-#text-position[aria-checked='true'] {
+.toggle-switch[aria-checked='true'] {
   background: linear-gradient(var(--accent), var(--accent-deep));
   border-color: var(--accent-deep);
 }
@@ -1232,18 +1233,19 @@ body {
   transition: translate 0.2s;
 }
 
-#text-position[aria-checked='true'] .toggle-knob {
+.toggle-switch[aria-checked='true'] .toggle-knob {
   translate: 1em 0;
 }
 
-#text-position:disabled {
+.toggle-switch:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-/* Save, Reset and Default, side by side at the bottom of Sizes: Save solid
-   in the accent, the others plain. */
-#sheet-actions {
+/* Save, Reset and Default, side by side at the bottom of Sizes (Save and
+   Reset at the bottom of Input Settings too): Save solid in the accent,
+   the others plain. */
+.sheet-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1251,19 +1253,19 @@ body {
 }
 
 /* With nothing to save: dimmed, a little blurred, and not pressable. */
-#sheet-actions .chip:disabled {
+.sheet-actions .chip:disabled {
   opacity: 0.45;
   filter: blur(1.5px);
   cursor: default;
   pointer-events: none;
 }
 
-#sheet-actions .chip {
+.sheet-actions .chip {
   padding-inline: 1.4em;
   font-weight: 700;
 }
 
-#sheet-save {
+.chip.save-button {
   color: var(--on-accent);
   background: linear-gradient(var(--accent), var(--accent-deep));
   border-color: var(--accent-deep);

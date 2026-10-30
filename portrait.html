@@ -227,6 +227,7 @@
                   <span class="toggle-side">Bot</span>
                   <button
                     id="text-position"
+                    class="toggle-switch"
                     role="switch"
                     aria-checked="false"
                     aria-labelledby="text-position-label"
@@ -246,9 +247,9 @@
                  keeps the changes, Reset puts back the values as last saved,
                  Default sets the default sizes (menus-sheet.ts). Disabled (and
                  blurred) while there's nothing for them to do. -->
-            <div id="sheet-actions">
-              <button id="sheet-save" class="chip" disabled>Save</button>
-              <button id="sheet-reset" class="chip" disabled>Reset</button>
+            <div id="sheet-actions" class="sheet-actions">
+              <button class="chip save-button" disabled>Save</button>
+              <button class="chip reset-button" disabled>Reset</button>
               <button id="sheet-default" class="chip" disabled>Default</button>
             </div>
           </div>
@@ -272,6 +273,38 @@
                (visual-novels.ts). -->
           <div id="close-game-row">
             <button id="close-game" class="chip" disabled>Close game</button>
+          </div>
+        </details>
+        <!-- How taps reach the game, folded away until opened
+             (input-settings.ts). The same setting as the picker's "Taps click
+             by", part of the game's profile, so saved with Save. -->
+        <details id="input-settings">
+          <summary><h2>Input Settings</h2></summary>
+          <div class="toggle-row">
+            <span id="click-method-label">Taps click by</span>
+            <span class="toggle">
+              <span class="toggle-side">Messages</span>
+              <button
+                id="click-method"
+                class="toggle-switch"
+                role="switch"
+                aria-checked="false"
+                aria-labelledby="click-method-label"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+              <span class="toggle-side">Mouse</span>
+            </span>
+          </div>
+          <p class="sheet-note">
+            Messages click without moving the mouse or taking the game to the
+            front; some games ignore them. Mouse moves the real pointer and
+            clicks, which works in more games. This is the game's own setting,
+            kept when you save.
+          </p>
+          <div class="sheet-actions">
+            <button class="chip save-button" disabled>Save</button>
+            <button class="chip reset-button" disabled>Reset</button>
           </div>
         </details>
       </section>

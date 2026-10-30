@@ -16,6 +16,7 @@ import {
 import './history-log';
 import './menus-sheet';
 import './visual-novels';
+import './input-settings';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';
