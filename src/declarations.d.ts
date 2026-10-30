@@ -40,11 +40,14 @@ type ClickMethod = 'message' | 'mouse';
 // than the text); it's relative to `size`, so it follows the text.
 // `position` is where the message window sits: 'bottom' of the screen,
 // growing upward with the text, or 'top', hanging just under the picture,
-// growing downward.
+// growing downward. `padding` adds space on the side it grows from (below
+// it at the bottom, above it under the picture), 0 to 1, where 1 is a fifth
+// of the screen's height; 0 keeps the usual gaps.
 interface TextStyle {
   size: number;
   nameSize: number;
   position: TextPosition;
+  padding: number;
 }
 type TextPosition = 'bottom' | 'top';
 

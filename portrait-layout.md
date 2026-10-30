@@ -58,6 +58,11 @@ bottom, and never moves it.
 
 ## Message window
 
+- **Text padding** (per game, the Menus sheet's slider, 0–100%, default
+  0%): adds `Text padding × 20%` of the screen's height to the gap on the
+  side the window grows from: below it with Bottom (on top of the usual
+  bottom gap), between the picture and it with Top (and the Portrait
+  height cap leaves room for it). 0% keeps both usual gaps.
 - **Position** (per game, the Menus sheet's Text position): **Bottom**
   (default) puts it at the bottom of the screen, growing upward as the text
   gets longer or bigger. **Top** hangs it just under the picture's bottom
@@ -154,8 +159,10 @@ game's name box (the `name` region, per game).
   (50–200%), Portrait height (0–100%), Portrait width (50–100%) and Button
   size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
-  input is 48px tall, the track 0.45em, the thumb 1.6em. Under them, **Text
-  position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
+  input is 48px tall, the track 0.45em, the thumb 1.6em. After Button size,
+  **Text padding** (0–100%, starts at 0%, per game): extra space on the
+  side the message window grows from, up to a fifth of the screen's height
+  at 100% (1% of the screen per 5% step). Under them, **Text position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
   filled with the accent for Top), "Top". A note says which
   are the game's. At the drop-down's bottom, always there while it's open,
   **Save** (accent) and **Reset** (plain; back to the values as last

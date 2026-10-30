@@ -19,7 +19,12 @@ const clampTo = (slider: HTMLInputElement, size: number) =>
   Math.min(Number(slider.max), Math.max(Number(slider.min), size));
 const clampSize = (size: number) => clampTo(sizeSlider, size);
 
-let style: TextStyle = { size: 1, nameSize: 1, position: 'bottom' };
+let style: TextStyle = {
+  size: 1,
+  nameSize: 1,
+  position: 'bottom',
+  padding: 0,
+};
 // Whether a game is picked, so there's something to adjust.
 let enabled = false;
 

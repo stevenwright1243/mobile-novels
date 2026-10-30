@@ -77,10 +77,15 @@ body {
     /* The text size chosen in the picker: the base size (100%) times the size
        setting. Set here so the arrow (`#next-arrow`) is sized by it too. */
     --chosen-font-size: calc(var(--base-font-size) * var(--text-size, 1));
+    /* The Text padding (`--text-padding`, 0 to 1, the game's): extra space
+       on the side the window grows from, up to a fifth of the screen's
+       height. 0 keeps the usual gaps. */
+    --text-extra: calc(var(--text-padding, 0) * 20dvh);
     /* Below it, at least 5% of the portrait's height: up off the bottom
        edge, nearer the thumb and clear of the phone's gesture bar. A share
-       of the height, since that's what grows on a tall phone. */
-    --gap-bottom: max(var(--gap), 5dvh);
+       of the height, since that's what grows on a tall phone. Plus the Text
+       padding (at the bottom; see text position "top" for the other). */
+    --gap-bottom: calc(max(var(--gap), 5dvh) + var(--text-extra));
     /* The message window's side padding, and how far in from its right
        edge the arrow sits (inside that padding). Named so the text's room
        for the arrow (`#text-line::after`) can be worked out from them. */
@@ -212,8 +217,11 @@ body {
    portrait.ts keeps the picture high enough to leave room for them (the
    Portrait height cap). */
 .portrait[data-text-position='top'] :is(#text-zone, .text-zone) {
+  /* Here the Text padding goes above the zone, under the picture, and the
+     gap below is the usual one. */
+  --gap-bottom: max(var(--gap), 5dvh);
   --zone-top: max(
-    var(--picture-bottom, 0px) + var(--gap),
+    var(--picture-bottom, 0px) + var(--gap) + var(--text-extra),
     var(--buttons-height)
   );
   align-self: start;

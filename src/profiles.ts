@@ -22,6 +22,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   size: 1,
   nameSize: 1,
   position: 'bottom',
+  padding: 0,
 };
 
 // The background sits 20% of the way down (see `BACKGROUND_VIEW`).

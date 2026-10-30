@@ -101,8 +101,10 @@ function zoneView(zone: Zone) {
 function setTextStyle(style: TextStyle) {
   portrait.style.setProperty('--text-size', String(style.size));
   portrait.style.setProperty('--name-size', String(style.nameSize ?? 1));
-  // Where the message window sits (portrait.css styles by it).
+  // Where the message window sits (portrait.css styles by it), and the
+  // extra space on the side it grows from (`--text-padding`, 0 to 1).
   portrait.dataset.textPosition = style.position ?? 'bottom';
+  portrait.style.setProperty('--text-padding', String(style.padding ?? 0));
 }
 textStyle.listen(setTextStyle);
 
@@ -510,6 +512,10 @@ const sampleZone = document.querySelector<HTMLElement>(
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
 const sampleNameTag = sample.querySelector<HTMLElement>('.name-tag')!;
 
+// How much of the screen's height Text padding 100% adds (as in
+// portrait.css's `--text-extra`).
+const TEXT_PADDING_SHARE = 0.2;
+
 function updateBackgroundYCap(regions: Regions) {
   if (textStyle.get().position !== 'top') {
     backgroundYCap.set(1);
@@ -536,7 +542,9 @@ function updateBackgroundYCap(regions: Regions) {
     tag.offsetHeight +
     parseFloat(tagStyle.marginTop) +
     parseFloat(tagStyle.marginBottom) +
-    parseFloat(getComputedStyle(lines).minHeight);
+    parseFloat(getComputedStyle(lines).minHeight) +
+    // The Text padding, above the zone (a fifth of the screen at 100%).
+    (textStyle.get().padding ?? 0) * TEXT_PADDING_SHARE * innerHeight;
   // The picture's height on screen (it doesn't depend on its position),
   // and the height that puts its bottom at the lowest it may go.
   const { sw, sh } = regionInVideo(video, clientArea, regions.background);

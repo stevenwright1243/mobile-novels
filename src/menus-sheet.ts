@@ -142,6 +142,13 @@ linkSlider(
   buttonSize.set,
   buttonSize.listen,
 );
+// Extra space on the side the text box grows from (see `TextStyle`).
+linkSlider(
+  'sheet-text-padding',
+  () => textStyle.get().padding ?? 0,
+  (padding) => textStyle.set({ ...textStyle.get(), padding }),
+  textStyle.listen,
+);
 
 // Text position: a switch, on for "top" (see `TextStyle`). Tapping the
 // words beside it works too.
@@ -168,7 +175,7 @@ const actionButtons = document.querySelectorAll<HTMLButtonElement>(
   '#sheet-actions button',
 );
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
-  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #text-position',
+  '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #sheet-text-padding, #text-position',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
   for (const button of actionButtons) {

@@ -185,6 +185,17 @@
                   step="0.05"
                 />
               </label>
+              <label class="slider">
+                <span>Text padding</span>
+                <output></output>
+                <input
+                  type="range"
+                  id="sheet-text-padding"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                />
+              </label>
               <!-- Where the message window sits: an on/off-style switch
                    between Bottom and Top (menus-sheet.ts). -->
               <div class="toggle-row">
@@ -204,9 +215,9 @@
               </div>
             </div>
             <p class="sheet-note">
-              Text size, name size, portrait height and width and text position
-              are this game's; button size is for every game. Changes show at
-              once, and are kept when you save.
+              Text size, name size, portrait height and width, text padding and
+              text position are this game's; button size is for every game.
+              Changes show at once, and are kept when you save.
             </p>
             <!-- At the bottom of Sizes, always shown while it's open: Save
                  keeps the changes, Reset puts back the values as last saved.
