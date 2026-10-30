@@ -75,6 +75,7 @@ type NextArrow =
   | 'hearts'
   | 'ember'
   | 'drop'
+  | 'knife'
   | 'none';
 interface MessageStyle {
   border: MessageBorder;

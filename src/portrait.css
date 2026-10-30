@@ -448,6 +448,20 @@ body {
   }
 }
 
+/* Arrow "knife": a bloody knife in the theme's deep accent (like the
+   chevron), bobbing. */
+.portrait[data-arrow='knife'] {
+  --arrow-width: 1em;
+}
+
+.portrait :is(#next-arrow, .next-arrow)[data-arrow='knife'] .knife {
+  display: block;
+  width: 1em;
+  height: 1em;
+  fill: var(--accent-deep);
+  animation: bob 1.2s ease-in-out infinite;
+}
+
 /* Arrow "ember": a glowing dot that pulses, in the theme's accent. */
 .portrait[data-arrow='ember'] {
   --arrow-width: 0.62em;

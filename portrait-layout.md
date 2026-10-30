@@ -107,7 +107,9 @@ bottom, and never moves it.
     big heart and a small one, like MiSide's menu cursor, beating gently;
     1.3em; picked automatically with the MiSide theme), **Ember** (a glowing
     accent dot that pulses), **Drop** (a drop that forms, falls 0.12em and
-    fades; it never leaves the window), or **None** (no arrow).
+    fades; it never leaves the window), **Knife** (a bloody knife, mirrored
+    so the blade points right, in the theme's deep accent; 1em; bobs like the
+    chevron), or **None** (no arrow).
   - The Miyuki's Realm theme gives every glass panel a bevelled frame: a 3px
     light rim with a 1px accent groove inside it. Picking that theme picks
     border None and the triangle.

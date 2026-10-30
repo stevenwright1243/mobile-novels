@@ -32,6 +32,7 @@ export const ARROWS = [
   ['hearts', 'Hearts'],
   ['ember', 'Ember'],
   ['drop', 'Drop'],
+  ['knife', 'Knife'],
   ['none', 'None'],
 ] as const satisfies readonly (readonly [NextArrow, string])[];
 
