@@ -517,8 +517,13 @@ const findRegion = (name: RegionName) => () =>
 startTextReader(video, findRegion('text'), (line) =>
   window.vn.setTextLine(line),
 );
-startTextReader(video, findRegion('name'), (name) =>
-  window.vn.setSpeaker(tidyName(name)),
+// Names are often light text on a shaded plate, so they get a second try
+// with the background removed.
+startTextReader(
+  video,
+  findRegion('name'),
+  (name) => window.vn.setSpeaker(tidyName(name)),
+  { retryFlattened: true },
 );
 
 window.vn.onSourceSelected(showSource);

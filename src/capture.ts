@@ -67,20 +67,36 @@ export function regionInVideo(
 // OCR reads small text better when it's enlarged first.
 const OCR_SCALE = 2;
 
-// Copies part of the video into a PNG for OCR, enlarged. With `clean`, the
-// copy is made greyscale with stronger contrast, which usually helps.
+// How a crop is prepared for OCR:
+//  - 'none': as it is.
+//  - 'clean': greyscale with stronger contrast, which usually helps.
+//  - 'flatten': the background removed, leaving dark strokes on white. For
+//    text that's barely different from a shaded background, like white names
+//    on a light gradient plate, which 'clean' reads badly. It reads ordinary
+//    text worse, though, so it's a second try (see text-reader.ts).
+export type OcrPrep = 'none' | 'clean' | 'flatten';
+
+// Copies part of the video into a PNG for OCR, enlarged, prepared as `prep`
+// says.
 export async function cropForOcr(
   video: HTMLVideoElement,
-  { sx, sy, sw, sh }: VideoRect,
-  clean = true,
+  box: VideoRect,
+  prep: OcrPrep = 'clean',
 ) {
-  const canvas = document.createElement('canvas');
+  const { sx, sy, sw, sh } = box;
+  let canvas = document.createElement('canvas');
   canvas.width = Math.round(sw * OCR_SCALE);
   canvas.height = Math.round(sh * OCR_SCALE);
   const context = canvas.getContext('2d')!;
   // `filter` works like the CSS property, applied to whatever is drawn next.
-  context.filter = clean ? 'grayscale(1) contrast(1.5)' : 'none';
+  context.filter = prep === 'clean' ? 'grayscale(1) contrast(1.5)' : 'none';
+  if (prep === 'flatten') {
+    context.filter = 'grayscale(1)';
+  }
   context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  if (prep === 'flatten') {
+    canvas = flatten(video, box, canvas);
+  }
 
   // `toBlob` hands over the PNG through a callback; wrapping it in a Promise
   // lets us `await` it instead.
@@ -90,6 +106,47 @@ export async function cropForOcr(
       'image/png',
     ),
   );
+}
+
+// Removes the background from a greyscale crop (`canvas`, of `box`): it's
+// compared with a blurred copy of itself (the local background shade), and
+// only what differs from it is kept. That works whatever the background's
+// shade, and for light text as well as dark. The difference is then
+// brightened, and flipped to dark strokes on white, which OCR prefers.
+function flatten(
+  video: HTMLVideoElement,
+  { sx, sy, sw, sh }: VideoRect,
+  canvas: HTMLCanvasElement,
+) {
+  const context = canvas.getContext('2d')!;
+  // About the size of a letter's strokes and gaps.
+  const blur = Math.max(3, canvas.height / 6);
+  // 'difference' draws how far each pixel is from the one already there.
+  context.globalCompositeOperation = 'difference';
+  context.filter = `grayscale(1) blur(${blur}px)`;
+  // A margin of the video around the box is blurred too, so the edges blur
+  // real pixels, not empty space (which left stray marks there). A blur
+  // reaches about 3 times its radius. In canvas pixels, then video pixels.
+  const margin = 3 * blur;
+  const videoMargin = margin / OCR_SCALE;
+  context.drawImage(
+    video,
+    sx - videoMargin,
+    sy - videoMargin,
+    sw + 2 * videoMargin,
+    sh + 2 * videoMargin,
+    -margin,
+    -margin,
+    canvas.width + 2 * margin,
+    canvas.height + 2 * margin,
+  );
+  const result = document.createElement('canvas');
+  result.width = canvas.width;
+  result.height = canvas.height;
+  const resultContext = result.getContext('2d')!;
+  resultContext.filter = 'brightness(2.5) invert(1) contrast(2)';
+  resultContext.drawImage(canvas, 0, 0);
+  return result;
 }
 
 // The bytes of a PNG, ready to send to main. IPC can carry raw bytes, and a

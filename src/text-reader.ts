@@ -13,7 +13,7 @@
  *     line, finished; send it to main and stop reading.
  */
 
-import { cropForOcr, pngBytes, type VideoRect } from './capture';
+import { cropForOcr, type OcrPrep, pngBytes, type VideoRect } from './capture';
 
 // How often to check the text box, in milliseconds. Counted from the end of
 // the previous check, so a slow read never piles up behind another.
@@ -107,13 +107,26 @@ function looksLikeText(text: string, confidence: number) {
   return real / words.length >= MIN_WORD_SHARE;
 }
 
+// Reads a box with OCR, prepared as `prep` says. Garbage counts as an
+// empty box: ''.
+async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
+  const { text, confidence } = await window.vn.readText(
+    await pngBytes(await cropForOcr(video, box, prep)),
+  );
+  const tidied = tidy(text);
+  return tidied && looksLikeText(tidied, confidence) ? tidied : '';
+}
+
 // Starts reading. `findTextBox` says where the box is in the video right
 // now, or null when there's nothing to read yet (no capture or regions).
-// `onRead` gets each confirmed read ('' when the box is empty).
+// `onRead` gets each confirmed read ('' when the box is empty). With
+// `retryFlattened`, a box that reads as nothing is read again with its
+// background removed (see `OcrPrep`), for names on shaded plates.
 export function startTextReader(
   video: HTMLVideoElement,
   findTextBox: () => VideoRect | null,
   onRead: (text: string) => void,
+  { retryFlattened = false } = {},
 ) {
   // The sample at the last read, the text of the last read, and the last
   // line sent to main.
@@ -128,12 +141,10 @@ export function startTextReader(
       // Read when a new line has started, or to confirm an unconfirmed read.
       if (hasChanged(sample, lastSample) || lastRead !== confirmed) {
         lastSample = sample;
-        const { text, confidence } = await window.vn.readText(
-          await pngBytes(await cropForOcr(video, box)),
-        );
-        // Garbage counts as an empty text box: nothing to show.
-        const tidied = tidy(text);
-        const read = tidied && looksLikeText(tidied, confidence) ? tidied : '';
+        let read = await readBox(video, box, 'clean');
+        if (!read && retryFlattened) {
+          read = await readBox(video, box, 'flatten');
+        }
         if (read === lastRead && read !== confirmed) {
           confirmed = read;
           onRead(read);

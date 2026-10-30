@@ -20,7 +20,11 @@ const liveText = document.querySelector<HTMLElement>('#live-text span')!;
 async function grabTextRegion(video: HTMLVideoElement, clean: boolean) {
   const clientArea = await getClientArea();
   const { text: region } = await window.vn.getRegions();
-  return cropForOcr(video, regionInVideo(video, clientArea, region), clean);
+  return cropForOcr(
+    video,
+    regionInVideo(video, clientArea, region),
+    clean ? 'clean' : 'none',
+  );
 }
 
 // The live preview to read from; set once a game is picked.
