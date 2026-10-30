@@ -19,7 +19,8 @@
  * World's: "You don't?~ take school too seriously.~"), so the line ends
  * where it best matches OCR's read, plus any closing punctuation right after
  * (OCR often misreads a line's last mark). Not at a fixed end mark: that
- * game's "~" also turns up inside lines ("empty as can~be.").
+ * game's "~" is also its line break inside lines ("I think I~finally"),
+ * which becomes a space.
  */
 
 import { prefixDistances, similarity } from './text-similarity';
@@ -46,6 +47,8 @@ interface Spot {
 const MATCH = 0.6;
 // The most text read from a spot, in characters.
 const MAX_LINE = 1024;
+// How alike two reads must be to count as the same line read again.
+const SAME_LINE = 0.85;
 // Searches allowed without finding the buffer, per run of the game: each
 // reads all its memory, so a game that doesn't keep its line in one place
 // stops being searched.
@@ -89,8 +92,9 @@ interface GameMemory {
   processId: number;
   // A handle to read its memory.
   process: number;
-  // Spots that held the line last searched for.
+  // Spots that held the line last searched for (`searchedFor`).
   candidates: Spot[];
+  searchedFor: string;
   // The game's line buffer, once found.
   buffer: Spot | null;
   misses: number;
@@ -126,6 +130,7 @@ function memoryOf(processId: number) {
       processId,
       process,
       candidates: [],
+      searchedFor: '',
       buffer: null,
       misses: 0,
       searches: 0,
@@ -171,9 +176,14 @@ const CLOSING = /^[.!?…,"'”’)\]」』】]+/;
 // best matches the read (the rest is left over from an earlier, longer
 // line), with any closing marks right after.
 function lineAt(memory: GameMemory, spot: Spot, read: string) {
-  const text = textAt(memory, spot);
+  let text = textAt(memory, spot);
   if (text === null) {
     return null;
+  }
+  // A "~" that isn't on screen is the game's own line break (The Colorful
+  // World's "I think I~finally"), so it's a space.
+  if (!read.includes('~')) {
+    text = text.replaceAll('~', ' ');
   }
   // Only as far as a little past the read's length can match.
   const nearby = text.slice(0, Math.round(read.length * 1.5) + 20);
@@ -263,6 +273,9 @@ async function search(memory: GameMemory, read: string) {
         bestScore = score;
       }
     }
+    log(
+      `${changed.length} of ${memory.candidates.length} copies changed; ${best ? 'one' : 'none'} holds "${read}"`,
+    );
     if (best) {
       memory.buffer = best;
       memory.candidates = [];
@@ -272,6 +285,11 @@ async function search(memory: GameMemory, read: string) {
       setStatus('found');
       return;
     }
+  }
+  // The same line again (read a little differently): searching for it
+  // would find the same copies.
+  if (alike(read, memory.searchedFor) >= SAME_LINE) {
+    return;
   }
   if (memory.searches >= MAX_SEARCHES) {
     setStatus('not-found');
@@ -286,6 +304,7 @@ async function search(memory: GameMemory, read: string) {
   const started = performance.now();
   try {
     memory.candidates = await findSpots(memory, needles);
+    memory.searchedFor = read;
     log(
       `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms`,
     );

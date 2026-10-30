@@ -884,13 +884,33 @@ export function writableRegions(process: number) {
   return regions;
 }
 
-// Copies `size` bytes of a process's memory from `address`, or returns null
-// if they can't be read (freed since, say).
-export function readMemory(process: number, address: number, size: number) {
+// Copies up to `size` bytes of a process's memory from `address`: fewer if
+// its region ends sooner (Windows refuses the whole read if any of it can't
+// be read), or null if none can be read (freed since, say).
+export function readMemory(
+  process: number,
+  address: number,
+  size: number,
+): Buffer | null {
   const buffer = Buffer.alloc(size);
   const read = [0];
-  return ReadProcessMemory(process, address, buffer, size, read)
-    ? buffer.subarray(0, read[0])
+  if (ReadProcessMemory(process, address, buffer, size, read)) {
+    return buffer.subarray(0, read[0]);
+  }
+  const info = {} as { BaseAddress: number; RegionSize: number };
+  if (
+    !VirtualQueryEx(
+      process,
+      address,
+      info,
+      koffi.sizeof(MEMORY_BASIC_INFORMATION),
+    )
+  ) {
+    return null;
+  }
+  const available = info.BaseAddress + info.RegionSize - address;
+  return available > 0 && available < size
+    ? readMemory(process, address, available)
     : null;
 }
 
