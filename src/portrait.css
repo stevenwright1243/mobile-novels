@@ -654,21 +654,30 @@ body {
   padding: max(1rem, 5vmin);
 }
 
+/* The count, with the speaker's name beside it, in one row above the line.
+   A long name shortens with "…" rather than pushing the row wider. */
+#log-heading {
+  display: flex;
+  align-items: center;
+  gap: max(0.6rem, 3vmin);
+  margin: 0 0 max(0.6rem, 3vmin);
+}
+
 #log-count {
-  margin: 0 0 0.75em;
+  flex: none;
+  margin: 0;
   font-size: max(0.85rem, 3.5vmin);
   font-weight: 700;
   color: var(--accent-deep);
   letter-spacing: 0.05em;
 }
 
-/* Who said the line: the name pill, a little smaller than the line, as on
-   the message window. Hidden for narration. */
+/* Who said the line: the name pill, beside the count, a little smaller than
+   the line, as on the message window. Hidden for narration. */
 #log-speaker {
-  width: fit-content;
-  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
-  margin: 0 0 0.6em;
+  margin: 0;
   font-size: calc(
     var(--base-font-size) * var(--text-size, 1) * 0.72 * var(--name-size, 1)
   );

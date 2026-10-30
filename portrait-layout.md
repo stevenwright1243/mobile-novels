@@ -141,7 +141,9 @@ the PC and the phone (`#log…` and `.log-arrow` in `src/portrait.css`).
   `max(1.75rem, 7vmin)`.
 - **Line card:** padding `max(1rem, 5vmin)`; the "2 / 4" count
   `max(0.85rem, 3.5vmin)`; the speaker as the name tag's pill (`#log-speaker`,
-  72% of the line's size, hidden for narration); the line itself at the message window's text size.
+  72% of the line's size × Name size, hidden for narration) to the right of
+  the count, `max(0.6rem, 3vmin)` apart, in one row (`#log-heading`; a long
+  name ends in "…"); the line itself at the message window's text size.
 
 ## Current game profiles
 
