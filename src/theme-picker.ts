@@ -3,7 +3,7 @@
  * sidebar: it shows the current theme (its name, beside a swatch of its
  * colours) and opens a menu with a button per theme, each drawn in its own
  * theme's colours and font, as in the portrait's Menus sheet. The same app
- * setting as the Look page's select: main saves it and sends it to both
+ * setting as the Style page's select: main saves it and sends it to both
  * windows (applied by theme.ts).
  */
 

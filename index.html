@@ -132,7 +132,9 @@
         <button role="tab" aria-selected="false" data-page="style">
           Style
         </button>
-        <button role="tab" aria-selected="false" data-page="look">Look</button>
+        <button role="tab" aria-selected="false" data-page="input">
+          Input
+        </button>
         <button role="tab" aria-selected="false" data-page="debug" hidden>
           Debug
         </button>
@@ -242,24 +244,16 @@
         </section>
       </section>
 
-      <!-- Style: the portrait's Sizes and Input Settings, the same panels as
-           its Menus sheet (where they're separate drop-downs), filled in by
-           sizes-panel.ts (its sample drawn by picker-sizes.ts) and
-           input-settings.ts. -->
+      <!-- Style: the portrait's Sizes, the same panel as its Menus sheet's
+           drop-down, filled in by sizes-panel.ts (its sample drawn by
+           picker-sizes.ts), and under it the Look: the colour scheme of both
+           windows, and the look of the portrait's message window, for every
+           game (message-style.ts). -->
       <section id="page-style" class="page" role="tabpanel" hidden>
         <div id="sizes" class="card">
           <h2>Sizes</h2>
           <div class="sizes-body"></div>
         </div>
-        <div id="input-settings" class="card">
-          <h2>Input Settings</h2>
-          <div class="input-body"></div>
-        </div>
-      </section>
-
-      <!-- Look: the colour scheme of both windows, and the look of the
-           portrait's message window, for every game (message-style.ts). -->
-      <section id="page-look" class="page" role="tabpanel" hidden>
         <div
           id="message-style"
           class="card"
@@ -284,6 +278,15 @@
             The colour scheme of both windows, and the look of the portrait's
             message window. For every game, saved straight away.
           </p>
+        </div>
+      </section>
+
+      <!-- Input: the portrait's Input Settings, the same panel as its Menus
+           sheet's drop-down, filled in by input-settings.ts. -->
+      <section id="page-input" class="page" role="tabpanel" hidden>
+        <div id="input-settings" class="card">
+          <h2>Input Settings</h2>
+          <div class="input-body"></div>
         </div>
       </section>
 

@@ -279,6 +279,12 @@
   gap: 0.6em;
 }
 
+/* Input Settings' Bring to front / Send to back, set apart from its Save
+   and Reset. */
+#game-window-actions {
+  margin-top: 0.9em;
+}
+
 /* With nothing to save: dimmed, a little blurred, and not pressable. */
 .sheet-actions .chip:disabled {
   opacity: 0.45;

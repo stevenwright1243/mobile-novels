@@ -1,6 +1,6 @@
 /**
  * Input Settings, in the portrait's Menus sheet (a drop-down) and on the
- * picker's Style page: how taps reach the game, a switch between sending
+ * picker's Input page: how taps reach the game, a switch between sending
  * messages (off) and simulating the mouse (on) (see win32.ts's `postClick`
  * and `sendClick`), and whether lines are read exactly from the game's
  * memory (memory-text.ts), with how finding them is going. Both are part of

@@ -33,10 +33,12 @@ import {
 
 type Encoding = 'utf16le' | 'utf8';
 
-// A place in the game's memory that may hold its line.
+// A place in the game's memory that may hold its line, and the text it
+// held when found.
 interface Spot {
   address: number;
   encoding: Encoding;
+  found: string;
 }
 
 // How alike (letters and digits only) the memory's text and OCR's read
@@ -55,6 +57,9 @@ const MAX_MISSES = 10;
 const MAX_CANDIDATES = 300;
 // Runs of this many letters or more are searched for.
 const MIN_NEEDLE = 12;
+// Reads with fewer letters than this (a line of "......") are left as they
+// are: every text with as few letters is alike to them.
+const MIN_LETTERS = 2;
 // Runs searched for per line.
 const NEEDLES = 3;
 
@@ -84,9 +89,8 @@ interface GameMemory {
   processId: number;
   // A handle to read its memory.
   process: number;
-  // Spots that held the line last searched for (`searchedFor`).
+  // Spots that held the line last searched for.
   candidates: Spot[];
-  searchedFor: string;
   // The game's line buffer, once found.
   buffer: Spot | null;
   misses: number;
@@ -122,7 +126,6 @@ function memoryOf(processId: number) {
       processId,
       process,
       candidates: [],
-      searchedFor: '',
       buffer: null,
       misses: 0,
       searches: 0,
@@ -198,7 +201,7 @@ const tidy = (line: string) => line.replace(/\s+/g, ' ').trim();
  * isn't found, each line also searches for it, in the background.
  */
 export function exactLine(processId: number, read: string) {
-  if (!read) {
+  if (letters(read).length < MIN_LETTERS) {
     return null;
   }
   const memory = memoryOf(processId);
@@ -233,16 +236,26 @@ export function exactLine(processId: number, read: string) {
   return null;
 }
 
-// Finds the buffer: checks whether a candidate from the last search now
-// holds this line; if none does, searches for this line instead.
+// Finds the buffer: checks whether a candidate from the last search has
+// changed to this line; if none has, searches for this line instead. Only
+// a changed one counts: OCR reads the same line a little differently each
+// time, and a copy that never changes (the game's script) matches every
+// read of it.
 async function search(memory: GameMemory, read: string) {
   if (memory.searching) {
     return;
   }
-  if (memory.candidates.length > 0 && letters(read) !== memory.searchedFor) {
+  if (memory.candidates.length > 0) {
+    const changed = memory.candidates.filter(
+      (spot) => textAt(memory, spot) !== spot.found,
+    );
+    if (changed.length === 0) {
+      // Still the line searched for: nothing to learn yet.
+      return;
+    }
     let best: Spot | null = null;
     let bestScore = MATCH;
-    for (const spot of memory.candidates) {
+    for (const spot of changed) {
       const line = lineAt(memory, spot, read);
       const score = line === null ? 0 : alike(line, read);
       if (score >= bestScore) {
@@ -273,7 +286,6 @@ async function search(memory: GameMemory, read: string) {
   const started = performance.now();
   try {
     memory.candidates = await findSpots(memory, needles);
-    memory.searchedFor = letters(read);
     log(
       `search ${memory.searches}: ${memory.candidates.length} copies of "${read}" in ${Math.round(performance.now() - started)} ms`,
     );
@@ -343,9 +355,13 @@ async function findSpots(memory: GameMemory, needles: string[]) {
       ) {
         const start = startOfText(bytes, at, encoding);
         const address = region.address + start;
-        spots.set(`${encoding}:${address}`, { address, encoding });
+        spots.set(`${encoding}:${address}`, { address, encoding, found: '' });
       }
     }
+  }
+  // What each holds now, to tell later which ones change.
+  for (const spot of spots.values()) {
+    spot.found = textAt(memory, spot) ?? '';
   }
   return [...spots.values()];
 }
