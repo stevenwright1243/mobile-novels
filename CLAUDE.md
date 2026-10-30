@@ -28,7 +28,7 @@ There's no test framework set up yet.
 
 ## Git workflow
 
-Standing permission (the user's choice): once a change typechecks, lints and the user says it works, commit it, push the branch and open a pull request into `master` without asking. Work on a branch, never on `master`. Then turn on auto-merge (`gh pr merge --auto --squash`): the **Check** workflow (`.github/workflows/check.yml`: `npm run typecheck` + `npm run lint`) is required on `master`, so the pull request merges itself once it passes, and the branch is deleted after.
+Follows the user's git workflow in `~/.claude/CLAUDE.md` (branch per change; once it passes the checks and the user says it works, commit, push, open a pull request and auto-merge with squash), set up by the `solo-git-setup` skill. Here the default branch is `master` and the checks are `npm run typecheck` and `npm run lint`: the **Check** workflow (`.github/workflows/check.yml`) runs both and is required on `master`.
 
 ## Architecture
 
