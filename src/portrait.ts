@@ -105,10 +105,17 @@ buttonSize.listen(setButtonSize);
 const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
 const nextArrow = document.querySelector<HTMLElement>('#next-arrow')!;
 const pageView = document.querySelector<HTMLElement>('#page-view')!;
+// The Sizes sample's copies of the message window and arrow (see "The Sizes
+// sample" below).
+const sample = document.querySelector<HTMLElement>('#sizes-sample')!;
+const sampleLine = sample.querySelector<HTMLElement>('.message-window')!;
+const sampleArrow = sample.querySelector<HTMLElement>('.next-arrow')!;
 function setMessageStyle(style: MessageStyle) {
   textLine.dataset.border = style.border;
   pageView.dataset.border = style.border;
+  sampleLine.dataset.border = style.border;
   nextArrow.dataset.arrow = style.arrow;
+  sampleArrow.dataset.arrow = style.arrow;
   portrait.dataset.arrow = style.arrow;
 }
 window.vn.onMessageStyleChanged(setMessageStyle);
@@ -311,6 +318,8 @@ function drawFrame() {
     // In Menus mode the picture is the whole game, placed elsewhere.
     if (!rawMode) {
       reportPictureBottom(place);
+    } else if (sizesDropdown.open) {
+      drawSample(regions);
     }
   }
   requestAnimationFrame(drawFrame);
@@ -427,6 +436,7 @@ function showTextLine(line: string) {
     return;
   }
   textLine.textContent = line;
+  copyToSample();
   // Fades in while drifting up slightly, like a message window turning a
   // page.
   textLine.animate(
@@ -448,6 +458,7 @@ function showSpeaker(name: string) {
     return;
   }
   nameText.textContent = name;
+  copyToSample();
   // Pops in with a little slide from the left, like a name card.
   nameTag.animate(
     [
@@ -459,6 +470,87 @@ function showSpeaker(name: string) {
 }
 window.vn.onSpeakerChanged(showSpeaker);
 window.vn.getSpeaker().then(showSpeaker);
+
+// --- The Sizes sample ----------------------------------------------------------
+
+// While the Menus sheet's Sizes drop-down is open, it shows a small copy of
+// the reader screen, so the sizes can be seen changing: the picture at its
+// height, the line and name, the corner buttons. It's the screen's layout
+// at its full size (`.sample-screen` is 100vw × 100dvh, so every size in
+// it is the real one), scaled down to the sample's width.
+const sizesDropdown = document.querySelector<HTMLDetailsElement>('#sizes')!;
+const sampleCanvas = sample.querySelector('canvas')!;
+const sampleName = sample.querySelector<HTMLElement>('.name-text')!;
+sampleArrow.innerHTML = nextArrow.innerHTML;
+
+function fitSample() {
+  const scale = sample.clientWidth / innerWidth;
+  sample.style.setProperty('--sample-scale', String(scale));
+  sample.style.height = `${innerHeight * scale}px`;
+}
+// Its width follows the sheet's, and it's 0 while the drop-down is shut.
+new ResizeObserver(fitSample).observe(sample);
+addEventListener('resize', fitSample);
+
+// The line and name on screen, or stand-ins while there are none.
+function copyToSample() {
+  sampleLine.textContent =
+    textLine.textContent || 'The text will look like this.';
+  sampleName.textContent = nameText.textContent || 'Name';
+}
+sizesDropdown.addEventListener('toggle', () => {
+  copyToSample();
+  if (sizesDropdown.open) {
+    // Sized now, so the sheet knows how tall it is, then scrolled up into
+    // view: it opens at the bottom of the sheet.
+    fitSample();
+    sizesDropdown.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+
+// The picture, where the reader places it, over a blurred, tinted copy
+// (drawn simply, with a blur filter: the sample is small).
+function drawSample(regions: Regions) {
+  const width = Math.round(sample.clientWidth * devicePixelRatio);
+  const height = Math.round(sample.clientHeight * devicePixelRatio);
+  if (width < 1 || height < 1) {
+    return;
+  }
+  if (sampleCanvas.width !== width || sampleCanvas.height !== height) {
+    sampleCanvas.width = width;
+    sampleCanvas.height = height;
+  }
+  const context = sampleCanvas.getContext('2d')!;
+  const { sx, sy, sw, sh } = regionInVideo(
+    video,
+    clientArea,
+    regions.background,
+  );
+  const cover = placeInZone(sw, sh, width, height, { fill: 1, x: 0.5, y: 0.5 });
+  context.filter = 'blur(6px)';
+  context.drawImage(
+    video,
+    sx,
+    sy,
+    sw,
+    sh,
+    cover.dx,
+    cover.dy,
+    cover.dw,
+    cover.dh,
+  );
+  context.filter = 'none';
+  context.fillStyle = backdropTint;
+  context.fillRect(0, 0, width, height);
+  const { dx, dy, dw, dh } = placeInZone(
+    sw,
+    sh,
+    width,
+    height,
+    backgroundZone.view(),
+  );
+  context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
+}
 
 // A name box often has a decoration beside the name (an icon, brackets, a
 // colon) that OCR reads as stray marks: trim anything that isn't a letter,

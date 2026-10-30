@@ -125,12 +125,17 @@ game's name box (the `name` region, per game).
   `--accent-deep`.
 - At the sheet's top: **Full-screen text**, Off / On buttons
   (`max(6rem, 25vmin)` wide), with a one-line note above them.
-- Then **Sizes**, a drop-down (closed at first; its heading is a 48px-tall
-  button with a turning chevron): Text size (60–200%), Name size
+- At the bottom, **Sizes**, a drop-down (closed at first; its heading is a
+  48px-tall button with a turning chevron; opening it scrolls the sheet to
+  it): Text size (60–200%), Name size
   (50–200%), Portrait height (0–100%) and Button size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
   input is 48px tall, the track 0.45em, the thumb 1.6em. A note says which
   are the game's, and **Save for this game** shows while they're unsaved.
+  Left of the sliders, a live miniature of the reader screen, **33vw** wide
+  and the screen's shape (a third of its size each way): the picture at the
+  chosen height, the line and name at the chosen sizes, and the corner
+  buttons, all exactly in proportion, as they're dragged.
 
 ## Full-screen text (page mode)
 

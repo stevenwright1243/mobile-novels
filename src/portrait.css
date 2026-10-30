@@ -61,11 +61,11 @@ body {
   position: relative;
 
   #background-zone,
-  #text-zone {
+  :is(#text-zone, .text-zone) {
     grid-area: stage;
   }
 
-  #text-zone {
+  :is(#text-zone, .text-zone) {
     /* Only as tall as the text, at the bottom, drawn over the background,
        with a little space around it so it floats. */
     align-self: end;
@@ -88,7 +88,7 @@ body {
 
   /* The message window: the line read by OCR, as real text styled for
      phones, on frosted glass (`.glass`). */
-  #text-line {
+  :is(#text-line, .text-zone .message-window) {
     display: block;
     position: relative;
     box-sizing: border-box;
@@ -113,7 +113,7 @@ body {
 
   /* The "tap to continue" arrow, in the message window's bottom corner.
      Hidden while there's no line. */
-  #next-arrow {
+  :is(#next-arrow, .text-zone .next-arrow) {
     display: block;
     position: absolute;
     z-index: 1;
@@ -124,7 +124,8 @@ body {
     pointer-events: none;
   }
 
-  #text-line:empty + #next-arrow {
+  :is(#text-line, .text-zone .message-window):empty
+    + :is(#next-arrow, .text-zone .next-arrow) {
     display: none;
   }
 
@@ -135,7 +136,7 @@ body {
      two don't fit, the last word moves down with it. The arrow already
      sits partly in the window's side padding, so only the rest (plus a
      small gap) is reserved. `--arrow-width` is set per arrow below. */
-  #text-line:not(:empty)::after {
+  :is(#text-line, .text-zone .message-window):not(:empty)::after {
     content: '\2060';
     padding-right: max(
       0px,
@@ -150,7 +151,7 @@ body {
      the zone sits at the bottom), and the window never moves. Hidden while
      there's no name (narration). `--name-size` is the picker's Name size
      slider (1 = normal). */
-  #name-tag {
+  :is(#name-tag, .text-zone .name-tag) {
     position: relative;
     z-index: 1;
     width: fit-content;
@@ -164,7 +165,7 @@ body {
     cursor: pointer;
   }
 
-  #name-tag:has(#name-text:empty) {
+  :is(#name-tag, .text-zone .name-tag):has(:is(#name-text, .name-text):empty) {
     display: none;
   }
 }
@@ -941,9 +942,81 @@ body {
   margin: 0;
 }
 
-#sizes[open] {
+/* Open: the sample beside the sliders, so both stay in view while they're
+   dragged; the note and Save button below. (In a box of its own: a
+   <details> doesn't lay out its content as a grid in every browser.) */
+#sizes .sizes-body {
   display: grid;
-  gap: 0.5em;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'sample sliders'
+    'note note'
+    'save save';
+  align-items: start;
+  gap: 0.5em 1em;
+
+  .sliders {
+    grid-area: sliders;
+    display: grid;
+    gap: 0.3em;
+  }
+
+  .sheet-note {
+    grid-area: note;
+  }
+
+  #sheet-save {
+    grid-area: save;
+  }
+}
+
+/* The sample of the reader screen (portrait.ts), centered above the
+   sliders: the screen's layout at full size (100vw × 100dvh, so its sizes
+   are the real ones), shrunk by `--sample-scale` to the sample's width;
+   portrait.ts sets the sample's height to the screen's shape. */
+#sizes-sample {
+  grid-area: sample;
+  /* A third of the screen's size each way (the scale is its width over the
+     screen's), so it fits beside the sliders. */
+  width: 33vw;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(0.6em * var(--corner));
+  box-shadow: 0 0.3em 1em color-mix(in srgb, var(--shadow) 25%, transparent);
+  pointer-events: none;
+}
+
+.sample-screen {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'stage';
+  grid-template-rows: 1fr;
+  width: 100vw;
+  height: 100dvh;
+  transform-origin: 0 0;
+  scale: var(--sample-scale, 0.5);
+  /* The reader's own text settings, not the sheet's. */
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: normal;
+
+  canvas,
+  .text-zone {
+    grid-area: stage;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sample-left {
+    left: var(--corner-gap);
+  }
+
+  .sample-right {
+    right: var(--corner-gap);
+  }
 }
 
 /* One slider: its name and value on a row, the slider below, full width. */

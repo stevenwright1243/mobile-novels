@@ -82,7 +82,7 @@
 /* The haze: the whole text zone fades from clear to white, edge to edge and
    down to the bottom of the screen, with room above the text for the fade.
    (More specific than portrait.css's text zone rules, so it wins.) */
-:root[data-theme='kimikano'] .portrait #text-zone {
+:root[data-theme='kimikano'] .portrait :is(#text-zone, .text-zone) {
   padding-top: 3rem;
   background: linear-gradient(
     to bottom,
