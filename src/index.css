@@ -492,8 +492,8 @@ input[type='text'] {
 /* The quick save and quick load spots: a ring with a dot in its middle,
    centered on the spot, with its name beside it (on the left past the
    picture's middle, so it stays on the picture; `label-left`, set by
-   region-editor.ts). The one being placed is drawn bigger, above the
-   rest. */
+   region-editor.ts). Every spot is drawn the same size; the one being
+   placed sits above the rest. */
 .marker {
   position: absolute;
   width: 1.25rem;
@@ -510,7 +510,6 @@ input[type='text'] {
 }
 
 .marker.editing {
-  scale: 1.3;
   z-index: 2;
 }
 
