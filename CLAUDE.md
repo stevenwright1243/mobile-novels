@@ -26,6 +26,10 @@ Their knowledge of web and tooling practices may be outdated, and they've asked 
 
 There's no test framework set up yet.
 
+## Git workflow
+
+Standing permission (the user's choice): once a change typechecks, lints and the user says it works, commit it, push the branch and open a pull request into `master` without asking. Work on a branch, never on `master`. Then turn on auto-merge (`gh pr merge --auto --squash`): the **Check** workflow (`.github/workflows/check.yml`: `npm run typecheck` + `npm run lint`) is required on `master`, so the pull request merges itself once it passes, and the branch is deleted after.
+
 ## Architecture
 
 Electron Forge's Vite plugin (`forge.config.mts`) builds three separate bundles, each with its own Vite config:
