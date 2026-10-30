@@ -85,6 +85,11 @@ const tidy = (text: string) => text.replace(/\s+/g, ' ').trim();
 // fades or disappears, and OCR "reads" whatever art is there. Such reads have
 // low confidence (real lines score around 80) and are mostly not words.
 const MIN_CONFIDENCE = 55;
+// A read with the background removed (see `OcrPrep`) has to be far surer:
+// it turns any edges in the art into strokes, which OCR can read as letters.
+// In Aokana a real name reads at 96 that way, while a character's hair
+// outline read as "7 WN" at 55.
+const MIN_FLATTENED_CONFIDENCE = 80;
 const MIN_WORD_SHARE = 0.7;
 // One word: letters or digits, joined by apostrophes or dashes ("don't",
 // "clean-up", "inch—of"), maybe in quotes or brackets, maybe followed by
@@ -95,8 +100,12 @@ const WORD =
 // neither for nor against.
 const PUNCTUATION = /^[.,!?…"'“”‘’\-–—]+$/u;
 
-function looksLikeText(text: string, confidence: number) {
-  if (confidence < MIN_CONFIDENCE) {
+function looksLikeText(
+  text: string,
+  confidence: number,
+  minConfidence = MIN_CONFIDENCE,
+) {
+  if (confidence < minConfidence) {
     return false;
   }
   const words = text.split(' ').filter((word) => !PUNCTUATION.test(word));
@@ -114,7 +123,11 @@ async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
     await pngBytes(await cropForOcr(video, box, prep)),
   );
   const tidied = tidy(text);
-  return tidied && looksLikeText(tidied, confidence) ? tidied : '';
+  const minConfidence =
+    prep === 'flatten' ? MIN_FLATTENED_CONFIDENCE : MIN_CONFIDENCE;
+  return tidied && looksLikeText(tidied, confidence, minConfidence)
+    ? tidied
+    : '';
 }
 
 // Starts reading. `findTextBox` says where the box is in the video right
