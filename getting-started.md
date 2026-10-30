@@ -2,7 +2,7 @@
 
 This is the project's planning doc. It assumes a **Windows PC** (where most VNs and Sunshine live).
 
-## Status (as of 2026-10-25)
+## Status (as of 2026-10-26)
 
 **Read this first when picking the project up in a new chat or tool.**
 
@@ -45,13 +45,22 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Live window list:** the picker's window list and game cards update by themselves when windows open or close; closing the picked game clears the portrait (with a message) and unfolds the window list.
 
-**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** per-game sliders (Show all ↔ Fill, Left ↔ Right, Top ↔ Bottom) zoom and position the background in its zone, live; a "Shown in portrait" box in the preview marks the part that's visible; space around a zoomed-out background shows a blurred copy instead of black bars. In text mode the text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
+**Picker UI:** the window list folds away (`<details>`) once a game is picked; the preview zooms (Ctrl+scroll, − / + / Fit, drag to move around). **Portrait background:** zoom and position are fixed for every game (Zoom 20%, Left↔Right 50%, Top↔Bottom 20%; `BACKGROUND_VIEW` in `src/zone-view.ts`), with no sliders; a "Shown in portrait" box in the preview marks the part that's visible; space around the zoomed-out background shows a blurred copy instead of black bars. In text mode the text panel overlays the bottom of the background (a dark gradient scrim) instead of sitting below it, so a longer or shorter line never moves the background; Top ↔ Bottom can push a zoomed-out picture up, clear of the panel.
 
 **Text size:** a per-game slider (60–200%, with an exact percent field). Bigger text makes the message window's resting height (3 lines) taller, over the background picture (the picture never moves because of the text: it fills the portrait, and the window lies on top); a line too long for the window's resting height is shrunk to fit (just that line; the next one goes back to the chosen size, never below 60%), and the picker shows a "Long line: shown at N%" note. A **Long lines** slider sets a fixed size for such lines instead ("Auto" = shrink each just enough); at a fixed size the window grows over the picture as needed. The background sliders and the text settings never affect each other.
 
 **Look:** a styling sweep in the spirit of Aokana: shared sky-blue and white theme (`src/theme.css`), bundled Nunito font, frosted-glass message window with a sky ribbon and bobbing arrow, pill buttons and white cards in the picker.
 
-Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done. Next: Milestone 4 (Apollo + Tailscale).
+Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done.
+
+**Now: Milestone 4 (streaming to the phone).** The phone is **Android**, so the client is **Artemis** (Apollo's own Moonlight fork), which streams in portrait at the phone's exact resolution.
+
+- 4a (setup, outside the app): install Apollo on the PC and Artemis on the phone, pair them on home Wi-Fi, and stream the Desktop app with "Always use Virtual Display". _As of 2026-10-29:_ Apollo 0.4.6 is installed and running (NVENC encoders found), Parsec's virtual display driver is gone, and the phone (Galaxy S24+, `SM-S926U1`) is paired. Still to do: tick "Always use Virtual Display" on the Desktop app (it's off by default), then the first stream. Leave Apollo's "Device configuration" off "Deactivate other displays" and "make it a primary display", so the game stays on the PC's monitor, and never rotate the virtual display in Windows (Apollo handles portrait).
+- 4b (built, to be tested with the phone): the portrait goes full screen on the phone's display by itself (`src/phone-display.ts`). It recognizes that display by its adapter, Apollo's SudoVDA driver (`displayAdapterAt()` in `win32.ts`), not by shape: this PC's HP 727pq monitor is portrait (1440×2560) too. The picker shows "On phone: W × H" or "Phone not connected", and the portrait hides the mouse pointer there. Verified: the adapter is named "SudoMaker Virtual Display Adapter", which matches `/SudoMaker|SudoVDA/i`. Found on the first stream: closing Artemis only _pauses_ Apollo's session, and the display stays (with the portrait on it, out of sight) until you **Quit session** in Artemis. So a **PC / Phone switch** in the picker moves the portrait between the phone's display and the PC while that display exists; it's also handy for testing. The choice is saved as an app setting (`settings.json`), so on PC it stays on PC even when the phone connects: switch it to Phone before leaving the house. Back on the PC, the portrait matches the picker's height. (A duplicate on both was considered and left out: it needs a second portrait window, capture and OCR reader.) For 4c: the phone's display came up at 1080 × 1920 with **100% scaling**, so the text will be small on the phone until that's raised.
+- 4c: taps from the phone reach the portrait (Artemis touch → Apollo → mouse or touch input) and go on to the game; check the virtual display's Windows scaling (the text is tuned for a portrait window about 500 px wide; 200–300% scaling on a 1080-wide phone gives the same proportions).
+- 4d: Tailscale on both, then stream on mobile data.
+
+**Layout reference:** `portrait-layout.md` holds the portrait's sizes and positions. The background's zoom and position are fixed for every game: Zoom 20%, Left↔Right 50%, Top↔Bottom 20% (`BACKGROUND_VIEW` in `src/zone-view.ts`).
 
 **Working agreement:** small steps the user can test and commit; explain TypeScript and Electron patterns briefly; when the user suggests something and a better current practice exists, say so and explain before building (see `CLAUDE.md`).
 
@@ -126,6 +135,8 @@ Four separate problems, and it helps to keep them separate:
 
 - Sunshine streams a whole **monitor**, not a window. So the trick is a **virtual portrait monitor**: the game sits on your real screen, your Electron view goes fullscreen on the virtual one, and Sunshine streams only that.
 - **Apollo** (a Sunshine fork) creates a virtual display matching the phone's resolution automatically when Moonlight connects, which is exactly this use case. Plain Sunshine plus a virtual display driver also works. Try Apollo first.
+- **Artemis** (Android) is Apollo's companion Moonlight fork: it connects in portrait, and Apollo makes the virtual display the phone's exact size and shape. Moonlight for iPhone has no confirmed portrait support with Apollo.
+- **The app's side:** the portrait window moves onto that virtual display and goes full screen while it exists (`src/phone-display.ts`), and back to its place on the PC when the phone disconnects. Apollo names the display after the phone, so it's recognized by its adapter (SudoVDA) instead.
 
 ### Input and different networks
 
@@ -153,6 +164,7 @@ Four separate problems, and it helps to keep them separate:
 | 4   | Streaming            | Apollo + Tailscale: play from your phone on mobile data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 5   | Real text            | OCR first (`tesseract.js` on the text region) → nicely styled text in the app. 5a: OCR test button. 5b: read automatically when the text box settles. 5c: styled text layer, image crop as fallback. Textractor / Windows OCR later as other text sources. _Moved ahead of 4._                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 6+  | Creative             | Sprite extraction, themes, per-game presets, history log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 7   | Sharing and setup    | _Final polish, last._ Another person can install the app and get streaming to their phone with as little manual work as reasonable: automate what the PC can do, and give detailed step-by-step instructions for the rest (the phone). See section 5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 **Start with Milestone 1.** It shows results fast, and everything else builds on it. You can test streaming (4) whenever you like, since it doesn't depend on your code.
 
@@ -168,3 +180,34 @@ Four separate problems, and it helps to keep them separate:
 ### A first prompt you can paste into Claude Code (after scaffolding)
 
 > This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second "portrait" window laid out with CSS Grid named areas, each zone holding a canvas that a ResizeObserver keeps sized to its box (times devicePixelRatio). Draw two hard-coded regions of that capture into them, given as fractions of the game window: a background crop (cover) in a top zone (3fr) and a text-box crop (contain) in a bottom zone (2fr). Keep it simple and explain the main-process vs renderer split as you go.
+
+## 5. Milestone 7: sharing and setup (final polish)
+
+Do this last, once the app itself is done. The aim: automate as much of the setup as is reasonable, and give detailed steps for what can't be automated. It's based on what setting up Apollo and Artemis by hand took on 2026-10-29: Parsec's driver had to be gone, Apollo's Desktop app needed "Always use Virtual Display", a saved per-phone display mode (`1080x1920x30`) caused black bars and a 30 fps cap, Artemis was stuck in landscape until Auto Orientation was on, and closing Artemis only paused the session, leaving the portrait stuck on the phone's display.
+
+Each step is a small milestone that can be tested on its own:
+
+1. **7a: Packaging works.** `npm run package` / `npm run make` include koffi and tesseract.js (copied in, e.g. with a `packageAfterCopy` hook, and unpacked from the asar), and the OCR language data is bundled rather than downloaded on first use. The Squirrel installer then gives a normal install with auto-updates. Nothing can be shared before this.
+2. **7b: A "Phone setup" checklist page in the picker (detect only).** Each row shows ✅ or ⚠️ and how to fix it. Every check is one that was done by hand with PowerShell during 4a:
+   - Apollo installed (its uninstall registry entry) and running (the `ApolloService` service).
+   - Apollo's virtual display driver present: "SudoMaker Virtual Display Adapter" (the same lookup as `displayAdapterAt()`).
+   - No other virtual display drivers (Parsec and similar), which Apollo advises removing.
+   - A phone is paired, with "Always use virtual display" on and no display mode override.
+   - The phone's display while connected: size and scaling (the picker's pill already has these).
+   - Tailscale installed, and the PC's `100.x.x.x` address to type into Artemis.
+3. **7c: One-click fixes through Apollo's web API** (port 47990, the same service as its settings page, with the user's Apollo login). Check the exact endpoints and options against Apollo's source before building on them.
+   - Add the app's own **"VN Mobile" app entry** with "Always use Virtual Display", instead of asking users to edit Desktop (that leaves their normal Desktop streaming alone).
+   - Clear per-phone overrides like the display mode.
+   - If it works out: have that app entry launch VN Mobile, so connecting from Artemis starts everything.
+   - Setting Apollo's web login from the command line (Sunshine-based servers support this) could make first-time setup smoother.
+   - Store the Apollo password with Electron's `safeStorage` (encrypted), never in a plain JSON file.
+4. **7d: Pairing help.** Show Apollo's one-time pairing PIN (or a QR code) in the picker, so the user never opens Apollo's web page.
+5. **7e: Detailed phone steps** for what the PC can't do, with screenshots, in the checklist page:
+   - Install Artemis from its official download page (a QR code to it).
+   - Pair with the PIN from 7d.
+   - In Artemis's settings: **Auto Orientation** on, video resolution set to **Native** (or a custom resolution matching the phone, short side first).
+   - On the phone: auto-rotate on. On Samsung phones, Display → Screen resolution decides "native": FHD+ is the better choice for streaming.
+   - Connect to the "VN Mobile" entry holding the phone upright.
+   - When done, **Quit session** (long-press the PC in Artemis), not just close the app, or the phone's display stays behind. Otherwise, use the picker's PC / Phone switch.
+   - Install Tailscale on both and sign in with the same account; in Artemis, add the PC by its Tailscale address to play away from home.
+6. **Avoid:** bundling Apollo's installer inside the app (download it from Apollo's official releases instead: bundling ties the app to one Apollo version), and editing Apollo's config files directly (they're in Program Files, need admin rights, and can break while Apollo is running; its web API is the supported way in).

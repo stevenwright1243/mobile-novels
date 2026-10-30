@@ -54,13 +54,6 @@ contextBridge.exposeInMainWorld('vn', {
       callback(mode),
     );
   },
-  getBackgroundView: () => ipcRenderer.invoke('get-background-view'),
-  setBackgroundView: (view) => ipcRenderer.invoke('set-background-view', view),
-  onBackgroundViewChanged: (callback) => {
-    ipcRenderer.on('background-view-changed', (_event, view: ZoneView) =>
-      callback(view),
-    );
-  },
   getBackgroundZoneSize: () => ipcRenderer.invoke('get-background-zone-size'),
   setBackgroundZoneSize: (size) =>
     ipcRenderer.invoke('set-background-zone-size', size),
@@ -91,4 +84,14 @@ contextBridge.exposeInMainWorld('vn', {
       callback(line),
     );
   },
+  getPhoneDisplay: () => ipcRenderer.invoke('get-phone-display'),
+  onPhoneDisplayChanged: (callback) => {
+    ipcRenderer.on(
+      'phone-display-changed',
+      (_event, phone: PhoneDisplay | null) => callback(phone),
+    );
+  },
+  getPortraitOnPhone: () => ipcRenderer.invoke('get-portrait-on-phone'),
+  setPortraitOnPhone: (onPhone) =>
+    ipcRenderer.invoke('set-portrait-on-phone', onPhone),
 } satisfies Window['vn']);

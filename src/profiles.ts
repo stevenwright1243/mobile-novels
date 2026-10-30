@@ -11,9 +11,6 @@ export const DEFAULT_REGIONS: Regions = {
   text: { x: 0, y: 0.7, w: 1, h: 0.3 },
 };
 
-// The background fills its zone, trimmed evenly on both sides.
-export const DEFAULT_BACKGROUND_VIEW: ZoneView = { fill: 1, x: 0.5, y: 0.5 };
-
 // Normal-sized text.
 export const DEFAULT_TEXT_STYLE: TextStyle = { size: 1, oversizedSize: null };
 
@@ -81,8 +78,10 @@ export async function loadProfile(
       // so a value added since the file was saved gets its default.
       regions: { ...DEFAULT_REGIONS, ...saved.regions },
       textStyle: { ...DEFAULT_TEXT_STYLE, ...saved.textStyle },
-      backgroundView: { ...DEFAULT_BACKGROUND_VIEW, ...saved.backgroundView },
     };
+    // The background's zoom and position used to be saved per game; they're
+    // fixed now (see `BACKGROUND_VIEW`), so drop any old saved ones.
+    delete profile.backgroundView;
     return { profile, saved: true, legacyFile: null };
   }
 
@@ -112,7 +111,6 @@ function newProfile(
     clickMethod: 'message',
     textMode: 'text',
     textStyle: DEFAULT_TEXT_STYLE,
-    backgroundView: DEFAULT_BACKGROUND_VIEW,
     regions: DEFAULT_REGIONS,
     window: null,
     lastPlayed: new Date().toISOString(),

@@ -65,9 +65,12 @@ function applyStyle(newStyle: TextStyle, except?: HTMLInputElement) {
 }
 
 // Wires up a slider and its percent field to one size setting. `input` fires
-// continuously while dragging, so the portrait follows live. Typing applies
-// as you go; anything that isn't a number is ignored until it is, and
-// leaving the field (or pressing Enter) tidies what's shown in it.
+// continuously while dragging, so the portrait follows live.
+//
+// Typing applies as you go, but only values in range: on the way to "150",
+// the "1" and "15" typed first are out of range and are skipped, instead of
+// jumping the text to the smallest size. Pressing Enter or leaving the field
+// (`change`) applies what's there, kept in range, and tidies the field.
 function linkSizeControls(
   slider: HTMLInputElement,
   field: HTMLInputElement,
@@ -75,11 +78,17 @@ function linkSizeControls(
 ) {
   slider.addEventListener('input', () => apply(slider.valueAsNumber));
   field.addEventListener('input', () => {
-    if (Number.isFinite(field.valueAsNumber)) {
-      apply(field.valueAsNumber / 100, field);
+    const size = field.valueAsNumber / 100;
+    if (size >= MIN_SIZE && size <= MAX_SIZE) {
+      apply(size, field);
     }
   });
-  field.addEventListener('change', () => showStyle());
+  field.addEventListener('change', () => {
+    if (Number.isFinite(field.valueAsNumber)) {
+      apply(field.valueAsNumber / 100);
+    }
+    showStyle();
+  });
 }
 
 linkSizeControls(sizeSlider, sizeField, (size, except) =>

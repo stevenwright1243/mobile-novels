@@ -7,8 +7,10 @@
 import '@fontsource-variable/nunito';
 import './index.css';
 import { playCapture, stopCapture } from './capture';
-import { enableBackgroundControls } from './background-view';
+// The "Shown in portrait" box in the preview.
+import './background-view';
 import { enableOcrTest } from './ocr-test';
+import './phone-status';
 import './preview-zoom';
 import { enableRegionEditing } from './region-editor';
 import { enableTextStyle } from './text-style';
@@ -37,7 +39,6 @@ async function pickWindow(source: GameWindow) {
   playCapture(preview, source.id);
   enableRegionEditing();
   enableOcrTest(preview);
-  enableBackgroundControls();
   enableTextStyle();
   // Fold the window list away; its summary line still opens it again.
   windowsSection.open = false;

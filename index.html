@@ -78,66 +78,24 @@
              `aria-live` has screen readers announce it when it appears. -->
         <span id="text-shrink-note" aria-live="polite" hidden></span>
       </span>
-      <!-- How the background is zoomed and positioned in the portrait
-           (background-view.ts). -->
-      <div
-        id="background-controls"
-        role="group"
-        aria-label="Portrait background"
+      <!-- Whether the phone is streaming (phone-status.ts). -->
+      <span id="phone-status" aria-live="polite"></span>
+      <!-- Whether the portrait goes on the phone's display while there is
+           one: a switch made of two radio buttons (phone-status.ts). -->
+      <span
+        id="portrait-place"
+        class="switch"
+        role="radiogroup"
+        aria-label="Show the portrait on"
       >
-        <strong>Portrait background:</strong>
-        <!-- Each slider has an exact percent field beside it. -->
-        <span class="slider-field">
-          <label for="bg-fill">Show all</label>
-          <input
-            type="range"
-            id="bg-fill"
-            min="0"
-            max="1"
-            step="0.01"
-            disabled
-          />
-          <span>Fill</span>
-          <input
-            type="number"
-            id="bg-fill-percent"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Zoom, percent of the way from Show all to Fill"
-            disabled
-          />%
-        </span>
-        <span class="slider-field">
-          <label for="bg-x">Left</label>
-          <input type="range" id="bg-x" min="0" max="1" step="0.01" disabled />
-          <span>Right</span>
-          <input
-            type="number"
-            id="bg-x-percent"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Position, percent from left to right"
-            disabled
-          />%
-        </span>
-        <span class="slider-field">
-          <label for="bg-y">Top</label>
-          <input type="range" id="bg-y" min="0" max="1" step="0.01" disabled />
-          <span>Bottom</span>
-          <input
-            type="number"
-            id="bg-y-percent"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Position, percent from top to bottom"
-            disabled
-          />%
-        </span>
-        <button id="bg-reset" disabled>Reset</button>
-      </div>
+        <label
+          ><input type="radio" name="portrait-place" value="pc" /> PC</label
+        >
+        <label
+          ><input type="radio" name="portrait-place" value="phone" />
+          Phone</label
+        >
+      </span>
       <!-- Debug tools, only shown with `npm run start:debug` (ocr-test.ts). -->
       <span id="debug-tools" role="group" aria-label="Debug tools" hidden>
         <strong>Debug:</strong>
