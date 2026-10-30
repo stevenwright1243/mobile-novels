@@ -161,11 +161,12 @@
         <label><input type="checkbox" id="lock-size" /> Lock size</label>
       </div>
     </header>
-    <!-- Saved game profiles; filled in by renderer.ts. -->
-    <section id="games" hidden>
-      <h2>Your games</h2>
+    <!-- Saved game profiles; filled in by renderer.ts. Folds like the
+         window list below, but stays as the user left it. -->
+    <details id="games" open hidden>
+      <summary>Your games</summary>
       <ul id="game-list"></ul>
-    </section>
+    </details>
     <!-- Every open window. `<details>` is the browser's own collapsible
          section: clicking the summary line folds or unfolds it. It folds by
          itself once a game is picked (renderer.ts). -->

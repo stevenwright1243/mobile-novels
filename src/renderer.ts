@@ -23,7 +23,8 @@ const refreshButton = document.querySelector<HTMLButtonElement>('#refresh')!;
 const windowsSection = document.querySelector<HTMLDetailsElement>('#windows')!;
 const windowsSummary = windowsSection.querySelector('summary')!;
 const windowList = document.querySelector<HTMLUListElement>('#window-list')!;
-const gamesSection = document.querySelector<HTMLElement>('#games')!;
+const gamesSection = document.querySelector<HTMLDetailsElement>('#games')!;
+const gamesSummary = gamesSection.querySelector('summary')!;
 const gameList = document.querySelector<HTMLUListElement>('#game-list')!;
 const preview = document.querySelector<HTMLVideoElement>('#preview')!;
 const sendToBackButton =
@@ -111,6 +112,7 @@ function element(tag: string, className: string, text: string) {
 async function showGameList() {
   const profiles = await window.vn.listProfiles();
   gamesSection.hidden = profiles.length === 0;
+  gamesSummary.textContent = `Your games (${profiles.length})`;
   gameList.replaceChildren(
     ...profiles.map((profile) => {
       const exeName = profile.exePath?.split('\\').pop() ?? 'unknown .exe';
