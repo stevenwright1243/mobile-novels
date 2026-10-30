@@ -143,10 +143,9 @@ body {
     box-sizing: border-box;
     margin: 0;
     --line-height: 1.55;
-    /* Room for 3 lines at the chosen size, so the window stays the same size
-       for most lines. It's worked out from the chosen size (not the actual
-       font size below), so shrinking one long line to fit never changes it.
-       Very long text scrolls inside the window. */
+    /* Room for 3 lines, so the window stays the same size for most lines.
+       A longer line makes it grow, over the background picture; very long
+       text scrolls inside it. */
     --padding-block: clamp(0.9rem, 4.5vw, 1.6rem);
     min-height: calc(
       3 * var(--line-height) * var(--chosen-font-size) + 2 *
@@ -156,9 +155,7 @@ body {
     overflow-y: auto;
     padding: var(--padding-block) clamp(1.1rem, 5.5vw, 2rem);
     font-family: var(--font);
-    /* The chosen size, times `--fit`: below 1 when portrait.ts shrinks a line
-       that's too long for the window (see `fitText()`). */
-    font-size: calc(var(--chosen-font-size) * var(--fit, 1));
+    font-size: var(--chosen-font-size);
     font-weight: var(--text-weight);
     line-height: var(--line-height);
     letter-spacing: 0.01em;

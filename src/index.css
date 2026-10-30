@@ -518,21 +518,6 @@ h2 {
   display: none;
 }
 
-/* The note beside the text size while a long line is shrunk to fit. */
-#text-shrink-note {
-  margin-left: 0.5rem;
-  padding: 0.1rem 0.6rem;
-  border-radius: var(--pill);
-  background: var(--accent-pale);
-  border: 1px solid var(--line);
-  font-size: 0.85rem;
-  color: var(--accent-deep);
-}
-
-#text-shrink-note[hidden] {
-  display: none;
-}
-
 /* "On phone" / "Phone not connected" (phone-status.ts). */
 #phone-status {
   padding: 0.1rem 0.6rem;

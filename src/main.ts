@@ -57,10 +57,6 @@ let portraitWindow: BrowserWindow | null = null;
 // The size of the portrait's background zone (see `setBackgroundZoneSize`).
 let backgroundZoneSize: Size | null = null;
 
-// The size the portrait shrank the current line to, to fit (null = it
-// didn't need to). Passed on to the picker for its note.
-let textShrink: number | null = null;
-
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
 // Who's speaking, read from the name box ('' for narration).
@@ -600,13 +596,6 @@ app.whenReady().then(async () => {
       broadcast('text-style-changed', style, event.sender);
       sendSaveState();
     }
-  });
-
-  // The portrait shrank (or stopped shrinking) a line to fit its window.
-  ipcMain.handle('get-text-shrink', () => textShrink);
-  ipcMain.handle('set-text-shrink', (event, size: number | null) => {
-    textShrink = size;
-    broadcast('text-shrink-changed', size, event.sender);
   });
 
   ipcMain.handle('get-text-mode', () => profile?.textMode ?? 'text');

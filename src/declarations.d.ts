@@ -39,13 +39,11 @@ type TextMode = 'text' | 'image';
 
 // How the text is styled in the portrait's message window. `size` scales
 // the text (1 = normal, 1.5 = half as big again); the window grows with it.
-// `oversizedSize` is the size for lines too long to fit at `size`, or null
-// to shrink each such line just enough to fit ("Auto"). `nameSize` scales
+// `nameSize` scales
 // the speaker's name tag the same way (1 = normal, which is a little smaller
 // than the text); it's relative to `size`, so it follows the text.
 interface TextStyle {
   size: number;
-  oversizedSize: number | null;
   nameSize: number;
 }
 
@@ -189,12 +187,6 @@ interface Window {
     getTextStyle(): Promise<TextStyle>;
     setTextStyle(style: TextStyle): Promise<void>;
     onTextStyleChanged(callback: (style: TextStyle) => void): void;
-    // The text size the current line was shrunk to so it fits the message
-    // window (as a multiple of normal, like `TextStyle.size`), or null when
-    // it's at the chosen size. Sent by the portrait, shown in the picker.
-    getTextShrink(): Promise<number | null>;
-    setTextShrink(size: number | null): Promise<void>;
-    onTextShrinkChanged(callback: (size: number | null) => void): void;
     // The size of the portrait's background zone, sent by the portrait so
     // the picker can outline the part of the background that's shown.
     getBackgroundZoneSize(): Promise<Size | null>;

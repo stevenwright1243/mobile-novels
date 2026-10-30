@@ -48,37 +48,6 @@
           disabled
         />%
       </span>
-      <!-- The size for lines too long to fit at the text size, or "Auto" to
-           shrink each one just enough (text-style.ts). -->
-      <span
-        class="slider-field"
-        title="The text size for lines too long to fit the message window at your text size. Auto shrinks each one just enough."
-      >
-        <label for="oversized-size">Long lines</label>
-        <input
-          type="range"
-          id="oversized-size"
-          min="0.6"
-          max="2"
-          step="0.05"
-          disabled
-        />
-        <input
-          type="number"
-          id="oversized-size-percent"
-          min="60"
-          max="200"
-          step="1"
-          aria-label="Text size for long lines, percent of normal"
-          disabled
-        />%
-        <label>
-          <input type="checkbox" id="oversized-auto" checked disabled /> Auto
-        </label>
-        <!-- Shown while the current line is shrunk to fit (text-style.ts).
-             `aria-live` has screen readers announce it when it appears. -->
-        <span id="text-shrink-note" aria-live="polite" hidden></span>
-      </span>
       <!-- The size of the speaker's name tag, relative to the text size
            (text-style.ts). -->
       <span

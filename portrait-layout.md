@@ -37,11 +37,10 @@ bottom, and never moves it.
 
 ## Text (per game, saved in the profile)
 
-| Setting    | Default | Range   | Meaning                                                                                                                                                                  |
-| ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Text size  | 100%    | 60–200% | Multiplies the base size below                                                                                                                                           |
-| Long lines | Auto    | 60–200% | Size for a line too long for the window's resting height. Auto = shrink just enough (never below 60%). A set size is used exactly, and the window grows over the picture |
-| Name size  | 100%    | 50–200% | Multiplies the name tag's size (both modes). Relative to the text size, so it grows and shrinks with it                                                                  |
+| Setting   | Default | Range   | Meaning                                                                                                 |
+| --------- | ------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| Text size | 100%    | 60–200% | Multiplies the base size below                                                                          |
+| Name size | 100%    | 50–200% | Multiplies the name tag's size (both modes). Relative to the text size, so it grows and shrinks with it |
 
 - **Base size (100%):** `clamp(1.6875rem, 7.5vw, 3rem)` = `--base-font-size` at
   the top of `portrait.css`. Raised by half from the original
@@ -51,8 +50,8 @@ bottom, and never moves it.
 ## Message window (text mode)
 
 - **Resting height:** room for **3 lines** at the chosen text size, plus
-  padding. Most lines fit, so the window stays the same size. It's worked out
-  from the chosen size, not the size a long line was shrunk to.
+  padding. Most lines fit, so the window stays the same size; a longer line
+  makes it grow over the background picture.
 - **Maximum height:** 60% of the portrait's height; longer text scrolls inside.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right.
@@ -153,10 +152,12 @@ What's saved for each game (`%APPDATA%\mobile-novel\games\`), as of
 2026-10-26. Text sizes were set before the base size went up by half. (Their
 old background settings are no longer used.)
 
-| Game               | Text size | Long lines |
-| ------------------ | --------- | ---------- |
-| Aokana             | 170%      | 200%       |
-| YOU and ME and HER | 150%      | 130%       |
+| Game               | Text size |
+| ------------------ | --------- |
+| Aokana             | 170%      |
+| YOU and ME and HER | 150%      |
+
+(The Long lines setting they also had was removed on 2026-10-30.)
 
 ## Where to change things
 
@@ -165,7 +166,6 @@ old background settings are no longer used.)
 | Background zoom and position       | `BACKGROUND_VIEW` in `src/zone-view.ts`           |
 | Base text size                     | `--base-font-size` in `src/portrait.css`          |
 | Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
-| Smallest shrink for long lines     | `SMALLEST_SIZE` in `src/portrait.ts`              |
 | Name tag size and position         | `#name-tag` in `src/portrait.css`                 |
 | Corner button size and gaps        | `.corner-button` in `src/portrait.css`            |
 | Slider ranges                      | `min` / `max` on the inputs in `index.html`       |

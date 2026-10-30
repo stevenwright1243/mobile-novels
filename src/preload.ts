@@ -40,13 +40,6 @@ contextBridge.exposeInMainWorld('vn', {
       callback(style),
     );
   },
-  getTextShrink: () => ipcRenderer.invoke('get-text-shrink'),
-  setTextShrink: (size) => ipcRenderer.invoke('set-text-shrink', size),
-  onTextShrinkChanged: (callback) => {
-    ipcRenderer.on('text-shrink-changed', (_event, size: number | null) =>
-      callback(size),
-    );
-  },
   getTextMode: () => ipcRenderer.invoke('get-text-mode'),
   setTextMode: (mode) => ipcRenderer.invoke('set-text-mode', mode),
   onTextModeChanged: (callback) => {

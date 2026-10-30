@@ -65,7 +65,7 @@ let textMode: TextMode = 'text';
 function setTextMode(mode: TextMode) {
   textMode = mode;
   portrait.classList.toggle('text-mode', mode === 'text');
-  layoutChanged();
+  reportZoneSize();
 }
 window.vn.onTextModeChanged(setTextMode);
 window.vn.getTextMode().then(setTextMode);
@@ -103,11 +103,8 @@ function zoneView(zone: Zone) {
 // The text and name sizes (see `TextStyle`), passed to portrait.css as
 // `--text-size` and `--name-size`.
 function setTextStyle(style: TextStyle) {
-  chosenSize = style.size;
-  oversizedSize = style.oversizedSize ?? null;
   portrait.style.setProperty('--text-size', String(style.size));
   portrait.style.setProperty('--name-size', String(style.nameSize ?? 1));
-  layoutChanged();
 }
 window.vn.onTextStyleChanged(setTextStyle);
 window.vn.getTextStyle().then(setTextStyle);
@@ -129,85 +126,9 @@ function setMessageStyle(style: MessageStyle) {
 window.vn.onMessageStyleChanged(setMessageStyle);
 window.vn.getMessageStyle().then(setMessageStyle);
 
-// --- Keeping things in step -------------------------------------------------------
-
-// Something that affects the message window changed (text mode, text size,
-// or the window's size): tell the picker the background zone's size, and
-// refit the current line. The background picture doesn't depend on the text
-// at all: it fills the whole portrait, and the window lies over it.
-function layoutChanged() {
-  reportZoneSize();
-  fitText();
-}
-
-// --- Fitting long lines -----------------------------------------------------------
-
-// The text size chosen in the picker (see `TextStyle`).
-let chosenSize = 1;
-// The size for lines too long to fit at the chosen size, or null to shrink
-// each one just enough ("Auto").
-let oversizedSize: number | null = null;
-// The smallest a line may shrink to, as a text size: the slider's minimum.
-const SMALLEST_SIZE = 0.6;
-// The last shrunk size sent to main (null = not shrunk), to only send changes.
-let reportedShrink: number | null = null;
-
-// Changes the size of a line that's too long for the message window's
-// resting height (room for 3 lines at the chosen size):
-//  - With a long-line size set, it's shown at exactly that size, and the
-//    window grows over the background picture as much as it needs to.
-//  - With "Auto", it's shrunk just enough to fit, so the window doesn't grow.
-// Every new line starts again at the chosen size. Text too long for the
-// window's maximum height scrolls inside it.
-function fitText() {
-  const line = document.querySelector<HTMLElement>('#text-line')!;
-  let fit = 1;
-  if (textMode === 'text' && line.textContent) {
-    // The window's resting height, in CSS pixels.
-    const limit = parseFloat(getComputedStyle(line).minHeight) || 0;
-    // `scrollHeight` is the height the window's text needs. Reading it right
-    // after changing the size makes the browser lay the text out again
-    // straight away, so each try is measured for real.
-    const fits = (scale: number) => {
-      line.style.setProperty('--fit', String(scale));
-      return line.scrollHeight <= limit + 1;
-    };
-    // The long-line size as a fit (never bigger than the chosen size).
-    const oversizedFit =
-      oversizedSize === null ? null : Math.min(1, oversizedSize / chosenSize);
-    if (fits(1)) {
-      fit = 1;
-    } else if (oversizedFit !== null) {
-      fit = oversizedFit;
-    } else {
-      // A "binary search": try halfway between a size that fits and one that
-      // doesn't, and keep the half the answer is in. 8 tries narrows it to
-      // within half a percent.
-      let low = Math.min(1, SMALLEST_SIZE / chosenSize);
-      let high = 1;
-      for (let i = 0; i < 8; i++) {
-        const middle = (low + high) / 2;
-        if (fits(middle)) {
-          low = middle;
-        } else {
-          high = middle;
-        }
-      }
-      fit = low;
-    }
-  }
-  line.style.setProperty('--fit', String(fit));
-
-  // Tell the picker, which shows a note while a line is shrunk.
-  const shrunkTo = fit < 1 ? chosenSize * fit : null;
-  if (shrunkTo !== reportedShrink) {
-    reportedShrink = shrunkTo;
-    window.vn.setTextShrink(shrunkTo);
-  }
-}
-
 // The picker outlines the part of the background that's shown, which depends
-// on the zone's shape, so let it know.
+// on the zone's shape (it changes with the text mode and the window's size),
+// so let it know.
 function reportZoneSize() {
   window.vn.setBackgroundZoneSize({
     width: backgroundCanvas.width,
@@ -239,10 +160,9 @@ const resizeObserver = new ResizeObserver((entries) => {
     const size = entry.devicePixelContentBoxSize[0];
     canvas.width = size.inlineSize;
     canvas.height = size.blockSize;
-    // The window resized: the zone's shape, and the text's size (which
-    // follows the window's width), may have changed.
+    // The window resized: the zone's shape may have changed.
     if (canvas === backgroundCanvas) {
-      layoutChanged();
+      reportZoneSize();
     }
   }
 });
@@ -468,8 +388,6 @@ function showTextLine(line: string) {
     return;
   }
   textLine.textContent = line;
-  // A new line starts at the chosen size, shrunk only if it doesn't fit.
-  fitText();
   // Fades in while drifting up slightly, like a message window turning a
   // page.
   textLine.animate(
