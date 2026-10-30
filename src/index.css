@@ -292,6 +292,9 @@ input[type='number'] {
   border-radius: 0.75rem;
   /* Scrollbars appear when zoomed in. */
   overflow: auto;
+  /* Dragging regions never selects their labels (or anything else here),
+     and neither does a double or triple click. */
+  user-select: none;
 }
 
 /* The video and the region outlines. Zooming makes it bigger than the
