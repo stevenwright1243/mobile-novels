@@ -1,0 +1,24 @@
+# Runs the type check and lint on every pull request and every push to
+# master. Pull requests can only merge into master once this passes.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      # The Electron binary isn't needed to type check or lint.
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - run: npm run typecheck
+      - run: npm run lint
