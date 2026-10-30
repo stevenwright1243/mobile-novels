@@ -67,6 +67,12 @@ function fixCommonMistakes(text: string) {
         const capital = letters.length > 1 && letters === letters.toUpperCase();
         return word.replaceAll('0', capital ? 'O' : 'o');
       })
+      // Some fonts' "?" reads as a "7" (Katawa Shoujo's "???" as "777" or
+      // "7?"). A word of only 7s and question marks is a run of "?"s, if it
+      // has a "?" in it or three or more 7s (so a "77" stays a number).
+      .replace(/(?<![\p{L}\p{N}])[7?]{2,}(?![\p{L}\p{N}])/gu, (run) =>
+        run.includes('?') || run.length >= 3 ? '?'.repeat(run.length) : run,
+      )
       // A "1" before an apostrophe and a letter: "1'm", "1'll", "1've".
       .replace(/(?<![\p{L}\p{N}])1(?=['’]\p{L})/gu, 'I')
       // A stammered "I" with a "1" in it: "I-1 did it", "1-I", "I-I-1".

@@ -156,7 +156,9 @@ export function ocrScale(
 
 // How a crop is prepared for OCR:
 //  - 'none': as it is.
-//  - 'clean': greyscale with stronger contrast, which usually helps.
+//  - 'clean': black text on plain white, which is what OCR reads best (see
+//    `toBlackOnWhite`). Works for dark text on a light box and light text
+//    on a dark, see-through one.
 //  - 'flatten': the background removed, leaving dark strokes on white. For
 //    text that's barely different from a shaded background, like white names
 //    on a light gradient plate, which 'clean' reads badly. It reads ordinary
@@ -184,6 +186,9 @@ export async function cropForOcr(
     context.filter = 'grayscale(1)';
   }
   context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  if (prep === 'clean') {
+    toBlackOnWhite(canvas);
+  }
   if (prep === 'flatten') {
     canvas = flatten(video, box, canvas, scale);
   }
@@ -196,6 +201,70 @@ export async function cropForOcr(
       'image/png',
     ),
   );
+}
+
+// The share of a box's pixels at each end of the brightness range that are
+// skipped when finding the text's brightness, so a few stray pixels can't set
+// it. Text covers far more of a box than this (a short line about 4%).
+const EXTREME_SHARE = 0.005;
+
+// Turns a greyscale crop into black text on white, leaving out the
+// background. Text is whichever way stands out from the box's usual
+// brightness (the median): darker on a light box, lighter on a dark one.
+// Pixels more than halfway from the usual brightness to the text's become
+// black, the rest white. That also drops art showing through a see-through
+// box (e.g. Katawa Shoujo's), since it's dimmer than the text. Then any mark
+// touching the crop's edge is cleared: that's the box's frame or art cut off
+// by the region, not text (so a region needs a little room around its text).
+function toBlackOnWhite(canvas: HTMLCanvasElement) {
+  const { width, height } = canvas;
+  const context = canvas.getContext('2d')!;
+  const image = context.getImageData(0, 0, width, height);
+  const { data } = image;
+  // Greyscale already, so red is the brightness.
+  const brightness = new Uint8Array(width * height);
+  for (let i = 0; i < brightness.length; i++) {
+    brightness[i] = data[i * 4];
+  }
+  const sorted = brightness.slice().sort();
+  const median = sorted[sorted.length >> 1];
+  const darkest = sorted[Math.floor(sorted.length * EXTREME_SHARE)];
+  const lightest = sorted[Math.floor(sorted.length * (1 - EXTREME_SHARE))];
+  const lightText = lightest - median > median - darkest;
+  const cut = (median + (lightText ? lightest : darkest)) / 2;
+  const ink = new Uint8Array(brightness.length);
+  for (let i = 0; i < ink.length; i++) {
+    ink[i] = (lightText ? brightness[i] > cut : brightness[i] < cut) ? 1 : 0;
+  }
+
+  // Clear marks touching the edge: from every edge pixel, follow its ink
+  // neighbours (a "flood fill") and clear them all.
+  const stack: number[] = [];
+  for (let x = 0; x < width; x++) {
+    stack.push(x, (height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y++) {
+    stack.push(y * width, y * width + width - 1);
+  }
+  while (stack.length > 0) {
+    const i = stack.pop()!;
+    if (!ink[i]) {
+      continue;
+    }
+    ink[i] = 0;
+    const x = i % width;
+    if (x > 0) stack.push(i - 1);
+    if (x < width - 1) stack.push(i + 1);
+    if (i >= width) stack.push(i - width);
+    if (i < ink.length - width) stack.push(i + width);
+  }
+
+  for (let i = 0; i < ink.length; i++) {
+    const shade = ink[i] ? 0 : 255;
+    data[i * 4] = data[i * 4 + 1] = data[i * 4 + 2] = shade;
+    data[i * 4 + 3] = 255;
+  }
+  context.putImageData(image, 0, 0);
 }
 
 // Removes the background from a greyscale crop (`canvas`, of `box`, enlarged
