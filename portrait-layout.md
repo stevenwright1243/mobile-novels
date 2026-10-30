@@ -57,9 +57,12 @@ bottom, and never moves it.
 
 ## Corner buttons
 
-- **Menus** (top-left) and **Log** (top-right): frosted pills, at least 44px
-  tall, `clamp(0.5rem, 3vw, 1rem)` from the edges, text
-  `clamp(0.95rem, 4vw, 1.2rem)`.
+- **Menus** (top-left) and **Log** (top-right): frosted pills, at least 48px
+  tall, `clamp(0.75rem, 4.5vw, 2rem)` from the top and sides (set in a little
+  further than the message window), text `clamp(1.05rem, 4.75vw, 1.75rem)`,
+  padding `0.5em 1.15em`. Set in `.corner-button` in `src/portrait.css`.
+  (Before 2026-10-29: 44px, `clamp(0.5rem, 3vw, 1rem)`,
+  `clamp(0.95rem, 4vw, 1.2rem)`.)
 - **Menus** shows the whole game screen in full (taps map 1:1) until tapped
   again ("Reader"). Not saved.
 - **Log** opens the history log: "Return to game" on top, one line in the

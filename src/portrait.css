@@ -222,20 +222,21 @@ body {
   border-radius: 999px;
 }
 
-/* The corner buttons (Menus top-left, Log top-right): small frosted
-   pills over the background. Still at least 44px tall, a comfortable size
-   for a finger. */
+/* The corner buttons (Menus top-left, Log top-right): frosted pills over
+   the background, set in a little from the edges. Sized by the window's
+   width, like the text, so they keep up with it on a big phone display.
+   Always at least 48px tall, a comfortable size for a finger. */
 .corner-button {
-  --corner-gap: clamp(0.5rem, 3vw, 1rem);
+  --corner-gap: clamp(0.75rem, 4.5vw, 2rem);
   position: absolute;
   top: var(--corner-gap);
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 0.4em;
-  min-height: 44px;
-  padding: 0.4em 1em;
-  font-size: clamp(0.95rem, 4vw, 1.2rem);
+  gap: 0.45em;
+  min-height: 48px;
+  padding: 0.5em 1.15em;
+  font-size: clamp(1.05rem, 4.75vw, 1.75rem);
 }
 
 #raw-button {
