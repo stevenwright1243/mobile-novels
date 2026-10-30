@@ -465,12 +465,13 @@ h2 {
   right: 0;
 }
 
-/* The name box is small, so its name goes just below it (lined up with the
+/* The name box is small, so its name goes just above it (lined up with the
    dashed border's outer edge), clear of the name it's around. Where that
-   would hang off the bottom of the game picture, region-editor.ts adds
+   would hang off the top of the game picture, region-editor.ts adds
    `label-inside`, putting it in the top left corner inside instead. */
 .outline[data-region='name']:not(.label-inside) > span {
-  top: calc(100% + 2px);
+  top: auto;
+  bottom: calc(100% + 2px);
   left: -2px;
 }
 

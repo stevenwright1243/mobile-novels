@@ -128,8 +128,8 @@ function showOutlines() {
   showFields();
 }
 
-// The name box's name goes just below it, unless that would hang off the
-// bottom of the game picture; then it goes inside, in the top left corner
+// The name box's name goes just above it, unless that would hang off the
+// top of the game picture; then it goes inside, in the top left corner
 // (the `label-inside` class in index.css). Rechecked whenever a region moves
 // or the picture changes size, since the label's size is in screen pixels.
 // (The other regions' names sit inside their boxes; see index.css.)
@@ -142,11 +142,10 @@ function placeLabels() {
     const label = outline.querySelector<HTMLElement>(':scope > span');
     const region = regions[outline.dataset.region as RegionName];
     if (label && outline.dataset.region === 'name') {
-      // Where the label's bottom edge would be, in pixels down the picture
+      // Where the label's top edge would be, in pixels down the picture
       // (2px for the border it sits outside).
-      const bottom =
-        (region.y + region.h) * frameHeight + 2 + label.offsetHeight;
-      outline.classList.toggle('label-inside', bottom > frameHeight);
+      const top = region.y * frameHeight - 2 - label.offsetHeight;
+      outline.classList.toggle('label-inside', top < 0);
     }
   }
 }
