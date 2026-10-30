@@ -161,15 +161,19 @@ textStyle.listen((style) =>
 );
 
 // The sizes are only saved when asked (as in the picker; the button size
-// too, though it's for every game), so while there are changes, Save and
-// Reset show: Reset puts back the values as last saved. The game's sliders
-// are disabled while no game is picked.
-const actions = document.querySelector<HTMLElement>('#sheet-actions')!;
+// too, though it's for every game), so Save and Reset sit at the bottom of
+// Sizes, and can be pressed while there are changes: Reset puts back the values as
+// last saved. The game's sliders are disabled while no game is picked.
+const actionButtons = document.querySelectorAll<HTMLButtonElement>(
+  '#sheet-actions button',
+);
 const gameSliders = document.querySelectorAll<HTMLInputElement>(
   '#sheet-text-size, #sheet-name-size, #sheet-background-y, #sheet-background-width, #text-position',
 );
 function showSaveState({ hasGame, edited }: SaveState) {
-  actions.hidden = !edited;
+  for (const button of actionButtons) {
+    button.disabled = !edited;
+  }
   for (const slider of gameSliders) {
     slider.disabled = !hasGame;
   }

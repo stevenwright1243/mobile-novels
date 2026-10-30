@@ -208,11 +208,12 @@
               are this game's; button size is for every game. Changes show at
               once, and are kept when you save.
             </p>
-            <!-- Shown while there are unsaved changes: Save keeps them, Reset
-                 puts back the values as last saved. -->
-            <div id="sheet-actions" hidden>
-              <button id="sheet-save" class="chip">Save</button>
-              <button id="sheet-reset" class="chip">Reset</button>
+            <!-- At the bottom of Sizes, always shown while it's open: Save
+                 keeps the changes, Reset puts back the values as last saved.
+                 Disabled (and blurred) while there's nothing to save. -->
+            <div id="sheet-actions">
+              <button id="sheet-save" class="chip" disabled>Save</button>
+              <button id="sheet-reset" class="chip" disabled>Reset</button>
             </div>
           </div>
         </details>

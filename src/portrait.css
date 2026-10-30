@@ -1194,14 +1194,19 @@ body {
   cursor: default;
 }
 
-/* Save and Reset, side by side: Save solid in the accent, Reset plain. */
+/* Save and Reset, side by side at the bottom of Sizes: Save solid in the
+   accent, Reset plain. */
 #sheet-actions {
   display: flex;
   gap: 0.6em;
 }
 
-#sheet-actions[hidden] {
-  display: none;
+/* With nothing to save: dimmed, a little blurred, and not pressable. */
+#sheet-actions .chip:disabled {
+  opacity: 0.45;
+  filter: blur(1.5px);
+  cursor: default;
+  pointer-events: none;
 }
 
 #sheet-actions .chip {

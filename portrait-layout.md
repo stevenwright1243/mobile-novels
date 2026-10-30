@@ -157,8 +157,10 @@ game's name box (the `name` region, per game).
   input is 48px tall, the track 0.45em, the thumb 1.6em. Under them, **Text
   position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
   filled with the accent for Top), "Top". A note says which
-  are the game's. While any of the four is unsaved, **Save** (accent) and
-  **Reset** (plain; back to the values as last saved) show side by side.
+  are the game's. At the drop-down's bottom, always there while it's open,
+  **Save** (accent) and **Reset** (plain; back to the values as last
+  saved) side by side: with nothing unsaved they're dimmed to 45%, blurred
+  1.5px and can't be pressed.
   Left of the sliders, a live miniature of the reader screen, **33vw** wide
   and the screen's shape (a third of its size each way): the picture at the
   chosen height, the line and name at the chosen sizes, and the corner
