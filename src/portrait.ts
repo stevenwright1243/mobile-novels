@@ -487,6 +487,24 @@ function showSpeaker(name: string) {
 window.vn.onSpeakerChanged(showSpeaker);
 window.vn.getSpeaker().then(showSpeaker);
 
+// --- Text zone height ----------------------------------------------------------
+
+// Each text zone's height (the reader's and the Sizes sample's), passed to
+// portrait.css as `--zone-height` on the zone itself: with text position
+// "top", it stops following the picture down where it would run off the
+// screen. A ResizeObserver gives the layout size, before the sample's
+// scaling, which is what the CSS works in.
+const zoneHeights = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const zone = entry.target as HTMLElement;
+    const height = entry.borderBoxSize[0].blockSize;
+    zone.style.setProperty('--zone-height', `${Math.ceil(height)}px`);
+  }
+});
+for (const zone of document.querySelectorAll('#text-zone, .text-zone')) {
+  zoneHeights.observe(zone);
+}
+
 // --- The Sizes sample ----------------------------------------------------------
 
 // While the Menus sheet's Sizes drop-down is open, it shows a small copy of

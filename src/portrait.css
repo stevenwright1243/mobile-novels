@@ -207,13 +207,14 @@ body {
 /* Text position "top" (the game's text style): the text zone hangs just
    under the picture's bottom edge (`--picture-bottom`, from portrait.ts),
    a small gap below it, and grows downward with the text. Never above the
-   corner buttons' row, and never so low there's no room for the window:
-   at most 60% of the way down. */
+   corner buttons' row, and never so low it would run off the bottom:
+   `--zone-height` is the zone's own height, measured by portrait.ts, so it
+   stops where its bottom meets the screen's (with the usual gap). */
 .portrait[data-text-position='top'] :is(#text-zone, .text-zone) {
   align-self: start;
   margin-top: min(
     max(var(--picture-bottom, 0px) + var(--gap), var(--buttons-height)),
-    60dvh
+    100dvh - var(--zone-height, 0px)
   );
 }
 
