@@ -18,6 +18,7 @@ import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
+import { steamAppIdOf } from './steam';
 import {
   DEFAULT_BACKGROUND_WIDTH,
   DEFAULT_BACKGROUND_Y,
@@ -669,14 +670,21 @@ app.whenReady().then(async () => {
     });
   });
 
-  // The Menus sheet's Visual Novels: start a game that isn't running, from
-  // its saved .exe (in its own folder, as games expect), and pick it once
-  // its window opens. `detached` and `unref()` let it keep running on its
-  // own, even after this app closes.
+  // The Menus sheet's Visual Novels: start a game that isn't running, and
+  // pick it once its window opens. A Steam game is started through Steam,
+  // like its Play button (see steam.ts); any other from its saved .exe (in
+  // its own folder, as games expect). `detached` and `unref()` let it keep
+  // running on its own, even after this app closes.
   ipcMain.handle('launch-game', async (_event, id: string) => {
     const saved = (await listProfiles()).find((game) => game.id === id);
     if (!saved?.exePath) {
       return false;
+    }
+    pendingLaunch = { id, until: Date.now() + 60_000, picked: false };
+    const appId = await steamAppIdOf(saved.exePath);
+    if (appId) {
+      await shell.openExternal(`steam://rungameid/${appId}`);
+      return true;
     }
     const game = spawn(saved.exePath, [], {
       cwd: path.dirname(saved.exePath),
@@ -686,7 +694,6 @@ app.whenReady().then(async () => {
     // Without a listener, a failed start (a moved .exe) would crash main.
     game.on('error', (error) => console.error('Launch failed:', error));
     game.unref();
-    pendingLaunch = { id, until: Date.now() + 60_000, picked: false };
     return true;
   });
 
