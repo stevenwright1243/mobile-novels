@@ -1,5 +1,5 @@
 /**
- * The "Shown in portrait" box (picker window): outlines, inside the
+ * The "Portrait view" box (picker window): outlines, inside the
  * background region in the preview, the part of the background that makes
  * it onto the phone. The background's zoom and position are fixed
  * (`BACKGROUND_VIEW`); what's shown depends on them and on the shape of the
