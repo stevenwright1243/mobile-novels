@@ -164,6 +164,7 @@ Four separate problems, and it helps to keep them separate:
 | 4   | Streaming            | Apollo + Tailscale: play from your phone on mobile data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 5   | Real text            | OCR first (`tesseract.js` on the text region) → nicely styled text in the app. 5a: OCR test button. 5b: read automatically when the text box settles. 5c: styled text layer, image crop as fallback. Textractor / Windows OCR later as other text sources. _Moved ahead of 4._                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 6+  | Creative             | Sprite extraction, themes, per-game presets, history log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 7   | Sharing and setup    | _Final polish, last._ Another person can install the app and get streaming to their phone with as little manual work as reasonable: automate what the PC can do, and give detailed step-by-step instructions for the rest (the phone). See section 5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 **Start with Milestone 1.** It shows results fast, and everything else builds on it. You can test streaming (4) whenever you like, since it doesn't depend on your code.
 
@@ -179,3 +180,34 @@ Four separate problems, and it helps to keep them separate:
 ### A first prompt you can paste into Claude Code (after scaffolding)
 
 > This is an Electron Forge + Vite + TypeScript app. I want a window that lists open windows using desktopCapturer, lets me pick one, and shows it live. Then add a second "portrait" window laid out with CSS Grid named areas, each zone holding a canvas that a ResizeObserver keeps sized to its box (times devicePixelRatio). Draw two hard-coded regions of that capture into them, given as fractions of the game window: a background crop (cover) in a top zone (3fr) and a text-box crop (contain) in a bottom zone (2fr). Keep it simple and explain the main-process vs renderer split as you go.
+
+## 5. Milestone 7: sharing and setup (final polish)
+
+Do this last, once the app itself is done. The aim: automate as much of the setup as is reasonable, and give detailed steps for what can't be automated. It's based on what setting up Apollo and Artemis by hand took on 2026-10-29: Parsec's driver had to be gone, Apollo's Desktop app needed "Always use Virtual Display", a saved per-phone display mode (`1080x1920x30`) caused black bars and a 30 fps cap, Artemis was stuck in landscape until Auto Orientation was on, and closing Artemis only paused the session, leaving the portrait stuck on the phone's display.
+
+Each step is a small milestone that can be tested on its own:
+
+1. **7a: Packaging works.** `npm run package` / `npm run make` include koffi and tesseract.js (copied in, e.g. with a `packageAfterCopy` hook, and unpacked from the asar), and the OCR language data is bundled rather than downloaded on first use. The Squirrel installer then gives a normal install with auto-updates. Nothing can be shared before this.
+2. **7b: A "Phone setup" checklist page in the picker (detect only).** Each row shows ✅ or ⚠️ and how to fix it. Every check is one that was done by hand with PowerShell during 4a:
+   - Apollo installed (its uninstall registry entry) and running (the `ApolloService` service).
+   - Apollo's virtual display driver present: "SudoMaker Virtual Display Adapter" (the same lookup as `displayAdapterAt()`).
+   - No other virtual display drivers (Parsec and similar), which Apollo advises removing.
+   - A phone is paired, with "Always use virtual display" on and no display mode override.
+   - The phone's display while connected: size and scaling (the picker's pill already has these).
+   - Tailscale installed, and the PC's `100.x.x.x` address to type into Artemis.
+3. **7c: One-click fixes through Apollo's web API** (port 47990, the same service as its settings page, with the user's Apollo login). Check the exact endpoints and options against Apollo's source before building on them.
+   - Add the app's own **"VN Mobile" app entry** with "Always use Virtual Display", instead of asking users to edit Desktop (that leaves their normal Desktop streaming alone).
+   - Clear per-phone overrides like the display mode.
+   - If it works out: have that app entry launch VN Mobile, so connecting from Artemis starts everything.
+   - Setting Apollo's web login from the command line (Sunshine-based servers support this) could make first-time setup smoother.
+   - Store the Apollo password with Electron's `safeStorage` (encrypted), never in a plain JSON file.
+4. **7d: Pairing help.** Show Apollo's one-time pairing PIN (or a QR code) in the picker, so the user never opens Apollo's web page.
+5. **7e: Detailed phone steps** for what the PC can't do, with screenshots, in the checklist page:
+   - Install Artemis from its official download page (a QR code to it).
+   - Pair with the PIN from 7d.
+   - In Artemis's settings: **Auto Orientation** on, video resolution set to **Native** (or a custom resolution matching the phone, short side first).
+   - On the phone: auto-rotate on. On Samsung phones, Display → Screen resolution decides "native": FHD+ is the better choice for streaming.
+   - Connect to the "VN Mobile" entry holding the phone upright.
+   - When done, **Quit session** (long-press the PC in Artemis), not just close the app, or the phone's display stays behind. Otherwise, use the picker's PC / Phone switch.
+   - Install Tailscale on both and sign in with the same account; in Artemis, add the PC by its Tailscale address to play away from home.
+6. **Avoid:** bundling Apollo's installer inside the app (download it from Apollo's official releases instead: bundling ties the app to one Apollo version), and editing Apollo's config files directly (they're in Program Files, need admin rights, and can break while Apollo is running; its web API is the supported way in).
