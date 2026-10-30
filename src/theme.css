@@ -49,32 +49,59 @@
   accent-color: var(--accent-deep);
 }
 
-/* You and Me and Her: candy pink and white, with a cyan glitch running
-   through it (faint diagonal stripes, a cyan rim). */
+/* You and Me and Her: quiet and clean, like its message window: no box at
+   all, just a white haze rising from the bottom of the screen, soft
+   charcoal text in a plain sans, a thin grey chevron. Greys with no colour.
+   Picking it in the picker also picks the plain border and the chevron
+   (message-style.ts). */
 :root[data-theme='kimikano'] {
-  --accent: #ff7eb3;
-  --accent-deep: #e0457f;
-  --accent-pale: #fff0f6;
-  --ink: #3a2a3f;
-  --line: #ffc4dc;
+  --accent: #8c8c94;
+  --accent-deep: #55555c;
+  --accent-pale: #f2f2f4;
+  --ink: #2a2a2e;
+  --line: #d8d8dc;
   --on-accent: #fff;
   --surface: #fff;
-  --surface-tint: #fff0f7;
-  --shadow: #8a2d5a;
-  --deep: #241a2e;
-  --stage-top: #ffc0da;
-  --backdrop-tint: rgb(255 228 240 / 35%);
-  --rim-light: #6fe0e8;
-  --glass-pattern: repeating-linear-gradient(
-    135deg,
-    rgb(111 224 232 / 9%) 0 6px,
-    transparent 6px 14px
+  --surface-tint: #fafafa;
+  --shadow: #3a3a40;
+  --deep: #1c1c20;
+  --stage-top: #e6e6ea;
+  --backdrop-tint: rgb(255 255 255 / 30%);
+  --rim-light: #fff;
+  --glass-pattern: none;
+  --glass-blur: 6px;
+  /* Windows' own plain sans, always installed there. */
+  --font: 'Segoe UI', system-ui, sans-serif;
+  --text-weight: 500;
+  --corner: 0.4;
+  --pill: 0.4rem;
+}
+
+/* The haze: the whole text zone fades from clear to white, edge to edge and
+   down to the bottom of the screen, with room above the text for the fade.
+   (More specific than portrait.css's text-mode rules, so it wins.) */
+:root[data-theme='kimikano'] .portrait.text-mode #text-zone {
+  padding-top: 3rem;
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0%),
+    rgb(255 255 255 / 85%) 3rem,
+    rgb(255 255 255 / 95%)
   );
-  --glass-blur: 10px;
-  --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
-  --text-weight: 600;
-  --corner: 1.2;
-  --pill: 999px;
+}
+
+/* The message window itself is see-through: no glass, no edge. Border
+   options still draw over it (they're as specific as this and come later). */
+:root[data-theme='kimikano'] #text-line {
+  background: none;
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* A thin chevron, as in the game. */
+:root[data-theme='kimikano'] .portrait #next-arrow .chevron {
+  stroke-width: 2;
 }
 
 /* Katawa Shoujo: quiet and warm, like a spring afternoon at school: cream

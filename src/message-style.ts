@@ -28,12 +28,20 @@ arrow.addEventListener('change', styleChanged);
 window.vn.getMessageStyle().then(showStyle);
 
 // The theme. Main sends the change to every window, this one included.
+// Themes that come with their own border or arrow, picked along with the
+// theme (they can still be changed after). `Partial` means "some of".
+const THEME_STYLES: Partial<Record<ThemeName, Partial<MessageStyle>>> = {
+  kimikano: { border: 'none', arrow: 'chevron' },
+  miside: { arrow: 'hearts' },
+};
+
 const theme = document.querySelector<HTMLSelectElement>('#theme')!;
 theme.addEventListener('change', () => {
   window.vn.setTheme(theme.value as ThemeName);
-  // MiSide comes with its two-hearts arrow (it can still be changed after).
-  if (theme.value === 'miside') {
-    arrow.value = 'hearts';
+  const style = THEME_STYLES[theme.value as ThemeName];
+  if (style) {
+    border.value = style.border ?? border.value;
+    arrow.value = style.arrow ?? arrow.value;
     styleChanged();
   }
 });

@@ -60,7 +60,7 @@ type ThemeName =
 // The look of the portrait's message window (the picker's Style settings,
 // an app setting): the effect around its edge, and the "tap to continue"
 // arrow in its corner.
-type MessageBorder = 'halo' | 'rim' | 'ribbon';
+type MessageBorder = 'halo' | 'rim' | 'ribbon' | 'none';
 type NextArrow = 'chevron' | 'dots' | 'triangle' | 'hearts';
 interface MessageStyle {
   border: MessageBorder;

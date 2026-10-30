@@ -68,7 +68,12 @@ bottom, and never moves it.
   same for every game):
   - Border: **Halo** (default; a soft accent glow all round, slowly breathing),
     **Turning rim** (a 5px gradient ring that turns once every 6s), or
-    **Ribbon** (the original 3px accent ribbon on the top edge).
+    **Ribbon** (the original 3px accent ribbon on the top edge), or **None**
+    (just the glass).
+  - The You and Me and Her theme has no glass: the whole text zone fades from
+    clear to white (3rem of fade above the text), edge to edge and down to the
+    bottom of the screen, with a thin (2px) chevron. Picking that theme picks
+    border None and the chevron.
   - Arrow: **Chevron** (default; a rounded ⌄ that bobs), **Dots** (three dots
     hopping in turn), **Triangle** (the original bobbing ▼), or **Hearts** (a
     big heart and a small one, like MiSide's menu cursor, beating gently;
