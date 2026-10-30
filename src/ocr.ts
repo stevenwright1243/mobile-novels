@@ -153,17 +153,44 @@ const PARAGRAPH_GAP = 0.4;
 
 function splitParagraphs(lines: Line[]) {
   const usual = median(lines.map((line) => line.bottom - line.top));
-  const paragraphs: string[][] = [];
+  const paragraphs: Word[][] = [];
   lines.forEach((line, i) => {
     const gap = i === 0 ? Infinity : line.top - lines[i - 1].bottom;
     if (gap > PARAGRAPH_GAP * usual) {
       paragraphs.push([]);
     }
-    paragraphs.at(-1)!.push(line.words.map((word) => word.text).join(' '));
+    paragraphs.at(-1)!.push(...line.words);
   });
   return paragraphs.map((paragraph) =>
-    fixCommonMistakes(paragraph.join(' ')).trim(),
+    fixCommonMistakes(
+      withoutLoneEnd(paragraph)
+        .map((word) => word.text)
+        .join(' '),
+    ).trim(),
   );
+}
+
+// --- A lone letter after a sentence ends ---------------------------------------
+//
+// Text never ends on a letter on its own, with no punctuation, right after
+// a sentence has ended: "I tried to read them. I". That letter is a mark
+// read as one (any upright stroke reads as "I": a pole in the art, the
+// box's edge, the mouse pointer), so it's dropped. Only at the very end of
+// the text (or of a paragraph): in the middle, it's a sentence going on to
+// the next line ("them. I / wanted to..."). A "|" counts, since it's how an
+// "I" is often read before `fixCommonMistakes` turns it into one.
+const LONE_LETTER = /^[\p{L}|]$/u;
+// A word ending a sentence: ".", "!", "?" or "…", maybe followed by a
+// closing quote or bracket.
+const SENTENCE_END = /[.!?…]["'”’)\]]*$/u;
+
+function withoutLoneEnd(words: Word[]) {
+  const n = words.length;
+  const loneEnd =
+    n >= 2 &&
+    LONE_LETTER.test(words[n - 1].text) &&
+    SENTENCE_END.test(words[n - 2].text);
+  return loneEnd ? words.slice(0, -1) : words;
 }
 
 function median(values: number[]) {
@@ -230,6 +257,15 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
   const keptLines = lines.map((line) =>
     isMark(line) ? [] : mainPart(line.filter(fits)),
   );
+  // A lone letter at the very end, after a sentence ends, is dropped (see
+  // `withoutLoneEnd`). It's always on the last line with words.
+  const last = keptLines.findLastIndex((line) => line.length > 0);
+  if (last >= 0) {
+    const ends = keptLines.flat();
+    if (withoutLoneEnd(ends).length < ends.length) {
+      keptLines[last] = keptLines[last].slice(0, -1);
+    }
+  }
 
   const kept = keptLines.flat();
   const dropped = words.filter((word) => !kept.includes(word));
