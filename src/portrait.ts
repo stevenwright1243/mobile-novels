@@ -17,15 +17,11 @@ import './history-log';
 import './menus-sheet';
 import './visual-novels';
 import './input-settings';
+import './zoom-pad';
 import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';
-import {
-  onZoomedChanged,
-  resetZoom,
-  zoomByGestures,
-  zoomedPlace,
-} from './game-zoom';
+import { resetZoom, zoomByGestures, zoomedPlace } from './game-zoom';
 import {
   backgroundWidth,
   backgroundY,
@@ -87,9 +83,10 @@ let rawMode = false;
 const rawButton = document.querySelector<HTMLButtonElement>('#raw-button')!;
 rawButton.addEventListener('click', () => {
   rawMode = !rawMode;
-  // Each visit to Menus starts with the whole game.
-  resetZoom();
   portrait.classList.toggle('raw-mode', rawMode);
+  // Each visit to Menus starts with the whole game (after the layout
+  // switches, so the zoom pad sees the game's slot).
+  resetZoom();
   rawButton.classList.toggle('raw', rawMode);
   rawButton.setAttribute(
     'aria-label',
@@ -466,11 +463,6 @@ zoomByGestures(
       : null,
   (event) => inCanvasPixels(backgroundCanvas, event),
 );
-// While zoomed in, a 1× button over the game's corner zooms back out.
-onZoomedChanged((zoomed) => portrait.classList.toggle('zoomed', zoomed));
-document
-  .querySelector<HTMLButtonElement>('#zoom-reset')!
-  .addEventListener('click', resetZoom);
 
 backgroundCanvas.addEventListener('click', (event) => {
   const point = tapToGame(backgroundZone, event);

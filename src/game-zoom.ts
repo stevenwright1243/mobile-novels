@@ -19,25 +19,31 @@ const MAX_ZOOM = 4;
 const DRAG_START = 8;
 // How much the wheel zooms, per pixel of its `deltaY`.
 const WHEEL_ZOOM = 0.002;
+// The zoom pad's steps (zoom-pad.ts): each zoom tap zooms by √2, so two
+// taps double it and four go from the whole game to the most (4×); each
+// move tap goes half of what's shown, so part of the last view stays in
+// sight and you don't lose your place.
+const ZOOM_STEP = Math.SQRT2;
+const MOVE_STEP = 0.5;
 
 // How far in (1 = the whole game), and the point of the game (as fractions
 // of it) at the middle of the slot.
 let zoom = { scale: 1, cx: 0.5, cy: 0.5 };
 
-const listeners: ((zoomed: boolean) => void)[] = [];
+// Where the game is now, from portrait.ts (see `zoomByGestures`).
+let currentPlace: () => Place | null = () => null;
 
-// Called whenever the zoom goes from 1× to more, or back.
-export function onZoomedChanged(listener: (zoomed: boolean) => void) {
+const listeners: (() => void)[] = [];
+
+// Called whenever the zoom or the part shown changes.
+export function onZoomChanged(listener: () => void) {
   listeners.push(listener);
 }
 
 function setZoom(next: typeof zoom) {
-  const wasZoomed = zoom.scale > 1;
   zoom = next;
-  if (wasZoomed !== zoom.scale > 1) {
-    for (const listener of listeners) {
-      listener(zoom.scale > 1);
-    }
+  for (const listener of listeners) {
+    listener();
   }
 }
 
@@ -103,7 +109,13 @@ function moveZoom(place: Place, from: Point, to: Point, factor: number) {
   // The point of the game under `from`, as fractions of it.
   const gx = (from.x - dx) / dw;
   const gy = (from.y - dy) / dh;
-  const scale = Math.min(MAX_ZOOM, Math.max(1, zoom.scale * factor));
+  let scale = Math.min(MAX_ZOOM, Math.max(1, zoom.scale * factor));
+  // Steps of √2 don't land exactly back on 1× or on the most (rounding).
+  if (scale < 1.001) {
+    scale = 1;
+  } else if (scale > MAX_ZOOM - 0.001) {
+    scale = MAX_ZOOM;
+  }
   const width = baseWidth * scale;
   const height = baseHeight * scale;
   // Put that point at `to`, and see which point that leaves in the middle
@@ -126,6 +138,61 @@ function moveZoom(place: Place, from: Point, to: Point, factor: number) {
   });
 }
 
+// The zoom pad's buttons (zoom-pad.ts). Zooms in (`steps` 1) or out (-1)
+// around the middle of what's shown.
+export function zoomStep(steps: number) {
+  const place = currentPlace();
+  if (place) {
+    const middle = middleOf(place.box);
+    moveZoom(place, middle, middle, ZOOM_STEP ** steps);
+  }
+}
+
+// Moves what's shown right (`x` 1), left (-1), down (`y` 1) or up (-1).
+export function moveStep(x: number, y: number) {
+  const place = currentPlace();
+  if (place) {
+    const { box } = place;
+    const middle = middleOf(box);
+    // Seeing more to the right means moving the picture left.
+    moveZoom(
+      place,
+      middle,
+      {
+        x: middle.x - x * box.width * MOVE_STEP,
+        y: middle.y - y * box.height * MOVE_STEP,
+      },
+      1,
+    );
+  }
+}
+
+function middleOf(box: Box) {
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+// For the zoom pad: the zoom, and which ways it can still go (a direction
+// is false at that edge of the game, and every one at 1×).
+export function zoomState() {
+  const ways = { left: false, right: false, up: false, down: false };
+  const place = currentPlace();
+  if (place) {
+    const { box, dx, dy, dw, dh } = place;
+    // Part of the game hidden past each edge of the slot (with half a
+    // pixel's leeway, for rounding).
+    ways.left = dx < box.x - 0.5;
+    ways.right = dx + dw > box.x + box.width + 0.5;
+    ways.up = dy < box.y - 0.5;
+    ways.down = dy + dh > box.y + box.height + 0.5;
+  }
+  return {
+    scale: zoom.scale,
+    zoomIn: zoom.scale < MAX_ZOOM,
+    zoomOut: zoom.scale > 1,
+    ...ways,
+  };
+}
+
 // Pinching, dragging and the wheel on the canvas the game is drawn on.
 // `place` gives where the game is now (null outside Menus mode, which turns
 // this off), and `toCanvas` a pointer's position in the canvas's pixels.
@@ -134,6 +201,8 @@ export function zoomByGestures(
   place: () => Place | null,
   toCanvas: (event: MouseEvent) => Point,
 ) {
+  // The zoom pad uses it too.
+  currentPlace = place;
   // The fingers (or the mouse button) down on the canvas, where each was
   // last seen.
   const pointers = new Map<number, Point>();

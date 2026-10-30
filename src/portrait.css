@@ -858,18 +858,6 @@ body {
   display: none;
 }
 
-/* Zooms back out to the whole game: in the game slot's top-right corner,
-   only while zoomed in (the `zoomed` class, set by portrait.ts). */
-#zoom-reset {
-  display: none;
-  right: var(--corner-gap);
-  pointer-events: auto;
-}
-
-.portrait.zoomed #zoom-reset {
-  display: flex;
-}
-
 .portrait.raw-mode {
   --sheet-gap: clamp(0.5rem, 3vw, 1rem);
   grid-template-areas:
@@ -895,10 +883,6 @@ body {
     display: block;
     grid-area: game;
     height: min(100vw / var(--game-aspect, 1.7778), 55dvh);
-    /* Holds the 1× button in its corner, while taps go through it to the
-       canvas behind, which the game is drawn on. */
-    position: relative;
-    pointer-events: none;
   }
 
   /* Pinches and drags on the game go to game-zoom.ts, not to the browser's
@@ -1291,6 +1275,74 @@ body {
   color: var(--on-accent);
   background: linear-gradient(var(--accent), var(--accent-deep));
   border-color: var(--accent-deep);
+}
+
+/* The zoom pad, at the sheet's top: zoom in over zoom out on the left, a
+   d-pad of square buttons on the right with the zoom level in its middle,
+   the two spread across the row. A button that would do nothing is
+   dimmed. */
+#zoom-pad {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 1em;
+
+  .chip {
+    width: 2.6em;
+    height: 2.6em;
+    min-width: 48px;
+    padding: 0;
+  }
+
+  .chip:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  svg {
+    width: 1.4em;
+    height: 1.4em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.zoom-buttons {
+  display: grid;
+  gap: 0.5em;
+}
+
+.move-buttons {
+  display: grid;
+  grid-template-areas:
+    '. up .'
+    'left level right'
+    '. down .';
+  gap: 0.3em;
+
+  [data-way='up'] {
+    grid-area: up;
+  }
+
+  [data-way='left'] {
+    grid-area: left;
+  }
+
+  [data-way='right'] {
+    grid-area: right;
+  }
+
+  [data-way='down'] {
+    grid-area: down;
+  }
+
+  #zoom-level {
+    grid-area: level;
+    font-weight: 700;
+  }
 }
 
 /* Full-screen text and Screenshot share the sheet's top row, half each,

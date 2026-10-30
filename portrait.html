@@ -59,18 +59,84 @@
       <!-- Menus mode only (the `raw-mode` class): an empty box under the
            corner buttons that the whole game is drawn into (portrait.ts),
            and the settings sheet below it (menus-sheet.ts). The game can be
-           pinched to zoom in (game-zoom.ts); then a 1× button in the
-           slot's corner zooms back out. -->
-      <div id="game-slot">
-        <button
-          id="zoom-reset"
-          class="corner-button glass"
-          aria-label="Zoom out to the whole game"
-        >
-          1×
-        </button>
-      </div>
+           pinched to zoom in (game-zoom.ts), or zoomed with the pad at the
+           top of the sheet. -->
+      <div id="game-slot"></div>
       <section id="menus-sheet" class="glass" aria-label="Settings">
+        <!-- Zoom in and out on the left, a d-pad to move around the game on
+             the right, the zoom level in its middle: tap it for the whole
+             game (zoom-pad.ts). -->
+        <div id="zoom-pad" role="group" aria-label="Zoom and move around">
+          <div class="zoom-buttons">
+            <button id="zoom-in" class="chip" aria-label="Zoom in">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M15.5 15.5 20 20M8 10.5h5M10.5 8v5"
+                />
+              </svg>
+            </button>
+            <button id="zoom-out" class="chip" aria-label="Zoom out">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M15.5 15.5 20 20M8 10.5h5"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="move-buttons">
+            <button
+              class="chip"
+              data-way="up"
+              data-x="0"
+              data-y="-1"
+              aria-label="Move up"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 15l6-6 6 6" />
+              </svg>
+            </button>
+            <button
+              class="chip"
+              data-way="left"
+              data-x="-1"
+              data-y="0"
+              aria-label="Move left"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </button>
+            <button
+              id="zoom-level"
+              class="chip"
+              aria-label="Show the whole game"
+            >
+              1×
+            </button>
+            <button
+              class="chip"
+              data-way="right"
+              data-x="1"
+              data-y="0"
+              aria-label="Move right"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+            <button
+              class="chip"
+              data-way="down"
+              data-x="0"
+              data-y="1"
+              aria-label="Move down"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
+        </div>
         <!-- Full-screen text and Screenshot, side by side. -->
         <div id="sheet-tools">
           <div class="sheet-tool">
