@@ -14,6 +14,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
 import { followPhoneDisplay } from './phone-display';
+import { loadSettings, saveSettings, type Settings } from './settings';
 import {
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
@@ -71,6 +72,12 @@ let textHistory: string[] = [];
 // The phone's display while the phone is streaming (the portrait is full
 // screen on it), or null. See phone-display.ts.
 let phoneDisplay: PhoneDisplay | null = null;
+// Moves the portrait between the phone's display and the PC. Set once the
+// portrait window exists.
+let setPortraitOnPhone: ((onPhone: boolean) => void) | null = null;
+
+// App-wide settings (settings.ts), loaded before the windows open.
+let settings: Settings;
 
 // The picked game's profile: its regions, click method and so on (see
 // profiles.ts). Null until a game is picked. Changes apply live, but are only
@@ -233,10 +240,12 @@ const createMainWindow = (bounds: Rectangle) => {
       quitting = false;
     }
   });
+  return mainWindow;
 };
 
-// The portrait view that gets streamed to the phone.
-const createPortraitWindow = (bounds: Rectangle) => {
+// The portrait view that gets streamed to the phone. Coming back from the
+// phone, it matches the picker's height.
+const createPortraitWindow = (bounds: Rectangle, picker: BrowserWindow) => {
   portraitWindow = new BrowserWindow({
     ...bounds,
     webPreferences: {
@@ -296,18 +305,24 @@ const createPortraitWindow = (bounds: Rectangle) => {
   loadPage(portrait, 'portrait.html');
 
   // While the phone is streaming, the portrait fills the phone's display.
-  followPhoneDisplay(portrait, (phone) => {
-    phoneDisplay = phone;
-    broadcast('phone-display-changed', phoneDisplay);
-    if (DEBUG) {
-      const displays = screen.getAllDisplays().map((display) => ({
-        label: display.label,
-        bounds: display.bounds,
-        scale: display.scaleFactor,
-      }));
-      console.log('Phone display:', phoneDisplay, 'All displays:', displays);
-    }
-  });
+  const placement = followPhoneDisplay(
+    portrait,
+    (phone) => {
+      phoneDisplay = phone;
+      broadcast('phone-display-changed', phoneDisplay);
+      if (DEBUG) {
+        const displays = screen.getAllDisplays().map((display) => ({
+          label: display.label,
+          bounds: display.bounds,
+          scale: display.scaleFactor,
+        }));
+        console.log('Phone display:', phoneDisplay, 'All displays:', displays);
+      }
+    },
+    () => (picker.isDestroyed() ? null : picker.getNormalBounds()),
+    settings.portraitOnPhone,
+  );
+  setPortraitOnPhone = placement.setOnPhone;
 };
 
 // For now, open the two windows docked side by side and centered on the main
@@ -324,14 +339,17 @@ const createWindows = () => {
   const x = area.x + Math.round((area.width - mainWidth - portraitWidth) / 2);
   const y = area.y + Math.round((area.height - height) / 2);
 
-  createMainWindow({ x, y, width: mainWidth, height });
-  createPortraitWindow({ x: x + mainWidth, y, width: portraitWidth, height });
+  const picker = createMainWindow({ x, y, width: mainWidth, height });
+  createPortraitWindow(
+    { x: x + mainWidth, y, width: portraitWidth, height },
+    picker,
+  );
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // The renderer can't use desktopCapturer, so it asks for the window list
   // here over IPC (see preload.ts for the other end).
   ipcMain.handle('list-windows', async (): Promise<WindowSource[]> => {
@@ -637,7 +655,15 @@ app.whenReady().then(() => {
   ipcMain.handle('get-text-history', () => textHistory);
 
   ipcMain.handle('get-phone-display', () => phoneDisplay);
+  // The PC / Phone switch, saved straight away.
+  ipcMain.handle('get-portrait-on-phone', () => settings.portraitOnPhone);
+  ipcMain.handle('set-portrait-on-phone', async (_event, onPhone: boolean) => {
+    settings = { ...settings, portraitOnPhone: onPhone };
+    setPortraitOnPhone?.(onPhone);
+    await saveSettings(settings);
+  });
 
+  settings = await loadSettings();
   createWindows();
 
   // On OS X it's common to re-create a window in the app when the
