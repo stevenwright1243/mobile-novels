@@ -13,7 +13,13 @@
  *     line, finished; send it to main and stop reading.
  */
 
-import { cropForOcr, type OcrPrep, pngBytes, type VideoRect } from './capture';
+import {
+  cropForOcr,
+  type OcrPrep,
+  ocrScale,
+  pngBytes,
+  type VideoRect,
+} from './capture';
 
 // How often to check the text box, in milliseconds. Counted from the end of
 // the previous check, so a slow read never piles up behind another.
@@ -252,12 +258,30 @@ function readDots({ width, median, ink, total, letter }: Ink) {
   return '…'.repeat(Math.floor(dots / 3)) + '.'.repeat(dots % 3);
 }
 
-// Reads a box with OCR, prepared as `prep` says. `text` is what was read,
-// tidied, and `ok` whether it passes as text (garbage counts as an empty
-// box).
-async function readBox(video: HTMLVideoElement, box: VideoRect, prep: OcrPrep) {
+// A read that saw something but wasn't sure enough is tried once more with
+// the crop this much bigger than usual (`ocrScale()`). Short lines in small
+// text are the weak spot: Aokana's "N..." showed in the live portrait with
+// this and went missing without it. Only failed reads pay for it, and a
+// confirmed line isn't read again.
+const RETRY_ENLARGE = 1.5;
+
+// Reads a box with OCR, prepared as `prep` says, enlarged `enlarge` times
+// more than usual. `text` is what was read, tidied, and `ok` whether it
+// passes as text (garbage counts as an empty box).
+async function readBox(
+  video: HTMLVideoElement,
+  box: VideoRect,
+  prep: OcrPrep,
+  enlarge = 1,
+) {
+  const usual = ocrScale(video, box);
   const { text, confidence } = await window.vn.readText(
-    await pngBytes(await cropForOcr(video, box, prep)),
+    await pngBytes(
+      await cropForOcr(video, box, prep, {
+        ...usual,
+        scale: usual.scale * enlarge,
+      }),
+    ),
   );
   const tidied = tidy(text);
   const minConfidence =
@@ -301,7 +325,21 @@ export function startTextReader(
         dotsAppeared
       ) {
         lastSample = sample;
-        const clean = await readBox(video, box, 'clean');
+        let clean = await readBox(video, box, 'clean');
+        // Something was seen but not trusted: try bigger, and keep the
+        // surer of the two. A bigger read must have a letter or digit in it:
+        // enlarged art can pass as a lone mark ("'"), and lines of only dots
+        // are counted separately (`readDots`).
+        if (!clean.ok && clean.text !== '') {
+          const bigger = await readBox(video, box, 'clean', RETRY_ENLARGE);
+          const hasLetters = /[\p{L}\p{N}]/u.test(bigger.text);
+          if (
+            hasLetters &&
+            (bigger.ok || bigger.confidence > clean.confidence)
+          ) {
+            clean = bigger;
+          }
+        }
         let read = clean.ok ? clean.text : '';
         if (!read && textBox) {
           const ink = measureInk(video, box);

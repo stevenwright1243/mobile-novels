@@ -6,10 +6,11 @@
 //   npm run ocr-bench                    the code as it is now
 //   npm run ocr-bench -- HEAD~3 1fab162  ...and those commits, side by side
 //   npm run ocr-bench -- --only aokana   only tests whose file names match
-//   npm run ocr-bench -- --scales 1      only full size (default: 1 and 0.6)
+//   npm run ocr-bench -- --scales 1      only full size (default: 1, 0.8 and 0.6)
 //   npm run ocr-bench -- --verbose       also every OCR attempt, to see why
 //
-// Each test runs at full size and at 60% (to check small text too). The
+// Each test runs at full size, 80% and 60% (small text is the weak spot,
+// and the live capture can be any size in between). The
 // tests live in %APPDATA%\mobile-novel\ocr-tests (see src/ocr-tests.ts).
 
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -45,7 +46,7 @@ const verbose = args.includes('--verbose');
 if (verbose) {
   args.splice(args.indexOf('--verbose'), 1);
 }
-const scales = option('--scales', '1,0.6').split(',').map(Number);
+const scales = option('--scales', '1,0.8,0.6').split(',').map(Number);
 const versions = ['now', ...args];
 
 // --- Tests ---
