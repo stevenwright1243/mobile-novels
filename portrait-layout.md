@@ -47,7 +47,7 @@ bottom, and never moves it.
   `clamp(1.125rem, 5vw, 2rem)`, so 100% now equals the old 150%.
 - Font: Nunito, weight 600, line height 1.55.
 
-## Message window (text mode)
+## Message window
 
 - **Height:** room for **3 lines** at the chosen text size, plus padding.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
@@ -103,7 +103,7 @@ game's name box (the `name` region, per game).
 - **Image mode:** the name box's picture, shaped like the name region,
   `1.5 ×` the base text size × Name size tall (at most 70% of the width), sitting on the
   text box's top edge, `clamp(0.5rem, 3vw, 1rem)` from the left.
-- Tapping it (text mode) clicks the game's text box, like the message window.
+- Tapping it clicks the game's text box, like the message window.
 
 ## Corner buttons
 

@@ -28,25 +28,13 @@ interface Zone {
 const backgroundCanvas = document.querySelector<HTMLCanvasElement>(
   '#background-zone canvas',
 )!;
-const zones: Zone[] = [
-  {
-    canvas: backgroundCanvas,
-    region: 'background',
-    view: () => BACKGROUND_VIEW,
-  },
-  {
-    // The text box picture always shows in full, so no text is cut off.
-    canvas: document.querySelector('#text-zone canvas')!,
-    region: 'text',
-    view: () => SHOW_ALL,
-  },
-  {
-    // The name box picture (image mode), in the name tag.
-    canvas: document.querySelector('#name-tag canvas')!,
-    region: 'name',
-    view: () => SHOW_ALL,
-  },
-];
+// The only zone drawn from the capture: the game's text and name are read
+// by OCR and shown as text, not as pictures.
+const backgroundZone: Zone = {
+  canvas: backgroundCanvas,
+  region: 'background',
+  view: () => BACKGROUND_VIEW,
+};
 
 // The current regions, kept up to date by main. Null until they arrive.
 let regions: Regions | null = null;
@@ -57,18 +45,7 @@ window.vn.getRegions().then((initialRegions) => {
   regions ??= initialRegions;
 });
 
-// How the text zone shows the game's text (see `TextMode`). The `text-mode`
-// class switches the zone's look in portrait.css; in text mode its canvas is
-// hidden and not drawn.
 const portrait = document.querySelector<HTMLElement>('.portrait')!;
-let textMode: TextMode = 'text';
-function setTextMode(mode: TextMode) {
-  textMode = mode;
-  portrait.classList.toggle('text-mode', mode === 'text');
-  reportZoneSize();
-}
-window.vn.onTextModeChanged(setTextMode);
-window.vn.getTextMode().then(setTextMode);
 
 // --- Menus: the whole game ("raw mode") -------------------------------------------------------
 
@@ -92,12 +69,10 @@ rawButton.addEventListener('click', () => {
 // What a zone shows, and how: in whole-game mode the background zone shows
 // the whole game, all of it (`SHOW_ALL`); otherwise its own region and view.
 function zoneRegion(zone: Zone, regions: Regions) {
-  return rawMode && zone.region === 'background'
-    ? WHOLE_GAME
-    : regions[zone.region];
+  return rawMode ? WHOLE_GAME : regions[zone.region];
 }
 function zoneView(zone: Zone) {
-  return rawMode && zone.region === 'background' ? SHOW_ALL : zone.view();
+  return rawMode ? SHOW_ALL : zone.view();
 }
 
 // The text and name sizes (see `TextStyle`), passed to portrait.css as
@@ -127,8 +102,7 @@ window.vn.onMessageStyleChanged(setMessageStyle);
 window.vn.getMessageStyle().then(setMessageStyle);
 
 // The picker outlines the part of the background that's shown, which depends
-// on the zone's shape (it changes with the text mode and the window's size),
-// so let it know.
+// on the zone's shape (it changes with the window's size), so let it know.
 function reportZoneSize() {
   window.vn.setBackgroundZoneSize({
     width: backgroundCanvas.width,
@@ -161,14 +135,10 @@ const resizeObserver = new ResizeObserver((entries) => {
     canvas.width = size.inlineSize;
     canvas.height = size.blockSize;
     // The window resized: the zone's shape may have changed.
-    if (canvas === backgroundCanvas) {
-      reportZoneSize();
-    }
+    reportZoneSize();
   }
 });
-for (const zone of zones) {
-  resizeObserver.observe(zone.canvas, { box: 'device-pixel-content-box' });
-}
+resizeObserver.observe(backgroundCanvas, { box: 'device-pixel-content-box' });
 
 // Where a zone's region comes from in the video (`s...`, source) and where it
 // lands on the zone's canvas (`d...`, destination), all in pixels. Used both
@@ -248,47 +218,19 @@ function drawZone(zone: Zone, regions: Regions) {
   const place = placeZone(zone, regions);
   const { sx, sy, sw, sh, dx, dy, dw, dh } = place;
   context.clearRect(0, 0, canvas.width, canvas.height);
-  // Space around the picture: fill it with the backdrop rather than black
-  // (the text box picture keeps plain bars, so the text stands out).
+  // Space around the picture: fill it with the backdrop rather than black.
   const leavesSpace = dw < canvas.width - 1 || dh < canvas.height - 1;
-  if (leavesSpace && zone.region === 'background') {
+  if (leavesSpace) {
     drawBackdrop(context, place);
   }
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
-}
-
-// Shapes an element like a region (width / height in real pixels), through a
-// CSS variable (`--text-aspect` for the text zone, `--name-aspect` for the
-// name tag), so the picture's `contain` fit has no bars. Only touches the
-// style when the shape changes, so layout isn't redone every frame.
-const textZone = document.querySelector<HTMLElement>('#text-zone')!;
-const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
-const aspects = new Map<HTMLElement, string>();
-function fitShape(element: HTMLElement, variable: string, { w, h }: Region) {
-  const aspect = (
-    (w * clientArea.w * video.videoWidth) /
-    (h * clientArea.h * video.videoHeight)
-  ).toFixed(4);
-  if (aspect !== aspects.get(element)) {
-    aspects.set(element, aspect);
-    element.style.setProperty(variable, aspect);
-  }
 }
 
 // Redraw every screen refresh. `requestAnimationFrame` calls us just before
 // the browser paints, so drawing stays in step with the display.
 function drawFrame() {
   if (regions && video.videoWidth > 0) {
-    fitShape(textZone, '--text-aspect', regions.text);
-    fitShape(nameTag, '--name-aspect', regions.name);
-    for (const zone of zones) {
-      // The text and name box pictures aren't shown in text mode or
-      // whole-game mode.
-      if (zone.region !== 'background' && (textMode === 'text' || rawMode)) {
-        continue;
-      }
-      drawZone(zone, regions);
-    }
+    drawZone(backgroundZone, regions);
   }
   requestAnimationFrame(drawFrame);
 }
@@ -331,9 +273,10 @@ function showRipple(event: MouseEvent) {
   ripple.addEventListener('animationend', () => ripple.remove());
 }
 
-// In text mode, a tap on the text clicks the middle of the game's text box,
-// which moves on to the next line in most VNs.
+// A tap on the text clicks the middle of the game's text box, which moves on
+// to the next line in most VNs.
 const textLine = document.querySelector<HTMLParagraphElement>('#text-line')!;
+const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
 function clickTextBox(event: MouseEvent) {
   if (regions) {
     const { x, y, w, h } = regions.text;
@@ -342,23 +285,16 @@ function clickTextBox(event: MouseEvent) {
   }
 }
 textLine.addEventListener('click', clickTextBox);
-// The name tag too, as it's part of the message window. (In image mode its
-// picture is a zone, and a tap on it clicks the game where it points.)
-nameTag.addEventListener('click', (event) => {
-  if (textMode === 'text') {
-    clickTextBox(event);
+// The name tag too, as it's part of the message window.
+nameTag.addEventListener('click', clickTextBox);
+
+backgroundCanvas.addEventListener('click', (event) => {
+  const point = tapToGame(backgroundZone, event);
+  if (point) {
+    showRipple(event);
+    window.vn.clickGame(point);
   }
 });
-
-for (const zone of zones) {
-  zone.canvas.addEventListener('click', (event) => {
-    const point = tapToGame(zone, event);
-    if (point) {
-      showRipple(event);
-      window.vn.clickGame(point);
-    }
-  });
-}
 
 function showSource(sourceId: string | null) {
   if (sourceId) {
@@ -367,19 +303,17 @@ function showSource(sourceId: string | null) {
     return;
   }
   // The game was closed: stop the (now blank) capture, clear its last frame
-  // from the zones, and say so.
+  // from the background, and say so.
   stopCapture(video);
-  for (const zone of zones) {
-    zone.canvas
-      .getContext('2d')!
-      .clearRect(0, 0, zone.canvas.width, zone.canvas.height);
-  }
+  backgroundCanvas
+    .getContext('2d')!
+    .clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
   status.textContent =
     'The game was closed. Start it again, then pick it in the main window.';
   status.hidden = false;
 }
 
-// --- Text mode -----------------------------------------------------------------
+// --- Text ----------------------------------------------------------------------
 
 // Shows the line read by OCR, with a quick fade-in so a new line is
 // noticeable without being jarring.

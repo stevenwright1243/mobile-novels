@@ -87,6 +87,9 @@ export async function loadProfile(
     // The background's zoom and position used to be saved per game; they're
     // fixed now (see `BACKGROUND_VIEW`), so drop any old saved ones.
     delete profile.backgroundView;
+    // Likewise the text mode: the text is always read now, never shown as
+    // the text box's picture.
+    delete profile.textMode;
     return { profile, saved: true, legacyFile: null };
   }
 
@@ -114,7 +117,6 @@ function newProfile(
     exePath,
     title,
     clickMethod: 'message',
-    textMode: 'text',
     textStyle: DEFAULT_TEXT_STYLE,
     regions: DEFAULT_REGIONS,
     window: null,

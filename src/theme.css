@@ -79,8 +79,8 @@
 
 /* The haze: the whole text zone fades from clear to white, edge to edge and
    down to the bottom of the screen, with room above the text for the fade.
-   (More specific than portrait.css's text-mode rules, so it wins.) */
-:root[data-theme='kimikano'] .portrait.text-mode #text-zone {
+   (More specific than portrait.css's text zone rules, so it wins.) */
+:root[data-theme='kimikano'] .portrait #text-zone {
   padding-top: 3rem;
   background: linear-gradient(
     to bottom,
@@ -101,7 +101,7 @@
 
 /* The speaker's name as plain accent-coloured text on the haze, with no
    pill, as in the game. */
-:root[data-theme='kimikano'] .portrait.text-mode #name-tag {
+:root[data-theme='kimikano'] .portrait #name-tag {
   margin-bottom: 0;
   padding-inline: 0;
   color: var(--accent-deep);
@@ -342,7 +342,7 @@
    buttons, the history log). The message window's border options still
    draw over it (they're more specific). */
 :root[data-theme='miyuki'] .glass,
-:root[data-theme='miyuki'] .portrait.text-mode #name-tag {
+:root[data-theme='miyuki'] .portrait #name-tag {
   border: 3px solid var(--rim-light);
   box-shadow:
     inset 0 0 0 1px var(--accent),

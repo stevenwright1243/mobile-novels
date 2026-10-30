@@ -30,7 +30,6 @@ const sendToBackButton =
   document.querySelector<HTMLButtonElement>('#send-to-back')!;
 const clickMethodSelect =
   document.querySelector<HTMLSelectElement>('#click-method')!;
-const textModeSelect = document.querySelector<HTMLSelectElement>('#text-mode')!;
 
 // Picks a window as the game: from its thumbnail, or from its profile card.
 async function pickWindow(source: GameWindow) {
@@ -46,7 +45,6 @@ async function pickWindow(source: GameWindow) {
   windowsSection.open = false;
   sendToBackButton.disabled = false;
   clickMethodSelect.disabled = false;
-  textModeSelect.disabled = false;
 }
 
 async function showWindowList() {
@@ -235,13 +233,4 @@ window.vn.onClickMethodChanged((method) => {
 });
 clickMethodSelect.addEventListener('change', () => {
   window.vn.setClickMethod(clickMethodSelect.value as ClickMethod);
-});
-
-// How the portrait shows the game's text: as text read by OCR, or as the
-// picture of the text box. Part of the game's profile, like the click method.
-window.vn.onTextModeChanged((mode) => {
-  textModeSelect.value = mode;
-});
-textModeSelect.addEventListener('change', () => {
-  window.vn.setTextMode(textModeSelect.value as TextMode);
 });

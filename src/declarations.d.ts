@@ -32,11 +32,6 @@ type Regions = Record<RegionName, Region>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
-// How the portrait's text zone shows the game's text: 'text' is the line
-// read by OCR, restyled for phones; 'image' is the picture of the game's text
-// box (the fallback for games OCR reads badly).
-type TextMode = 'text' | 'image';
-
 // How the text is styled in the portrait's message window. `size` scales
 // the text (1 = normal, 1.5 = half as big again); the window grows with it.
 // `nameSize` scales
@@ -118,7 +113,6 @@ interface GameProfile {
   // The window title when last played.
   title: string;
   clickMethod: ClickMethod;
-  textMode: TextMode;
   textStyle: TextStyle;
   regions: Regions;
   // The game's content size in pixels when last played.
@@ -129,10 +123,7 @@ interface GameProfile {
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
-type ProfileSummary = Omit<
-  GameProfile,
-  'version' | 'regions' | 'textMode' | 'textStyle'
-> & {
+type ProfileSummary = Omit<GameProfile, 'version' | 'regions' | 'textStyle'> & {
   isOpen: boolean;
   sourceId?: string;
 };
@@ -181,9 +172,6 @@ interface Window {
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
     onClickMethodChanged(callback: (method: ClickMethod) => void): void;
-    getTextMode(): Promise<TextMode>;
-    setTextMode(mode: TextMode): Promise<void>;
-    onTextModeChanged(callback: (mode: TextMode) => void): void;
     getTextStyle(): Promise<TextStyle>;
     setTextStyle(style: TextStyle): Promise<void>;
     onTextStyleChanged(callback: (style: TextStyle) => void): void;

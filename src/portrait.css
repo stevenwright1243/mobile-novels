@@ -37,76 +37,20 @@ body {
   color: var(--ink);
 }
 
-/* The zones. To rearrange the layout, change the area map and row sizes
-   here; the HTML stays the same. `fr` = a share of the available space.
-   The text row is `auto`: as tall as the text zone needs to be (see below),
-   and the background takes whatever is left. */
+/* The zones. Both share one grid cell: the background fills the whole
+   portrait and the message window floats over its bottom edge. The window
+   can grow and shrink with the text without moving the background. */
 .portrait {
   /* The text size of the corner buttons and "Return to game" (see
      `.corner-button`). Defined here, where `--button-size` is set. */
   --button-font-size: clamp(1.05rem, 4.75vmin * var(--button-size, 1), 7vmin);
   height: 100dvh;
   display: grid;
-  grid-template-areas:
-    'background'
-    'text';
-  grid-template-rows: 1fr auto;
+  grid-template-areas: 'stage';
+  grid-template-rows: 1fr;
   /* So the Log button can be placed in a corner (it's `position: absolute`,
      which places it relative to here). */
   position: relative;
-}
-
-#background-zone {
-  grid-area: background;
-}
-
-/* The text zone takes the text region's shape, so the crop fills it with no
-   black bars. `--text-aspect` (width / height) is set by portrait.ts from
-   the region; the fallback is only used before the first frame. The height
-   cap stops a tall text region from pushing the background off screen. */
-#text-zone {
-  grid-area: text;
-  aspect-ratio: var(--text-aspect, 4);
-  max-height: 60dvh;
-  background: #000;
-}
-
-/* Text mode: the line read by OCR, as real text styled for phones, instead
-   of the picture of the game's text box. */
-#text-line,
-#next-arrow {
-  display: none;
-}
-
-/* The name tag, on the text box's top-left corner. In image mode it's the
-   name box's picture (its canvas), shaped like the name region through
-   `--name-aspect` (set by portrait.ts), sitting just above the text box.
-   `--name-size` is the picker's Name size slider (1 = normal), in both
-   modes. */
-#name-tag {
-  position: absolute;
-  z-index: 1;
-  left: clamp(0.5rem, 3vw, 1rem);
-  bottom: 100%;
-  height: calc(var(--base-font-size) * 1.5 * var(--name-size, 1));
-  max-width: 70%;
-  aspect-ratio: var(--name-aspect, 4);
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  border-radius: calc(0.4rem * var(--corner)) calc(0.4rem * var(--corner)) 0 0;
-  background: #000;
-}
-
-#name-text {
-  display: none;
-}
-
-.portrait.text-mode {
-  /* Both zones share one grid cell: the background fills the whole portrait
-     and the message window floats over its bottom edge. The window can grow
-     and shrink with the text without moving the background. */
-  grid-template-areas: 'stage';
-  grid-template-rows: 1fr;
 
   #background-zone,
   #text-zone {
@@ -118,9 +62,6 @@ body {
        with a little space around it so it floats. */
     align-self: end;
     z-index: 1;
-    aspect-ratio: auto;
-    max-height: none;
-    background: none;
     --gap: clamp(0.5rem, 3vw, 1rem);
     /* The text size chosen in the picker: the base size (100%) times the size
        setting. Set here so the arrow (`#next-arrow`) is sized by it too. */
@@ -132,11 +73,8 @@ body {
     padding: 0 var(--gap) var(--gap-bottom);
   }
 
-  #text-zone canvas {
-    display: none;
-  }
-
-  /* The message window: frosted glass (`.glass`). */
+  /* The message window: the line read by OCR, as real text styled for
+     phones, on frosted glass (`.glass`). */
   #text-line {
     display: block;
     position: relative;
@@ -181,13 +119,11 @@ body {
      the message window's top edge like a game's name plate. In the flow
      just above the window, so the text zone grows by its height (upwards:
      the zone sits at the bottom), and the window never moves. Hidden while
-     there's no name (narration). */
+     there's no name (narration). `--name-size` is the picker's Name size
+     slider (1 = normal). */
   #name-tag {
     position: relative;
-    left: auto;
-    bottom: auto;
-    height: auto;
-    aspect-ratio: auto;
+    z-index: 1;
     width: fit-content;
     max-width: 80%;
     box-sizing: border-box;
@@ -199,17 +135,13 @@ body {
     cursor: pointer;
   }
 
-  #name-text {
-    display: inline;
-  }
-
   #name-tag:has(#name-text:empty) {
     display: none;
   }
 }
 
 /* The name pill's look. */
-.portrait.text-mode #name-tag {
+.portrait #name-tag {
   padding: 0.15em 1.1em 0.2em 0.9em;
   font-weight: 700;
   line-height: 1.35;
@@ -227,7 +159,7 @@ body {
 }
 
 /* A small dot before the name. */
-.portrait.text-mode #name-tag::before {
+.portrait #name-tag::before {
   content: '';
   display: inline-block;
   width: 0.32em;
@@ -495,18 +427,9 @@ body {
 
 /* Whole-game mode: the background zone fills the portrait and shows the
    entire game (portrait.ts places it with `SHOW_ALL`, so nothing is cut
-   off); the text zone is hidden. After the text-mode rules, so it wins. */
-.portrait.raw-mode {
-  grid-template-areas: 'stage';
-  grid-template-rows: 1fr;
-
-  #background-zone {
-    grid-area: stage;
-  }
-
-  #text-zone {
-    display: none;
-  }
+   off); the text zone is hidden. */
+.portrait.raw-mode #text-zone {
+  display: none;
 }
 
 @keyframes bob {

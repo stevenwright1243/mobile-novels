@@ -40,13 +40,6 @@ contextBridge.exposeInMainWorld('vn', {
       callback(style),
     );
   },
-  getTextMode: () => ipcRenderer.invoke('get-text-mode'),
-  setTextMode: (mode) => ipcRenderer.invoke('set-text-mode', mode),
-  onTextModeChanged: (callback) => {
-    ipcRenderer.on('text-mode-changed', (_event, mode: TextMode) =>
-      callback(mode),
-    );
-  },
   getBackgroundZoneSize: () => ipcRenderer.invoke('get-background-zone-size'),
   setBackgroundZoneSize: (size) =>
     ipcRenderer.invoke('set-background-zone-size', size),

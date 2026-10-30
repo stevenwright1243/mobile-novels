@@ -115,7 +115,6 @@ const snapshot = (current: GameProfile) =>
   JSON.stringify({
     regions: current.regions,
     clickMethod: current.clickMethod,
-    textMode: current.textMode,
     textStyle: current.textStyle,
   });
 
@@ -428,7 +427,6 @@ app.whenReady().then(async () => {
     portraitWindow?.webContents.send('source-selected', source.id);
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
-    broadcast('text-mode-changed', profile.textMode);
     broadcast('text-style-changed', profile.textStyle);
     // The last game's line no longer applies.
     textLine = '';
@@ -612,15 +610,6 @@ app.whenReady().then(async () => {
     if (profile) {
       profile = { ...profile, textStyle: style };
       broadcast('text-style-changed', style, event.sender);
-      sendSaveState();
-    }
-  });
-
-  ipcMain.handle('get-text-mode', () => profile?.textMode ?? 'text');
-  ipcMain.handle('set-text-mode', (event, mode: TextMode) => {
-    if (profile) {
-      profile = { ...profile, textMode: mode };
-      broadcast('text-mode-changed', mode, event.sender);
       sendSaveState();
     }
   });

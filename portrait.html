@@ -9,15 +9,12 @@
     <main class="portrait">
       <div class="zone" id="background-zone"><canvas></canvas></div>
       <div class="zone" id="text-zone">
-        <canvas></canvas>
-        <!-- The speaker's name, on the message window's top-left corner:
-             the name read by OCR in text mode, the name box's picture in
-             image mode (see portrait.ts). -->
+        <!-- The speaker's name read by OCR, on the message window's top-left
+             corner (see portrait.ts). -->
         <div id="name-tag">
-          <canvas></canvas>
           <span id="name-text"></span>
         </div>
-        <!-- The line read by OCR, shown in text mode (see portrait.ts). -->
+        <!-- The line read by OCR (see portrait.ts). -->
         <p id="text-line" class="glass"></p>
         <!-- The "tap to continue" arrow in the message window's corner. It
              holds every arrow shape; portrait.css shows the one picked in
