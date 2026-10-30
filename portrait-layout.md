@@ -159,19 +159,23 @@ game's name box (the `name` region, per game).
   (50–200%), Portrait height (0–100%), Portrait width (50–100%) and Button
   size (50–150%), each a
   full-width slider in **5% steps** with its name and value above it; the
-  input is 48px tall, the track 0.45em, the thumb 1.6em. After Button size,
+  input is 48px tall, the track 0.45em, the thumb 1.6em; slider names stay
+  on one line. After Button size,
   **Text padding** (0–100%, starts at 0%, per game): extra space on the
   side the message window grows from, up to a fifth of the screen's height
-  at 100% (1% of the screen per 5% step). Under them, **Text position**: "Bottom", an on/off switch (3.2em × 1.8em pill, 1.4em knob,
-  filled with the accent for Top), "Top". A note says which
+  at 100% (1% of the screen per 5% step). Under them, **Text position**: "Bot", an on/off switch (2.3em × 1.3em of the sheet's text,
+  1em knob, filled with the accent for Top), "Top" (the words at 75%); the
+  switch drops under the name when the column is too narrow. A note says which
   are the game's. At the drop-down's bottom, always there while it's open,
   **Save** (accent), **Reset** (plain; back to the values as last saved)
   and **Default** (plain; sets text and name 100%, portrait height 20%,
   width 75%, button size 100%, text position Bottom, padding 0%, as unsaved
-  changes) side by side: with nothing to do they're dimmed to 45%, blurred
+  changes), centered side by side: with nothing to do they're dimmed to 45%, blurred
   1.5px and can't be pressed.
-  Left of the sliders, a live miniature of the reader screen, **33vw** wide
-  and the screen's shape (a third of its size each way): the picture at the
+  Left of the sliders, a live miniature of the reader screen, the screen's
+  shape and as tall as the slider column (at most half the drop-down's
+  width), so the Text position row lines up with its bottom edge (exactly
+  on the phone; on a narrow PC window the cap leaves it a little shorter): the picture at the
   chosen height, the line and name at the chosen sizes, and the corner
   buttons, all exactly in proportion, as they're dragged.
 

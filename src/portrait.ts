@@ -578,13 +578,40 @@ const sampleCanvas = sample.querySelector('canvas')!;
 const sampleName = sample.querySelector<HTMLElement>('.name-text')!;
 sampleArrow.innerHTML = nextArrow.innerHTML;
 
+// It's as tall as the sliders beside it (their own height, without the
+// room their column spreads them over), so the last row, Text position,
+// lines up with its bottom edge; its width follows from the screen's shape.
+const sampleSliders = document.querySelector<HTMLElement>('#sizes .sliders')!;
+function slidersHeight() {
+  const rows = [...sampleSliders.children] as HTMLElement[];
+  const gap = parseFloat(getComputedStyle(sampleSliders).rowGap) || 0;
+  return (
+    rows.reduce((sum, row) => sum + row.offsetHeight, 0) +
+    gap * (rows.length - 1)
+  );
+}
+
+// At most this share of the drop-down's width, so the sliders keep room.
+const MAX_SAMPLE_SHARE = 0.5;
+
 function fitSample() {
+  const height = slidersHeight();
+  const body = sample.parentElement!.clientWidth;
+  if (height > 0 && body > 0) {
+    const width = Math.min(
+      (height * innerWidth) / innerHeight,
+      body * MAX_SAMPLE_SHARE,
+    );
+    sample.style.width = `${width}px`;
+  }
   const scale = sample.clientWidth / innerWidth;
   sample.style.setProperty('--sample-scale', String(scale));
   sample.style.height = `${innerHeight * scale}px`;
 }
-// Its width follows the sheet's, and it's 0 while the drop-down is shut.
+// Sized again when it's laid out (it's 0 while the drop-down is shut) or
+// the sliders' column changes shape.
 new ResizeObserver(fitSample).observe(sample);
+new ResizeObserver(fitSample).observe(sampleSliders);
 addEventListener('resize', fitSample);
 
 // The line and name on screen, or stand-ins while there are none.

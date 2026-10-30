@@ -1015,11 +1015,16 @@ body {
     'note note'
     'save save';
   align-items: start;
-  gap: 0.5em 1em;
+  gap: 0.5em 0.6em;
 
+  /* As tall as the sample beside it, the sliders spread out over it, so
+     the last row (Text position) lines up with the sample's bottom edge. */
   .sliders {
     grid-area: sliders;
-    display: grid;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     gap: 0.3em;
   }
 
@@ -1038,8 +1043,9 @@ body {
    portrait.ts sets the sample's height to the screen's shape. */
 #sizes-sample {
   grid-area: sample;
-  /* A third of the screen's size each way (the scale is its width over the
-     screen's), so it fits beside the sliders. */
+  /* The screen's shape, as tall as the sliders beside it (portrait.ts sets
+     its size; the scale is its width over the screen's). A third of the
+     screen until then. */
   width: 33vw;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1087,6 +1093,13 @@ body {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 0.2em 0.5em;
+}
+
+/* Names on one line, so the column's height doesn't change with its width
+   (the sample beside it is sized from that height). */
+.slider span,
+.toggle-row > span {
+  white-space: nowrap;
 }
 
 .slider output {
@@ -1137,22 +1150,25 @@ body {
 /* Text position: "Bottom", an on/off switch, "Top". The switch is a pill
    track with a round knob that slides right (and fills with the accent)
    for Top. */
+/* The name, and the switch at the right; when the column is too narrow
+   for both (a narrow PC window), the switch goes under the name. */
 .toggle-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.3em;
   min-height: 48px;
 }
 
 .toggle {
   display: flex;
   align-items: center;
-  gap: 0.5em;
+  gap: 0.25em;
 }
 
 .toggle-side {
-  font-size: 0.85em;
+  font-size: 0.75em;
   cursor: pointer;
   color: color-mix(in srgb, var(--ink) 55%, transparent);
 }
@@ -1164,10 +1180,12 @@ body {
   color: var(--accent-deep);
 }
 
+/* Sized in the sheet's text size (a button doesn't take it by itself). */
 #text-position {
+  font-size: inherit;
   position: relative;
-  width: 3.2em;
-  height: 1.8em;
+  width: 2.3em;
+  height: 1.3em;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1183,10 +1201,10 @@ body {
 
 .toggle-knob {
   position: absolute;
-  top: 0.15em;
-  left: 0.15em;
-  width: 1.4em;
-  height: 1.4em;
+  top: 0.13em;
+  left: 0.13em;
+  width: 1em;
+  height: 1em;
   border-radius: 50%;
   background: var(--surface);
   box-shadow: 0 0.1em 0.3em color-mix(in srgb, var(--shadow) 35%, transparent);
@@ -1194,7 +1212,7 @@ body {
 }
 
 #text-position[aria-checked='true'] .toggle-knob {
-  translate: 1.4em 0;
+  translate: 1em 0;
 }
 
 #text-position:disabled {
@@ -1207,6 +1225,7 @@ body {
 #sheet-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.6em;
 }
 
