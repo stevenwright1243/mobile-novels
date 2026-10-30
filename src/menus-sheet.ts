@@ -8,6 +8,12 @@
  * to main, which saves them and sends them to both windows.
  */
 
+import {
+  DEFAULT_BACKGROUND_WIDTH,
+  DEFAULT_BACKGROUND_Y,
+  DEFAULT_BUTTON_SIZE,
+  DEFAULT_TEXT_STYLE,
+} from './default-sizes';
 import { ARROWS, BORDERS, THEMES } from './look-options';
 import { isPageMode, onPageModeChanged, setPageMode } from './page-mode';
 import {
@@ -194,19 +200,15 @@ document
 window.vn.onSaveStateChanged(showSaveState);
 window.vn.getSaveState().then(showSaveState);
 
-// The Default button sets the sizes the user picked as the defaults (as
-// unsaved changes, like moving the sliders: Save keeps them, Reset undoes
-// them). It can be pressed while any size differs from these.
+// The Default button sets the default sizes (default-sizes.ts, also what a
+// new game starts with), as unsaved changes, like moving the sliders: Save
+// keeps them, Reset undoes them. It can be pressed while any size differs
+// from these.
 const DEFAULT_SIZES = {
-  textStyle: { size: 1, nameSize: 1, position: 'top', padding: 0 },
-  backgroundY: 0.2,
-  backgroundWidth: 0.75,
-  buttonSize: 1,
-} as const satisfies {
-  textStyle: TextStyle;
-  backgroundY: number;
-  backgroundWidth: number;
-  buttonSize: number;
+  textStyle: DEFAULT_TEXT_STYLE,
+  backgroundY: DEFAULT_BACKGROUND_Y,
+  backgroundWidth: DEFAULT_BACKGROUND_WIDTH,
+  buttonSize: DEFAULT_BUTTON_SIZE,
 };
 const defaultButton =
   document.querySelector<HTMLButtonElement>('#sheet-default')!;

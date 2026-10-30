@@ -63,8 +63,8 @@ bottom, and never moves it.
   side the window grows from: below it with Bottom (on top of the usual
   bottom gap), between the picture and it with Top (and the Portrait
   height cap leaves room for it). 0% keeps both usual gaps.
-- **Position** (per game, the Menus sheet's Text position): **Bottom**
-  (default) puts it at the bottom of the screen, growing upward as the text
+- **Position** (per game, the Menus sheet's Text position): **Top** is the
+  default (since 2026-10-30; it was Bottom). **Bottom** puts it at the bottom of the screen, growing upward as the text
   gets longer or bigger. **Top** hangs it just under the picture's bottom
   edge, a `clamp(0.5rem, 3vw, 1rem)` gap below it, growing downward. The
   name tag's room above the window is always kept there (invisible during

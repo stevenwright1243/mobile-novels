@@ -4,7 +4,15 @@
 import { app } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { BACKGROUND_VIEW } from './zone-view';
+import {
+  DEFAULT_BACKGROUND_WIDTH,
+  DEFAULT_BACKGROUND_Y,
+  DEFAULT_TEXT_STYLE,
+} from './default-sizes';
+
+// The default sizes live in default-sizes.ts (shared with the portrait's
+// Default button); passed on from here for main.
+export { DEFAULT_BACKGROUND_WIDTH, DEFAULT_BACKGROUND_Y, DEFAULT_TEXT_STYLE };
 
 // Used for a game that has no saved regions yet. The name box starts just
 // above the text box's left end, where most VNs put it. The page (for
@@ -16,19 +24,6 @@ export const DEFAULT_REGIONS: Regions = {
   name: { x: 0.05, y: 0.63, w: 0.2, h: 0.06 },
   page: { x: 0.01, y: 0.02, w: 0.98, h: 0.96 },
 };
-
-// Normal-sized text.
-export const DEFAULT_TEXT_STYLE: TextStyle = {
-  size: 1,
-  nameSize: 1,
-  position: 'bottom',
-  padding: 0,
-};
-
-// The background sits 20% of the way down (see `BACKGROUND_VIEW`).
-export const DEFAULT_BACKGROUND_Y = BACKGROUND_VIEW.y;
-// Three quarters of the background's width shows (see `BACKGROUND_VIEW`).
-export const DEFAULT_BACKGROUND_WIDTH = BACKGROUND_VIEW.width!;
 
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
