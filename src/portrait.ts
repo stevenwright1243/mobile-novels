@@ -12,6 +12,7 @@ import {
   playCapture,
   regionInVideo,
   stopCapture,
+  type VideoRect,
 } from './capture';
 import './history-log';
 import { startTextReader } from './text-reader';
@@ -187,8 +188,10 @@ function placeZone(zone: Zone, regions: Regions) {
   return { sx, sy, sw, sh, dx, dy, dw, dh };
 }
 
-// The backdrop behind a zoomed-out background: the whole game screen (not
-// just the background region), filling the zone, blurred and tinted. Drawn tiny and then stretched, which blurs it
+// The backdrop behind a zoomed-out background: the whole background region,
+// stretched to fill the zone, blurred and tinted. Stretched rather than
+// zoomed to fill, which would show only a small middle part of a wide
+// region in a tall portrait; blurred, the stretch doesn't show. Drawn tiny and then stretched, which blurs it
 // almost for free (a real blur filter on a full-size canvas, every frame,
 // would be slow).
 const BACKDROP_SHRINK = 24;
@@ -206,9 +209,11 @@ onThemeApplied(() => {
   backdropTint = readBackdropTint();
 });
 
-function drawBackdrop(context: CanvasRenderingContext2D) {
+function drawBackdrop(
+  context: CanvasRenderingContext2D,
+  { sx, sy, sw, sh }: VideoRect,
+) {
   const { width, height } = context.canvas;
-  const { sx, sy, sw, sh } = regionInVideo(video, clientArea, WHOLE_GAME);
   // Resizing a canvas clears and reallocates it, so only when it changes.
   const smallWidth = Math.max(1, Math.ceil(width / BACKDROP_SHRINK));
   const smallHeight = Math.max(1, Math.ceil(height / BACKDROP_SHRINK));
@@ -216,11 +221,6 @@ function drawBackdrop(context: CanvasRenderingContext2D) {
     backdrop.width = smallWidth;
     backdrop.height = smallHeight;
   }
-  const fill = placeInZone(sw, sh, backdrop.width, backdrop.height, {
-    fill: 1,
-    x: 0.5,
-    y: 0.5,
-  });
   // A light blur at this tiny size smooths out the blockiness.
   backdropContext.filter = 'blur(1px)';
   backdropContext.drawImage(
@@ -229,10 +229,10 @@ function drawBackdrop(context: CanvasRenderingContext2D) {
     sy,
     sw,
     sh,
-    fill.dx,
-    fill.dy,
-    fill.dw,
-    fill.dh,
+    0,
+    0,
+    backdrop.width,
+    backdrop.height,
   );
   context.drawImage(backdrop, 0, 0, width, height);
   // Wash it with the theme's tint, so the real picture stands out.
@@ -249,7 +249,7 @@ function drawZone(zone: Zone, regions: Regions) {
   // (the text box picture keeps plain bars, so the text stands out).
   const leavesSpace = dw < canvas.width - 1 || dh < canvas.height - 1;
   if (leavesSpace && zone.region === 'background') {
-    drawBackdrop(context);
+    drawBackdrop(context, { sx, sy, sw, sh });
   }
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
 }

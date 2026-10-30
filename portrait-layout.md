@@ -30,8 +30,8 @@ bottom, and never moves it.
   they're defined. There are no sliders for them in the picker, and games no
   longer save their own (older saved values are ignored).
 - The percentages are the same scale the old sliders used, for reference.
-- Space around a zoomed-out picture shows a blurred copy of the whole game
-  screen (not just the background region), washed with
+- Space around a zoomed-out picture shows a blurred copy of the whole
+  background region, stretched to fill the portrait, washed with
   the theme's `--backdrop-tint` (in `src/theme.css`; pale sky in Aokana).
 - The zoom blends between "show all" and "fill" evenly: each slider step
   zooms by the same factor (see `placeInZone()`).
