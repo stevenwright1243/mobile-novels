@@ -13,8 +13,9 @@ import {
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
+import { followPhoneDisplay } from './phone-display';
+import { loadSettings, saveSettings, type Settings } from './settings';
 import {
-  DEFAULT_BACKGROUND_VIEW,
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
   deleteProfile,
@@ -46,7 +47,7 @@ if (started) {
 // Debug mode, switched on by starting with `npm run start:debug`, which
 // passes this flag to the app: OCR reads are logged in the terminal, and the
 // picker shows its debug tools (see `is-debug`).
-const DEBUG = process.argv.includes('--debug');
+const DEBUG = process.argv.includes('--vn-debug');
 
 // The game window the user picked. Its ID lets the portrait window capture it
 // too.
@@ -68,6 +69,16 @@ let textLine = '';
 const HISTORY_LENGTH = 30;
 let textHistory: string[] = [];
 
+// The phone's display while the phone is streaming (the portrait is full
+// screen on it), or null. See phone-display.ts.
+let phoneDisplay: PhoneDisplay | null = null;
+// Moves the portrait between the phone's display and the PC. Set once the
+// portrait window exists.
+let setPortraitOnPhone: ((onPhone: boolean) => void) | null = null;
+
+// App-wide settings (settings.ts), loaded before the windows open.
+let settings: Settings;
+
 // The picked game's profile: its regions, click method and so on (see
 // profiles.ts). Null until a game is picked. Changes apply live, but are only
 // written to its file when the user clicks "Save profile".
@@ -86,7 +97,6 @@ const snapshot = (current: GameProfile) =>
     clickMethod: current.clickMethod,
     textMode: current.textMode,
     textStyle: current.textStyle,
-    backgroundView: current.backgroundView,
   });
 
 const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
@@ -230,10 +240,12 @@ const createMainWindow = (bounds: Rectangle) => {
       quitting = false;
     }
   });
+  return mainWindow;
 };
 
-// The portrait view that gets streamed to the phone.
-const createPortraitWindow = (bounds: Rectangle) => {
+// The portrait view that gets streamed to the phone. Coming back from the
+// phone, it matches the picker's height.
+const createPortraitWindow = (bounds: Rectangle, picker: BrowserWindow) => {
   portraitWindow = new BrowserWindow({
     ...bounds,
     webPreferences: {
@@ -291,6 +303,26 @@ const createPortraitWindow = (bounds: Rectangle) => {
     portraitWindow = null;
   });
   loadPage(portrait, 'portrait.html');
+
+  // While the phone is streaming, the portrait fills the phone's display.
+  const placement = followPhoneDisplay(
+    portrait,
+    (phone) => {
+      phoneDisplay = phone;
+      broadcast('phone-display-changed', phoneDisplay);
+      if (DEBUG) {
+        const displays = screen.getAllDisplays().map((display) => ({
+          label: display.label,
+          bounds: display.bounds,
+          scale: display.scaleFactor,
+        }));
+        console.log('Phone display:', phoneDisplay, 'All displays:', displays);
+      }
+    },
+    () => (picker.isDestroyed() ? null : picker.getNormalBounds()),
+    settings.portraitOnPhone,
+  );
+  setPortraitOnPhone = placement.setOnPhone;
 };
 
 // For now, open the two windows docked side by side and centered on the main
@@ -307,14 +339,17 @@ const createWindows = () => {
   const x = area.x + Math.round((area.width - mainWidth - portraitWidth) / 2);
   const y = area.y + Math.round((area.height - height) / 2);
 
-  createMainWindow({ x, y, width: mainWidth, height });
-  createPortraitWindow({ x: x + mainWidth, y, width: portraitWidth, height });
+  const picker = createMainWindow({ x, y, width: mainWidth, height });
+  createPortraitWindow(
+    { x: x + mainWidth, y, width: portraitWidth, height },
+    picker,
+  );
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // The renderer can't use desktopCapturer, so it asks for the window list
   // here over IPC (see preload.ts for the other end).
   ipcMain.handle('list-windows', async (): Promise<WindowSource[]> => {
@@ -375,7 +410,6 @@ app.whenReady().then(() => {
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-mode-changed', profile.textMode);
     broadcast('text-style-changed', profile.textStyle);
-    broadcast('background-view-changed', profile.backgroundView);
     // The last game's line no longer applies.
     textLine = '';
     textHistory = [];
@@ -572,20 +606,6 @@ app.whenReady().then(() => {
     }
   });
 
-  // How the background is zoomed and positioned in the portrait, part of the
-  // game's profile. The picker changes it; the portrait redraws.
-  ipcMain.handle(
-    'get-background-view',
-    () => profile?.backgroundView ?? DEFAULT_BACKGROUND_VIEW,
-  );
-  ipcMain.handle('set-background-view', (event, view: ZoneView) => {
-    if (profile) {
-      profile = { ...profile, backgroundView: view };
-      broadcast('background-view-changed', view, event.sender);
-      sendSaveState();
-    }
-  });
-
   // The portrait's background zone size, passed on to the picker.
   ipcMain.handle('get-background-zone-size', () => backgroundZoneSize);
   ipcMain.handle('set-background-zone-size', (event, size: Size) => {
@@ -634,6 +654,16 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('get-text-history', () => textHistory);
 
+  ipcMain.handle('get-phone-display', () => phoneDisplay);
+  // The PC / Phone switch, saved straight away.
+  ipcMain.handle('get-portrait-on-phone', () => settings.portraitOnPhone);
+  ipcMain.handle('set-portrait-on-phone', async (_event, onPhone: boolean) => {
+    settings = { ...settings, portraitOnPhone: onPhone };
+    setPortraitOnPhone?.(onPhone);
+    await saveSettings(settings);
+  });
+
+  settings = await loadSettings();
   createWindows();
 
   // On OS X it's common to re-create a window in the app when the

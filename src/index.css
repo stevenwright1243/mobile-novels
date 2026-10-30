@@ -464,14 +464,7 @@ h2 {
   background: #fd5;
 }
 
-/* A single row of controls, so flexbox; wraps when narrow. */
-#background-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 1rem;
-}
-
+/* A slider with its percent box (the text size settings). */
 .slider-field input[type='range'] {
   width: 7rem;
   vertical-align: middle;
@@ -509,6 +502,63 @@ h2 {
 
 #text-shrink-note[hidden] {
   display: none;
+}
+
+/* "On phone" / "Phone not connected" (phone-status.ts). */
+#phone-status {
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink);
+  opacity: 0.6;
+
+  &.connected {
+    background: var(--sky-pale);
+    color: var(--sky-deep);
+    opacity: 1;
+  }
+}
+
+/* A choice of two or more drawn as one pill, the chosen part filled in sky
+   blue (the portrait's PC / Phone switch). Underneath it's radio buttons, so
+   arrow keys and screen readers work; the round dots are hidden. A single
+   row, so flexbox. */
+.switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.9rem;
+
+  &[hidden] {
+    display: none;
+  }
+
+  & label {
+    padding: 0.15rem 0.8rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  & label:has(:checked) {
+    background: linear-gradient(var(--sky), var(--sky-deep));
+    color: #fff;
+  }
+
+  /* The keyboard ring goes round the part, since the dot is hidden. */
+  & label:has(:focus-visible) {
+    outline: 2px solid var(--sky-deep);
+    outline-offset: 1px;
+  }
+
+  /* Hidden from sight but not from the keyboard or screen readers. */
+  & input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 .slider-field input[type='number'] {

@@ -82,8 +82,6 @@ interface GameProfile {
   clickMethod: ClickMethod;
   textMode: TextMode;
   textStyle: TextStyle;
-  // How the background region is zoomed and positioned in the portrait.
-  backgroundView: ZoneView;
   regions: Regions;
   // The game's content size in pixels when last played.
   window: Size | null;
@@ -95,11 +93,23 @@ interface GameProfile {
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
 type ProfileSummary = Omit<
   GameProfile,
-  'version' | 'regions' | 'textMode' | 'textStyle' | 'backgroundView'
+  'version' | 'regions' | 'textMode' | 'textStyle'
 > & {
   isOpen: boolean;
   sourceId?: string;
 };
+
+// The phone's display, added by Apollo while the phone is streaming (see
+// phone-display.ts). Width and height are in real pixels; `scale` is the
+// display's Windows scaling (e.g. 3 for 300%). `portraitOnPhone` is false
+// while the picker's PC / Phone switch keeps the portrait on the PC.
+interface PhoneDisplay {
+  label: string;
+  width: number;
+  height: number;
+  scale: number;
+  portraitOnPhone: boolean;
+}
 
 // For the picker's Save button: whether a game is picked, whether its profile
 // has unsaved edits, and whether it has a profile file at all yet.
@@ -145,9 +155,6 @@ interface Window {
     getTextShrink(): Promise<number | null>;
     setTextShrink(size: number | null): Promise<void>;
     onTextShrinkChanged(callback: (size: number | null) => void): void;
-    getBackgroundView(): Promise<ZoneView>;
-    setBackgroundView(view: ZoneView): Promise<void>;
-    onBackgroundViewChanged(callback: (view: ZoneView) => void): void;
     // The size of the portrait's background zone, sent by the portrait so
     // the picker can outline the part of the background that's shown.
     getBackgroundZoneSize(): Promise<Size | null>;
@@ -177,5 +184,13 @@ interface Window {
     onTextLineChanged(callback: (line: string) => void): void;
     // The history log: the last 30 lines read, oldest first.
     getTextHistory(): Promise<string[]>;
+    // The phone's display while one is connected (the portrait is full
+    // screen on it), or null.
+    getPhoneDisplay(): Promise<PhoneDisplay | null>;
+    onPhoneDisplayChanged(callback: (phone: PhoneDisplay | null) => void): void;
+    // The PC / Phone switch: whether the portrait goes on the phone's display
+    // (true) or stays on the PC (false). Saved as an app setting.
+    getPortraitOnPhone(): Promise<boolean>;
+    setPortraitOnPhone(onPhone: boolean): Promise<void>;
   };
 }
