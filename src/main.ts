@@ -59,19 +59,35 @@ let backgroundZoneSize: Size | null = null;
 
 // The game's current line of text, as read by the portrait's text reader.
 let textLine = '';
-// Who's speaking, read from the name box ('' for narration).
+// Who's speaking ('' for narration): the name shown, which only changes
+// along with the text (see `set-speaker`), and the name box's latest read.
 let speaker = '';
+let nameRead = '';
 
 // The history log: the last lines read, oldest first. Cleared when another
 // game is picked.
 const HISTORY_LENGTH = 30;
 let textHistory: HistoryEntry[] = [];
-// When the last line was added to it (from `performance.now()`).
-let lastLineAt = 0;
+// When the line last changed (from `performance.now()`).
+let lineChangedAt = 0;
 // The name box and the text box are read separately, so a new speaker can be
 // confirmed a moment after their line. A speaker arriving this soon after a
 // line (in milliseconds) is taken to be that line's.
 const SPEAKER_CATCH_UP = 1000;
+
+// Shows a new speaker: tells the windows, and if the line was just read, it's
+// that line's speaker, so its history entry is corrected too.
+function changeSpeaker(name: string) {
+  speaker = name;
+  broadcast('speaker-changed', speaker);
+  const last = textHistory.at(-1);
+  if (
+    last?.line === textLine &&
+    performance.now() - lineChangedAt < SPEAKER_CATCH_UP
+  ) {
+    textHistory = [...textHistory.slice(0, -1), { ...last, speaker }];
+  }
+}
 
 // The phone's display while the phone is streaming (the portrait is full
 // screen on it), or null. See phone-display.ts.
@@ -417,6 +433,7 @@ app.whenReady().then(async () => {
     // The last game's line no longer applies.
     textLine = '';
     speaker = '';
+    nameRead = '';
     textHistory = [];
     broadcast('text-line-changed', textLine);
     broadcast('speaker-changed', speaker);
@@ -545,6 +562,7 @@ app.whenReady().then(async () => {
         selectedSource = null;
         textLine = '';
         speaker = '';
+        nameRead = '';
         broadcast('source-selected', null);
         broadcast('text-line-changed', textLine);
         broadcast('speaker-changed', speaker);
@@ -644,6 +662,9 @@ app.whenReady().then(async () => {
   // (the portrait included) hears about the change.
   ipcMain.handle('get-text-line', () => textLine);
   ipcMain.handle('set-text-line', (_event, line: string) => {
+    if (line !== textLine) {
+      lineChangedAt = performance.now();
+    }
     textLine = line;
     broadcast('text-line-changed', textLine);
     // Add it to the history log, unless it's empty (no text box showing) or
@@ -651,20 +672,26 @@ app.whenReady().then(async () => {
     // the last item; `.slice(-N)` keeps the last N.
     if (line && line !== textHistory.at(-1)?.line) {
       textHistory = [...textHistory, { speaker, line }].slice(-HISTORY_LENGTH);
-      lastLineAt = performance.now();
+    }
+    // The text moved on, so the name box's latest read is now shown.
+    if (nameRead !== speaker) {
+      changeSpeaker(nameRead);
     }
   });
   ipcMain.handle('get-text-history', () => textHistory);
 
-  // The speaker's name, read from the name box the same way.
+  // The speaker's name, read from the name box the same way. A change of name
+  // waits for the text to change (`set-text-line` shows it then), so a name
+  // never switches under the line it belongs to. Two changes show at once:
+  // an empty name box (the name goes), and a name after an empty box (it
+  // comes back). A name read just after the line changed belongs with it,
+  // so it shows at once too.
   ipcMain.handle('get-speaker', () => speaker);
   ipcMain.handle('set-speaker', (_event, name: string) => {
-    speaker = name;
-    broadcast('speaker-changed', speaker);
-    // Just after a new line: it's that line's speaker, so fix its entry.
-    const last = textHistory.at(-1);
-    if (last && performance.now() - lastLineAt < SPEAKER_CATCH_UP) {
-      textHistory = [...textHistory.slice(0, -1), { ...last, speaker }];
+    nameRead = name;
+    const justChanged = performance.now() - lineChangedAt < SPEAKER_CATCH_UP;
+    if (name !== speaker && (name === '' || speaker === '' || justChanged)) {
+      changeSpeaker(name);
     }
   });
 
