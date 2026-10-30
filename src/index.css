@@ -24,6 +24,19 @@ body {
   background: var(--surface-tint);
 }
 
+/* Text can't be selected (an app, not a page): clicks and drags never
+   highlight labels or names. Except where something is typed, and the
+   debug page's OCR results, which are copied into OCR tests. */
+body {
+  user-select: none;
+}
+
+input,
+textarea,
+#ocr-test {
+  user-select: text;
+}
+
 /* --- Controls ------------------------------------------------------------------ */
 
 /* Form controls don't inherit the page's font by default. */

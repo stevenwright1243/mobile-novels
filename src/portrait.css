@@ -4,6 +4,9 @@
 
 body {
   margin: 0;
+  /* Taps and drags never select text, on the PC or the phone (a long press
+     would otherwise highlight the line). */
+  user-select: none;
   /* Seen before the game is picked. */
   background: linear-gradient(to bottom, var(--stage-top), var(--accent-pale));
   color: var(--ink);
