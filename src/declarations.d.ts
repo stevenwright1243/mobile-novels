@@ -46,6 +46,10 @@ type Points = Record<PointName, GamePoint | null>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
+// How reading the game's lines from its memory is going (memory-text.ts):
+// found its line buffer, still looking, gave up, or not in use.
+type MemoryTextStatus = 'found' | 'searching' | 'not-found' | 'off';
+
 // How the text is styled in the portrait's message window. `size` scales
 // the text (1 = normal, 1.5 = half as big again); the window grows with it.
 // `nameSize` scales
@@ -172,6 +176,9 @@ interface GameProfile {
   // box.
   name?: string;
   clickMethod: ClickMethod;
+  // Whether its lines are read from its memory, exactly, when they match
+  // OCR's read (memory-text.ts). On for new games.
+  textFromMemory: boolean;
   textStyle: TextStyle;
   // Where the background sits in the portrait, top (0) to bottom (1): the
   // `y` of its `ZoneView` (the zoom and left/right are fixed).
@@ -197,6 +204,7 @@ type ProfileSummary = Omit<
   | 'version'
   | 'regions'
   | 'points'
+  | 'textFromMemory'
   | 'textStyle'
   | 'backgroundY'
   | 'backgroundWidth'
@@ -259,6 +267,13 @@ interface Window {
     getClickMethod(): Promise<ClickMethod>;
     setClickMethod(method: ClickMethod): Promise<void>;
     onClickMethodChanged(callback: (method: ClickMethod) => void): void;
+    getTextFromMemory(): Promise<boolean>;
+    setTextFromMemory(on: boolean): Promise<void>;
+    onTextFromMemoryChanged(callback: (on: boolean) => void): void;
+    getMemoryTextStatus(): Promise<MemoryTextStatus>;
+    onMemoryTextStatusChanged(
+      callback: (status: MemoryTextStatus) => void,
+    ): void;
     // The picked game's short name ('' for none), part of its profile.
     getGameName(): Promise<string>;
     setGameName(name: string): Promise<void>;

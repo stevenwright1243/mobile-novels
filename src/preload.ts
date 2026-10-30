@@ -41,6 +41,20 @@ contextBridge.exposeInMainWorld('vn', {
       callback(method),
     );
   },
+  getTextFromMemory: () => ipcRenderer.invoke('get-text-from-memory'),
+  setTextFromMemory: (on) => ipcRenderer.invoke('set-text-from-memory', on),
+  onTextFromMemoryChanged: (callback) => {
+    ipcRenderer.on('text-from-memory-changed', (_event, on: boolean) =>
+      callback(on),
+    );
+  },
+  getMemoryTextStatus: () => ipcRenderer.invoke('get-memory-text-status'),
+  onMemoryTextStatusChanged: (callback) => {
+    ipcRenderer.on(
+      'memory-text-status-changed',
+      (_event, status: MemoryTextStatus) => callback(status),
+    );
+  },
   getGameName: () => ipcRenderer.invoke('get-game-name'),
   setGameName: (name) => ipcRenderer.invoke('set-game-name', name),
   onGameNameChanged: (callback) => {

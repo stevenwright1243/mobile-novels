@@ -806,3 +806,112 @@ function muteOnDevice(
     release(manager);
   }
 }
+
+// --- Reading the game's memory (memory-text.ts) -------------------------------
+
+// What Windows reports about one stretch ("region") of a process's memory.
+const MEMORY_BASIC_INFORMATION = koffi.struct('MEMORY_BASIC_INFORMATION', {
+  BaseAddress: 'uintptr_t',
+  AllocationBase: 'uintptr_t',
+  AllocationProtect: 'uint32_t',
+  PartitionId: 'uint16_t',
+  RegionSize: 'size_t',
+  State: 'uint32_t',
+  Protect: 'uint32_t',
+  Type: 'uint32_t',
+});
+const VirtualQueryEx = kernel32.func(
+  'size_t __stdcall VirtualQueryEx(intptr_t hProcess, uintptr_t lpAddress, _Out_ MEMORY_BASIC_INFORMATION *lpBuffer, size_t dwLength)',
+);
+const ReadProcessMemory = kernel32.func(
+  'bool __stdcall ReadProcessMemory(intptr_t hProcess, uintptr_t lpBaseAddress, _Out_ uint8_t *lpBuffer, size_t nSize, _Out_ size_t *lpNumberOfBytesRead)',
+);
+// Enough access to list a process's memory and read it, never to change it.
+const PROCESS_VM_READ = 0x0010;
+const PROCESS_QUERY_INFORMATION = 0x0400;
+// Memory in use (not just reserved), and owned by the process itself (its
+// heaps, where text the game builds lives; not its .exe and DLLs).
+const MEM_COMMIT = 0x1000;
+const MEM_PRIVATE = 0x20000;
+// Writable memory: read-write, with or without execute, and copy-on-write.
+const WRITABLE = 0x04 | 0x08 | 0x40 | 0x80;
+// Guard pages fault when touched; skipped.
+const PAGE_GUARD = 0x100;
+// Past this, a 64-bit process's user memory ends (and a 32-bit one's long
+// before).
+const USER_MEMORY_END = 0x7fffffff0000;
+
+// An open handle to read a process's memory, or 0 if it can't be opened
+// (e.g. the game runs as administrator and this app doesn't).
+export const openForReading = (processId: number): number =>
+  OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, false, processId);
+
+export const closeProcess = (process: number) => CloseHandle(process);
+
+// The stretches of a process's memory where a game keeps text it builds at
+// run time (in use, its own, writable), as addresses and sizes.
+export function writableRegions(process: number) {
+  const regions: { address: number; size: number }[] = [];
+  let address = 0;
+  while (address < USER_MEMORY_END) {
+    const info = {} as {
+      BaseAddress: number;
+      RegionSize: number;
+      State: number;
+      Protect: number;
+      Type: number;
+    };
+    if (
+      !VirtualQueryEx(
+        process,
+        address,
+        info,
+        koffi.sizeof(MEMORY_BASIC_INFORMATION),
+      )
+    ) {
+      break;
+    }
+    if (
+      info.State === MEM_COMMIT &&
+      info.Type === MEM_PRIVATE &&
+      info.Protect & WRITABLE &&
+      !(info.Protect & PAGE_GUARD)
+    ) {
+      regions.push({ address: info.BaseAddress, size: info.RegionSize });
+    }
+    address = info.BaseAddress + info.RegionSize;
+  }
+  return regions;
+}
+
+// Copies `size` bytes of a process's memory from `address`, or returns null
+// if they can't be read (freed since, say).
+export function readMemory(process: number, address: number, size: number) {
+  const buffer = Buffer.alloc(size);
+  const read = [0];
+  return ReadProcessMemory(process, address, buffer, size, read)
+    ? buffer.subarray(0, read[0])
+    : null;
+}
+
+// The same, done on one of koffi's worker threads, so reading a lot of
+// memory doesn't hold up the main process.
+export function readMemoryAsync(
+  process: number,
+  address: number,
+  size: number,
+) {
+  const buffer = Buffer.alloc(size);
+  const read = [0];
+  return new Promise<Buffer | null>((resolve) =>
+    ReadProcessMemory.async(
+      process,
+      address,
+      buffer,
+      size,
+      read,
+      (error: unknown, ok: boolean) =>
+        resolve(!error && ok ? buffer.subarray(0, read[0]) : null),
+    ),
+  );
+}

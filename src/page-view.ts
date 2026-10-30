@@ -6,6 +6,7 @@
  */
 
 import { dragToScroll, updateScrollState } from './drag-scroll';
+import { similarity } from './text-similarity';
 
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
 
@@ -13,29 +14,10 @@ const pageText = document.querySelector<HTMLElement>('#page-text')!;
 let shown: string[] = [];
 let newFrom = 0;
 
-// How many letters must change to turn one text into the other (the "edit
-// distance"), worked out a row at a time.
-function distance(a: string, b: string) {
-  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    const row = [i];
-    for (let j = 1; j <= b.length; j++) {
-      row[j] = Math.min(
-        previous[j] + 1,
-        row[j - 1] + 1,
-        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
-      );
-    }
-    previous = row;
-  }
-  return previous[b.length];
-}
-
 // Whether two reads are the same paragraph: each read of a page can differ
 // by a letter or two (OCR), so they only have to be this alike.
 const SAME_PARAGRAPH = 0.85;
-const alike = (a: string, b: string) =>
-  1 - distance(a, b) / Math.max(a.length, b.length, 1) >= SAME_PARAGRAPH;
+const alike = (a: string, b: string) => similarity(a, b) >= SAME_PARAGRAPH;
 
 // What's new on the page since the last read: the index of the first new
 // paragraph, and the new text as history entries, one per paragraph.

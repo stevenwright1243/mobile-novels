@@ -16,6 +16,14 @@ import started from 'electron-squirrel-startup';
 import { THEME_STYLES } from './look-options';
 import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
+import {
+  exactLine,
+  forgetGame,
+  memoryTextStatus,
+  onMemoryTextStatus,
+  setMemoryTextDebug,
+  startReading,
+} from './memory-text';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import { steamAppIdOf } from './steam';
@@ -144,6 +152,7 @@ const snapshot = (current: GameProfile) =>
     // `null` for no name, since JSON leaves out `undefined`.
     name: current.name ?? null,
     clickMethod: current.clickMethod,
+    textFromMemory: current.textFromMemory,
     textStyle: current.textStyle,
     backgroundY: current.backgroundY,
     backgroundWidth: current.backgroundWidth,
@@ -247,6 +256,18 @@ const broadcast = (channel: string, value?: unknown, skip?: WebContents) => {
   }
 };
 
+// Reads the picked game's lines from its memory if its profile says to
+// (memory-text.ts), or stops. Every window hears how that's going.
+setMemoryTextDebug(DEBUG);
+onMemoryTextStatus((status) => broadcast('memory-text-status-changed', status));
+function readGameMemory() {
+  if (profile?.textFromMemory && selectedSource) {
+    startReading(processIdOf(hwndFromSourceId(selectedSource.id)));
+  } else {
+    forgetGame();
+  }
+}
+
 // Whether there's anything to save, for the Save buttons (the picker's and
 // the portrait's Menus sheet).
 const saveState = (): SaveState => ({
@@ -293,6 +314,8 @@ const revertEdits = () => {
     broadcast('points-changed', reverted.points);
     broadcast('game-name-changed', reverted.name ?? '');
     broadcast('click-method-changed', reverted.clickMethod);
+    broadcast('text-from-memory-changed', reverted.textFromMemory);
+    readGameMemory();
     broadcast('text-style-changed', reverted.textStyle);
     broadcast('background-y-changed', reverted.backgroundY);
     broadcast('background-width-changed', reverted.backgroundWidth);
@@ -602,6 +625,7 @@ app.whenReady().then(async () => {
     broadcast('regions-changed', profile.regions);
     broadcast('points-changed', profile.points);
     broadcast('click-method-changed', profile.clickMethod);
+    broadcast('text-from-memory-changed', profile.textFromMemory);
     broadcast('game-name-changed', profile.name ?? '');
     broadcast('text-style-changed', profile.textStyle);
     broadcast('background-y-changed', profile.backgroundY);
@@ -615,6 +639,7 @@ app.whenReady().then(async () => {
     broadcast('speaker-changed', speaker);
     sendSaveState();
     muteOtherGames();
+    readGameMemory();
     return true;
   };
 
@@ -800,6 +825,7 @@ app.whenReady().then(async () => {
       const hwnd = hwndFromSourceId(selectedSource.id);
       if (!windowExists(hwnd)) {
         selectedSource = null;
+        forgetGame();
         textLine = '';
         speaker = '';
         nameRead = '';
@@ -884,6 +910,22 @@ app.whenReady().then(async () => {
       sendSaveState();
     }
   });
+
+  // Whether the game's lines are read from its memory (memory-text.ts),
+  // part of its profile like the click method, and how that's going.
+  ipcMain.handle(
+    'get-text-from-memory',
+    () => profile?.textFromMemory ?? false,
+  );
+  ipcMain.handle('set-text-from-memory', (_event, on: boolean) => {
+    if (profile) {
+      profile = { ...profile, textFromMemory: on };
+      broadcast('text-from-memory-changed', on);
+      sendSaveState();
+      readGameMemory();
+    }
+  });
+  ipcMain.handle('get-memory-text-status', () => memoryTextStatus());
 
   // The game's short name, shown in the Menus sheet's Visual Novels; part
   // of its profile. An empty name clears it, so the title shows again.
@@ -997,7 +1039,14 @@ app.whenReady().then(async () => {
   // The current line: the portrait's text reader sets it, and every window
   // (the portrait included) hears about the change.
   ipcMain.handle('get-text-line', () => textLine);
-  ipcMain.handle('set-text-line', (_event, line: string) => {
+  ipcMain.handle('set-text-line', (_event, read: string) => {
+    // The game's own text for the line, when it's read from its memory and
+    // found there; otherwise OCR's read.
+    const line =
+      (profile?.textFromMemory &&
+        selectedSource &&
+        exactLine(processIdOf(hwndFromSourceId(selectedSource.id)), read)) ||
+      read;
     if (line !== textLine) {
       lineChangedAt = performance.now();
     }

@@ -128,6 +128,7 @@ function newProfile(
     exePath,
     title,
     clickMethod: 'message',
+    textFromMemory: true,
     textStyle: DEFAULT_TEXT_STYLE,
     backgroundY: DEFAULT_BACKGROUND_Y,
     backgroundWidth: DEFAULT_BACKGROUND_WIDTH,
