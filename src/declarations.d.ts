@@ -102,6 +102,9 @@ interface OcrResult {
   confidence: number;
   // How long the reading took, in milliseconds.
   ms: number;
+  // Words left out as junk (the wrong height for the line; see ocr.ts),
+  // logged in debug mode.
+  dropped: string[];
 }
 
 // Everything the app remembers about one game, saved as JSON (profiles.ts).

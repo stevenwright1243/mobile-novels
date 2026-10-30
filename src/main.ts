@@ -665,7 +665,14 @@ app.whenReady().then(async () => {
   ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
     const result = await readText(png);
     if (DEBUG) {
-      console.log(`OCR ${result.confidence}% ${result.ms}ms:`, result.text);
+      const dropped =
+        result.dropped.length > 0
+          ? ` (dropped: ${result.dropped.join(' ')})`
+          : '';
+      console.log(
+        `OCR ${result.confidence}% ${result.ms}ms:`,
+        result.text + dropped,
+      );
     }
     return result;
   });

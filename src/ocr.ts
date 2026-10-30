@@ -88,14 +88,89 @@ function fixCommonMistakes(text: string) {
   );
 }
 
+// --- Dropping words that aren't there ------------------------------------------
+//
+// Marks in the art or the box's frame can be read as "words". Judging each
+// word on its own beats judging the whole line: one stray word no longer
+// costs the whole line, and the real words keep it. Height is the test, not
+// confidence: real words share a height, while junk is a sliver (a frame
+// edge, 2-3 px) or a blob of art (2-4 times as tall). Confidence can't tell
+// them apart: Katawa Shoujo's "Hi..." was read right at 20%.
+
+// Words at least this sure set the line's usual height (if there are any),
+// so a junk word can't shift it.
+const SURE_WORD = 50;
+// How much shorter or taller than the usual height a word can be. Words with
+// no tall letters ("one") are about half the height of ones with them.
+const MIN_WORD_HEIGHT = 0.35;
+const MAX_WORD_HEIGHT = 1.8;
+// A word of only punctuation ("...", "—") can be tiny, so it's only checked
+// for being too tall.
+const PUNCTUATION_ONLY = /^[\p{P}\p{S}]+$/u;
+// If more of the read than this is dropped (counting letters), the real text
+// was probably misread too, not just junk added: what's left is part of the
+// line. Then the read keeps Tesseract's score for the whole of it, so a part
+// line isn't shown as if it were sure.
+const MAX_DROPPED_SHARE = 1 / 3;
+
+type Word = { text: string; confidence: number; height: number };
+
+function median(values: number[]) {
+  return values.slice().sort((a, b) => a - b)[values.length >> 1];
+}
+
 // Reads the text in a PNG image.
 export async function readText(png: Uint8Array): Promise<OcrResult> {
   const ocr = await getWorker();
   const start = performance.now();
-  const { data } = await ocr.recognize(Buffer.from(png));
+  // `blocks: true` also returns each line and word, with its confidence and
+  // position (`bbox`, its bounding box).
+  const { data } = await ocr.recognize(Buffer.from(png), {}, { blocks: true });
+  const lines: Word[][] = (data.blocks ?? []).flatMap((block) =>
+    block.paragraphs.flatMap((paragraph) =>
+      paragraph.lines.map((line) =>
+        line.words.map((word) => ({
+          text: word.text,
+          confidence: word.confidence,
+          height: word.bbox.y1 - word.bbox.y0,
+        })),
+      ),
+    ),
+  );
+  const words = lines.flat();
+  const sure = words.filter((word) => word.confidence >= SURE_WORD);
+  const usual = median((sure.length > 0 ? sure : words).map((w) => w.height));
+  const fits = ({ text, height }: Word) =>
+    height <= MAX_WORD_HEIGHT * usual &&
+    (PUNCTUATION_ONLY.test(text) || height >= MIN_WORD_HEIGHT * usual);
+
+  const kept = words.filter(fits);
+  const dropped = words.filter((word) => !fits(word));
+  const letters = (list: Word[]) =>
+    list.reduce((sum, word) => sum + word.text.length, 0);
+  const tooMuchDropped = letters(dropped) > MAX_DROPPED_SHARE * letters(words);
+  const text = lines
+    .map((line) =>
+      line
+        .filter(fits)
+        .map((word) => word.text)
+        .join(' '),
+    )
+    .filter((line) => line !== '')
+    .join('\n');
+  // Tesseract's own score for a read is the average of its words' scores, so
+  // it's worked out again from the words kept.
+  let confidence =
+    kept.length > 0
+      ? kept.reduce((sum, word) => sum + word.confidence, 0) / kept.length
+      : 0;
+  if (tooMuchDropped) {
+    confidence = Math.min(confidence, data.confidence);
+  }
   return {
-    text: fixCommonMistakes(data.text).trim(),
-    confidence: Math.round(data.confidence),
+    text: fixCommonMistakes(text).trim(),
+    confidence: Math.round(confidence),
     ms: Math.round(performance.now() - start),
+    dropped: dropped.map((word) => word.text),
   };
 }
