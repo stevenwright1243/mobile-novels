@@ -198,34 +198,8 @@ body {
     box-sizing: border-box;
     /* Overlaps the window by about half its height. */
     margin: 0 0 -0.6em clamp(0.75rem, 4vw, 1.5rem);
-    padding: 0.15em 1.1em 0.2em 0.9em;
     font-size: calc(var(--chosen-font-size) * 0.72);
-    font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: 0.04em;
-    color: var(--on-accent);
-    background: linear-gradient(to bottom, var(--accent), var(--accent-deep));
-    border: 1px solid color-mix(in srgb, var(--on-accent) 45%, transparent);
-    border-radius: var(--pill);
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--rim-light) 55%, transparent),
-      0 0.25rem 0.9rem color-mix(in srgb, var(--shadow) 30%, transparent);
-    white-space: nowrap;
-    text-overflow: ellipsis;
     cursor: pointer;
-  }
-
-  /* A small dot before the name. */
-  #name-tag::before {
-    content: '';
-    display: inline-block;
-    width: 0.32em;
-    height: 0.32em;
-    margin: 0 0.55em 0.12em 0;
-    vertical-align: middle;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.75;
   }
 
   #name-text {
@@ -235,6 +209,40 @@ body {
   #name-tag:has(#name-text:empty) {
     display: none;
   }
+}
+
+/* The name pill's look, shared by the name tag and the speaker in the
+   history log. */
+.portrait.text-mode #name-tag,
+#log-speaker {
+  padding: 0.15em 1.1em 0.2em 0.9em;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  color: var(--on-accent);
+  background: linear-gradient(to bottom, var(--accent), var(--accent-deep));
+  border: 1px solid color-mix(in srgb, var(--on-accent) 45%, transparent);
+  border-radius: var(--pill);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--rim-light) 55%, transparent),
+    0 0.25rem 0.9rem color-mix(in srgb, var(--shadow) 30%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A small dot before the name. */
+.portrait.text-mode #name-tag::before,
+#log-speaker::before {
+  content: '';
+  display: inline-block;
+  width: 0.32em;
+  height: 0.32em;
+  margin: 0 0.55em 0.12em 0;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
 }
 
 /* --- Message window styles ------------------------------------------------------
@@ -657,6 +665,20 @@ body {
   font-weight: 700;
   color: var(--accent-deep);
   letter-spacing: 0.05em;
+}
+
+/* Who said the line: the name pill, a little smaller than the line, as on
+   the message window. Hidden for narration. */
+#log-speaker {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 0.6em;
+  font-size: calc(var(--base-font-size) * var(--text-size, 1) * 0.72);
+}
+
+#log-speaker:empty {
+  display: none;
 }
 
 /* The same size as the message window's text. */

@@ -1,6 +1,6 @@
 /**
  * The history log (portrait window): a pop-up that shows the last lines read
- * (kept by main, up to 30), one at a time, with big buttons to step back and
+ * (kept by main, up to 30), each with who said it, one at a time, with big buttons to step back and
  * forward. It opens on the newest line. Opening it takes a snapshot, so new
  * lines arriving while you read don't shift what you're looking at.
  */
@@ -11,20 +11,24 @@ const closeButton = document.querySelector<HTMLButtonElement>('#log-close')!;
 const olderButton = document.querySelector<HTMLButtonElement>('#log-older')!;
 const newerButton = document.querySelector<HTMLButtonElement>('#log-newer')!;
 const count = document.querySelector<HTMLElement>('#log-count')!;
+const speaker = document.querySelector<HTMLElement>('#log-speaker')!;
 const text = document.querySelector<HTMLElement>('#log-text')!;
 
 // The lines as they were when the log was opened, oldest first, and which
 // one is showing.
-let lines: string[] = [];
+let lines: HistoryEntry[] = [];
 let index = 0;
 
 function showLine() {
   if (lines.length === 0) {
     count.textContent = '';
+    speaker.textContent = '';
     text.textContent = 'Nothing yet: lines appear here once they’ve been read.';
   } else {
     count.textContent = `${index + 1} / ${lines.length}`;
-    text.textContent = lines[index];
+    // Empty for narration, which hides the name (portrait.css).
+    speaker.textContent = lines[index].speaker;
+    text.textContent = lines[index].line;
     // The same gentle fade-in as the message window.
     text.animate(
       [

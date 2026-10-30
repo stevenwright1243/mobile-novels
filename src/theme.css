@@ -342,7 +342,7 @@
    buttons, the history log). The message window's border options still
    draw over it (they're more specific). */
 :root[data-theme='miyuki'] .glass,
-:root[data-theme='miyuki'] .portrait.text-mode #name-tag {
+:root[data-theme='miyuki'] :is(.portrait.text-mode #name-tag, #log-speaker) {
   border: 3px solid var(--rim-light);
   box-shadow:
     inset 0 0 0 1px var(--accent),

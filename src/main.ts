@@ -69,7 +69,13 @@ let speaker = '';
 // The history log: the last lines read, oldest first. Cleared when another
 // game is picked.
 const HISTORY_LENGTH = 30;
-let textHistory: string[] = [];
+let textHistory: HistoryEntry[] = [];
+// When the last line was added to it (from `performance.now()`).
+let lastLineAt = 0;
+// The name box and the text box are read separately, so a new speaker can be
+// confirmed a moment after their line. A speaker arriving this soon after a
+// line (in milliseconds) is taken to be that line's.
+const SPEAKER_CATCH_UP = 1000;
 
 // The phone's display while the phone is streaming (the portrait is full
 // screen on it), or null. See phone-display.ts.
@@ -654,8 +660,9 @@ app.whenReady().then(async () => {
     // Add it to the history log, unless it's empty (no text box showing) or
     // the same line again (the box was hidden and shown again). `.at(-1)` is
     // the last item; `.slice(-N)` keeps the last N.
-    if (line && line !== textHistory.at(-1)) {
-      textHistory = [...textHistory, line].slice(-HISTORY_LENGTH);
+    if (line && line !== textHistory.at(-1)?.line) {
+      textHistory = [...textHistory, { speaker, line }].slice(-HISTORY_LENGTH);
+      lastLineAt = performance.now();
     }
   });
   ipcMain.handle('get-text-history', () => textHistory);
@@ -665,6 +672,11 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-speaker', (_event, name: string) => {
     speaker = name;
     broadcast('speaker-changed', speaker);
+    // Just after a new line: it's that line's speaker, so fix its entry.
+    const last = textHistory.at(-1);
+    if (last && performance.now() - lastLineAt < SPEAKER_CATCH_UP) {
+      textHistory = [...textHistory.slice(0, -1), { ...last, speaker }];
+    }
   });
 
   ipcMain.handle('get-phone-display', () => phoneDisplay);

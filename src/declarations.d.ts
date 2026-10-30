@@ -87,6 +87,12 @@ interface ZoneView {
   y: number;
 }
 
+// One line in the history log, with who said it ('' for narration).
+interface HistoryEntry {
+  speaker: string;
+  line: string;
+}
+
 // A size in pixels.
 interface Size {
   width: number;
@@ -218,8 +224,9 @@ interface Window {
     getSpeaker(): Promise<string>;
     setSpeaker(name: string): Promise<void>;
     onSpeakerChanged(callback: (name: string) => void): void;
-    // The history log: the last 30 lines read, oldest first.
-    getTextHistory(): Promise<string[]>;
+    // The history log: the last 30 lines read, oldest first, each with its
+    // speaker.
+    getTextHistory(): Promise<HistoryEntry[]>;
     // The phone's display while one is connected (the portrait is full
     // screen on it), or null.
     getPhoneDisplay(): Promise<PhoneDisplay | null>;
