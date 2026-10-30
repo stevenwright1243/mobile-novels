@@ -53,7 +53,7 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Look:** a styling sweep in the spirit of Aokana: shared sky-blue and white theme (`src/theme.css`), bundled Nunito font, frosted-glass message window with a sky ribbon and bobbing arrow, pill buttons and white cards in the picker.
 
-Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done.
+Done from 3b: text zone sizing (in picture mode the text row takes the text region's shape, so there are no black bars) and removing the portrait's menu bar. Still left: the portrait button row (on hold). 3c (raw mode) is done, and its game view can be pinched to zoom in (or zoomed with the mouse wheel) and dragged around (`src/game-zoom.ts`); pinch on the phone is still to be confirmed (it needs Artemis in touchscreen mode; in trackpad mode a two-finger drag arrives as the wheel, which zooms too).
 
 **Now: Milestone 4 (streaming to the phone).** The phone is **Android**, so the client is **Artemis** (Apollo's own Moonlight fork), which streams in portrait at the phone's exact resolution.
 

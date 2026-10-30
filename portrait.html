@@ -58,8 +58,18 @@
 
       <!-- Menus mode only (the `raw-mode` class): an empty box under the
            corner buttons that the whole game is drawn into (portrait.ts),
-           and the settings sheet below it (menus-sheet.ts). -->
-      <div id="game-slot"></div>
+           and the settings sheet below it (menus-sheet.ts). The game can be
+           pinched to zoom in (game-zoom.ts); then a 1× button in the
+           slot's corner zooms back out. -->
+      <div id="game-slot">
+        <button
+          id="zoom-reset"
+          class="corner-button glass"
+          aria-label="Zoom out to the whole game"
+        >
+          1×
+        </button>
+      </div>
       <section id="menus-sheet" class="glass" aria-label="Settings">
         <!-- Full-screen text and Screenshot, side by side. -->
         <div id="sheet-tools">

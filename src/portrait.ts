@@ -21,6 +21,12 @@ import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';
 import {
+  onZoomedChanged,
+  resetZoom,
+  zoomByGestures,
+  zoomedPlace,
+} from './game-zoom';
+import {
   backgroundWidth,
   backgroundY,
   backgroundYCap,
@@ -81,6 +87,8 @@ let rawMode = false;
 const rawButton = document.querySelector<HTMLButtonElement>('#raw-button')!;
 rawButton.addEventListener('click', () => {
   rawMode = !rawMode;
+  // Each visit to Menus starts with the whole game.
+  resetZoom();
   portrait.classList.toggle('raw-mode', rawMode);
   rawButton.classList.toggle('raw', rawMode);
   rawButton.setAttribute(
@@ -205,6 +213,8 @@ function slotInCanvas(canvas: HTMLCanvasElement) {
 // Where a zone's region comes from in the video (`s...`, source) and where it
 // lands on the zone's canvas (`d...`, destination), all in pixels. Used both
 // to draw the zone and to work out where a tap on it points in the game.
+// `box` is the part of the canvas it's drawn in: the game slot in Menus mode,
+// where the game can be zoomed into (game-zoom.ts), otherwise all of it.
 function placeZone(zone: Zone, regions: Regions) {
   const { canvas } = zone;
   const region = zoneRegion(zone, regions);
@@ -219,7 +229,10 @@ function placeZone(zone: Zone, regions: Regions) {
     box.height,
     zoneView(zone),
   );
-  return { sx, sy, sw, sh, dx: box.x + dx, dy: box.y + dy, dw, dh };
+  if (rawMode) {
+    return { sx, sy, sw, sh, box, ...zoomedPlace(box, dw, dh) };
+  }
+  return { sx, sy, sw, sh, box, dx: box.x + dx, dy: box.y + dy, dw, dh };
 }
 
 // The backdrop behind a zoomed-out background: the same picture, filling the
@@ -312,7 +325,14 @@ function drawZone(zone: Zone, regions: Regions) {
   if (leavesSpace) {
     drawBackdrop(context, place);
   }
+  // Zoomed in, the game is bigger than its slot: only the slot shows it.
+  const { box } = place;
+  context.save();
+  context.beginPath();
+  context.rect(box.x, box.y, box.width, box.height);
+  context.clip();
   context.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
+  context.restore();
   return place;
 }
 
@@ -352,25 +372,36 @@ requestAnimationFrame(drawFrame);
 
 // --- Taps ----------------------------------------------------------------------
 
+// A pointer's position in a canvas's pixels (the canvas has more pixels than
+// CSS pixels on high-resolution screens).
+function inCanvasPixels(canvas: HTMLCanvasElement, event: MouseEvent) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) * canvas.width) / rect.width,
+    y: ((event.clientY - rect.top) * canvas.height) / rect.height,
+  };
+}
+
 // Works backwards from a tap on a zone to the spot in the game it shows, as
 // fractions of the game's content. Null if the tap is on the space around a
-// zoomed-out picture, which shows nothing of the game.
+// zoomed-out picture, which shows nothing of the game, or outside the game
+// slot in Menus mode (a zoomed-in game is hidden there).
 function tapToGame(zone: Zone, event: MouseEvent) {
   if (!regions || !video.videoWidth) {
     return null;
   }
-  const { canvas } = zone;
-  const rect = canvas.getBoundingClientRect();
-  // The tap in canvas pixels (the canvas has more pixels than CSS pixels on
-  // high-resolution screens).
-  const px = ((event.clientX - rect.left) * canvas.width) / rect.width;
-  const py = ((event.clientY - rect.top) * canvas.height) / rect.height;
+  const { x: px, y: py } = inCanvasPixels(zone.canvas, event);
 
   // Undo the scaling: where the tap falls within the drawn region, 0 to 1.
-  const { dx, dy, dw, dh } = placeZone(zone, regions);
+  const { box, dx, dy, dw, dh } = placeZone(zone, regions);
   const u = (px - dx) / dw;
   const v = (py - dy) / dh;
-  if (u < 0 || u > 1 || v < 0 || v > 1) {
+  const inBox =
+    px >= box.x &&
+    px <= box.x + box.width &&
+    py >= box.y &&
+    py <= box.y + box.height;
+  if (!inBox || u < 0 || u > 1 || v < 0 || v > 1) {
     return null;
   }
   const region = zoneRegion(zone, regions);
@@ -424,6 +455,23 @@ onPageModeChanged((on) => {
   }
 });
 
+// In Menus mode, pinching (or the wheel) zooms into the game and dragging
+// moves around it (game-zoom.ts). Set up before the tap below, so a
+// gesture's click is stopped before it reaches it.
+zoomByGestures(
+  backgroundCanvas,
+  () =>
+    rawMode && regions && video.videoWidth
+      ? placeZone(backgroundZone, regions)
+      : null,
+  (event) => inCanvasPixels(backgroundCanvas, event),
+);
+// While zoomed in, a 1× button over the game's corner zooms back out.
+onZoomedChanged((zoomed) => portrait.classList.toggle('zoomed', zoomed));
+document
+  .querySelector<HTMLButtonElement>('#zoom-reset')!
+  .addEventListener('click', resetZoom);
+
 backgroundCanvas.addEventListener('click', (event) => {
   const point = tapToGame(backgroundZone, event);
   if (point) {
@@ -433,8 +481,10 @@ backgroundCanvas.addEventListener('click', (event) => {
 });
 
 function showSource(sourceId: string | null) {
-  // Don't fade the new game in from the old one's backdrop.
+  // Don't fade the new game in from the old one's backdrop, or show it
+  // zoomed in where the old one was.
   backdropEmpty = true;
+  resetZoom();
   if (sourceId) {
     status.hidden = true;
     playCapture(video, sourceId);

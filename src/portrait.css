@@ -858,6 +858,18 @@ body {
   display: none;
 }
 
+/* Zooms back out to the whole game: in the game slot's top-right corner,
+   only while zoomed in (the `zoomed` class, set by portrait.ts). */
+#zoom-reset {
+  display: none;
+  right: var(--corner-gap);
+  pointer-events: auto;
+}
+
+.portrait.zoomed #zoom-reset {
+  display: flex;
+}
+
 .portrait.raw-mode {
   --sheet-gap: clamp(0.5rem, 3vw, 1rem);
   grid-template-areas:
@@ -883,6 +895,16 @@ body {
     display: block;
     grid-area: game;
     height: min(100vw / var(--game-aspect, 1.7778), 55dvh);
+    /* Holds the 1× button in its corner, while taps go through it to the
+       canvas behind, which the game is drawn on. */
+    position: relative;
+    pointer-events: none;
+  }
+
+  /* Pinches and drags on the game go to game-zoom.ts, not to the browser's
+     own scrolling (which would cancel them). */
+  #background-zone canvas {
+    touch-action: none;
   }
 
   #menus-sheet {

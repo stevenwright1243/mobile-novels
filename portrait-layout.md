@@ -143,6 +143,9 @@ game's name box (the `name` region, per game).
 - The game, whole, sits just under the corner buttons (the buttons' row:
   `2 × corner gap + max(48px, 2.2 × button text size)`), full width at its
   own shape, at most **55%** of the portrait's height (`#game-slot`).
+  Pinch (or the mouse wheel) zooms into it, up to **4×**, and a drag moves
+  around; the game stays inside the slot. While zoomed, a **1×** corner pill
+  sits in the slot's top-right corner (`#zoom-reset`, `src/game-zoom.ts`).
 - Below it, the **Menus sheet** (`#menus-sheet`, glass), filling the rest,
   `clamp(0.5rem, 3vw, 1rem)` from the sides, at least 3% of the height from
   the bottom; it scrolls inside itself. Text `max(0.95rem, 3.8vmin)`.
