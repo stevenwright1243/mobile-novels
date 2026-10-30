@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- The bench's hidden page (see bench-main.cjs): runs one version's text
+     reader on a saved frame, standing in for the portrait. -->
+<meta charset="utf-8" />
+<script>
+  // This version's reader, which sets `window.startTextReader`.
+  const loaded = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const file = new URLSearchParams(location.search).get('reader');
+    script.src = 'file:///' + file.replaceAll('\\', '/');
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+
+  // Draws the frame at `scale` (in place of the live capture) and runs the
+  // reader on one region (fractions of the frame) until it confirms a read,
+  // as the portrait does. Then the reader is given no box, so it goes quiet.
+  async function runTest(image, scale, region, options) {
+    await loaded;
+    const picture = new Image();
+    picture.src = 'file:///' + image.replaceAll('\\', '/');
+    await picture.decode();
+    const frame = document.createElement('canvas');
+    frame.width = Math.round(picture.width * scale);
+    frame.height = Math.round(picture.height * scale);
+    const context = frame.getContext('2d');
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(picture, 0, 0, frame.width, frame.height);
+    const box = {
+      sx: region.x * frame.width,
+      sy: region.y * frame.height,
+      sw: region.w * frame.width,
+      sh: region.h * frame.height,
+    };
+    return new Promise((resolve) => {
+      let reading = true;
+      const finish = (text) => {
+        if (reading) {
+          reading = false;
+          resolve(text);
+        }
+      };
+      setTimeout(() => finish('(timed out)'), 60000);
+      window.startTextReader(
+        frame,
+        () => (reading ? box : null),
+        finish,
+        options,
+      );
+    });
+  }
+</script>

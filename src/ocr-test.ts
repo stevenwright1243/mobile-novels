@@ -41,7 +41,92 @@ export function enableOcrTest(preview: HTMLVideoElement) {
   video = preview;
   button.disabled = false;
   cleanUp.disabled = false;
+  saveTestButton.disabled = false;
 }
+
+// --- Saving OCR test cases ------------------------------------------------------
+// When the reader gets a line wrong, the frame can be saved as a test (see
+// ocr-tests.ts), with what it should have read, for `npm run ocr-bench`.
+
+const saveTestButton =
+  document.querySelector<HTMLButtonElement>('#save-ocr-test')!;
+const showTestsButton =
+  document.querySelector<HTMLButtonElement>('#show-ocr-tests')!;
+const testDialog =
+  document.querySelector<HTMLDialogElement>('#ocr-test-dialog')!;
+const expectedText =
+  document.querySelector<HTMLTextAreaElement>('#expected-text')!;
+const expectedName =
+  document.querySelector<HTMLInputElement>('#expected-name')!;
+const testNameBox = document.querySelector<HTMLInputElement>('#test-name-box')!;
+
+// The game's content (its client area) as a PNG, at the capture's full size.
+async function grabClientArea(video: HTMLVideoElement) {
+  const area = await getClientArea();
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(area.w * video.videoWidth);
+  canvas.height = Math.round(area.h * video.videoHeight);
+  canvas
+    .getContext('2d')!
+    .drawImage(
+      video,
+      area.x * video.videoWidth,
+      area.y * video.videoHeight,
+      canvas.width,
+      canvas.height,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+  return pngBytes(
+    await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image')))),
+    ),
+  );
+}
+
+saveTestButton.addEventListener('click', async () => {
+  if (!video || video.videoWidth === 0) {
+    return;
+  }
+  // The frame is taken now, before the game can move on, and the boxes are
+  // filled in with what the app shows, to be corrected.
+  const [png, regions, shownText, shownName] = await Promise.all([
+    grabClientArea(video),
+    window.vn.getRegions(),
+    window.vn.getTextLine(),
+    window.vn.getSpeaker(),
+  ]);
+  expectedText.value = shownText;
+  expectedName.value = shownName;
+  // Escape leaves `returnValue` as it was, so a last "save" would repeat.
+  testDialog.returnValue = '';
+  testDialog.showModal();
+  // `close` fires once the dialog is closed, by a button or Escape.
+  testDialog.addEventListener(
+    'close',
+    async () => {
+      if (testDialog.returnValue !== 'save') {
+        return;
+      }
+      const path = await window.vn.saveOcrTest(png, {
+        savedAt: new Date().toISOString(),
+        text: regions.text,
+        name: testNameBox.checked ? regions.name : null,
+        expectedText: expectedText.value.trim(),
+        expectedName: expectedName.value.trim(),
+        shownText,
+        shownName,
+      });
+      stats.textContent = `Saved OCR test: ${path}`;
+      panel.hidden = false;
+    },
+    { once: true },
+  );
+});
+
+showTestsButton.addEventListener('click', () => window.vn.showOcrTests());
 
 button.addEventListener('click', async () => {
   if (!video || video.videoWidth === 0) {

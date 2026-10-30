@@ -16,7 +16,8 @@
     "release": "electron-forge release",
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "oxlint --fix && oxfmt --write",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ocr-bench": "node tools/ocr-bench/run.mjs"
   },
   "devDependencies": {
     "@electron-forge/cli": "^8.0.1",

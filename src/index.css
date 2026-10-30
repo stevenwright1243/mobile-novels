@@ -516,6 +516,70 @@ input[type='number'] {
   display: none;
 }
 
+/* "Save as OCR test" (ocr-test.ts): a native modal dialog. */
+#ocr-test-dialog {
+  width: min(36rem, 90vw);
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: calc(1rem * var(--corner));
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0.5rem 2rem color-mix(in srgb, var(--shadow) 35%, transparent);
+
+  /* The page behind it, dimmed. */
+  &::backdrop {
+    background: color-mix(in srgb, var(--deep) 45%, transparent);
+  }
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+    color: var(--accent-deep);
+  }
+
+  form {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  label {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  textarea,
+  input[type='text'] {
+    font: inherit;
+    color: inherit;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    background: var(--surface-tint);
+  }
+
+  .dialog-hint {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+}
+
+/* Cancel and Save, at the bottom right. */
+.dialog-buttons {
+  display: flex;
+  justify-content: end;
+  gap: 0.5rem;
+}
+
+button.primary {
+  border-color: var(--accent-deep);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
+}
+
 /* "On phone" / "Phone not connected" (phone-status.ts). */
 #phone-status {
   padding: 0.1rem 0.6rem;

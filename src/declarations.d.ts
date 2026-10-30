@@ -107,6 +107,23 @@ interface OcrResult {
   dropped: string[];
 }
 
+// An OCR test case (ocr-tests.ts), saved next to a frame of the game. The
+// regions are fractions of that frame, which is the game's client area.
+interface OcrTest {
+  game: string;
+  // When it was saved, as an ISO date.
+  savedAt: string;
+  text: Region;
+  // null when the name box isn't tested.
+  name: Region | null;
+  // What the reader should read ('' for nothing, e.g. narration's name).
+  expectedText: string;
+  expectedName: string;
+  // What the app was showing when the test was saved, for reference.
+  shownText: string;
+  shownName: string;
+}
+
 // Everything the app remembers about one game, saved as JSON (profiles.ts).
 interface GameProfile {
   version: 3;
@@ -209,6 +226,11 @@ interface Window {
     isDebug(): Promise<boolean>;
     // Reads the text in a PNG image with OCR (ocr.ts).
     readText(png: Uint8Array): Promise<OcrResult>;
+    // Saves an OCR test case (a frame of the game and what it should read;
+    // ocr-tests.ts). `game` is filled in by main. Returns the frame's path.
+    saveOcrTest(png: Uint8Array, test: Omit<OcrTest, 'game'>): Promise<string>;
+    // Opens the folder of OCR test cases in Explorer.
+    showOcrTests(): Promise<void>;
     // The game's current line of text, as read by OCR (text-reader.ts).
     // Main keeps it and passes changes on to every window.
     getTextLine(): Promise<string>;

@@ -174,7 +174,39 @@
           <input type="checkbox" id="ocr-clean-up" checked disabled /> Clean up
           image
         </label>
+        <button id="save-ocr-test" disabled>Save as OCR test…</button>
+        <button id="show-ocr-tests">Show OCR tests</button>
       </span>
+      <!-- Saves the current frame as an OCR test (see ocr-test.ts), with
+           what it should read. `method="dialog"` closes the dialog on
+           submit, setting its `returnValue` to the clicked button's value. -->
+      <dialog id="ocr-test-dialog">
+        <form method="dialog">
+          <h2>Save as OCR test</h2>
+          <p>
+            Saves this frame and your regions, for
+            <code>npm run ocr-bench</code>. Fix the text below to what the game
+            really shows.
+          </p>
+          <label>
+            Text
+            <textarea id="expected-text" rows="3"></textarea>
+          </label>
+          <label>
+            <span
+              ><input type="checkbox" id="test-name-box" checked /> Name</span
+            >
+            <input type="text" id="expected-name" />
+          </label>
+          <p class="dialog-hint">
+            Leave a box empty if it should read nothing.
+          </p>
+          <div class="dialog-buttons">
+            <button value="cancel" formnovalidate>Cancel</button>
+            <button value="save" class="primary">Save test</button>
+          </div>
+        </form>
+      </dialog>
       <!-- Shown while editing a region (see region-editor.ts). -->
       <div id="edit-panel" role="group" aria-label="Region settings" hidden>
         <label><input type="checkbox" id="snap" checked /> Snap to edges</label>

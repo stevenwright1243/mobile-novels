@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld('vn', {
   sendGameToBack: () => ipcRenderer.invoke('send-game-to-back'),
   isDebug: () => ipcRenderer.invoke('is-debug'),
   readText: (png) => ipcRenderer.invoke('read-text', png),
+  saveOcrTest: (png, test) => ipcRenderer.invoke('save-ocr-test', png, test),
+  showOcrTests: () => ipcRenderer.invoke('show-ocr-tests'),
   getTextLine: () => ipcRenderer.invoke('get-text-line'),
   getTextHistory: () => ipcRenderer.invoke('get-text-history'),
   setTextLine: (line) => ipcRenderer.invoke('set-text-line', line),

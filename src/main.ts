@@ -13,6 +13,7 @@ import {
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { readText } from './ocr';
+import { saveOcrTest, showOcrTests } from './ocr-tests';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import {
@@ -662,6 +663,14 @@ app.whenReady().then(async () => {
 
   // With `npm run start:debug`, each read is logged to the terminal, to help
   // tune what counts as garbage (see text-reader.ts).
+  // OCR test cases, saved from the picker's debug tools (see ocr-tests.ts).
+  ipcMain.handle(
+    'save-ocr-test',
+    (_event, png: Uint8Array, test: Omit<OcrTest, 'game'>) =>
+      saveOcrTest(png, { game: profile?.title ?? 'game', ...test }),
+  );
+  ipcMain.handle('show-ocr-tests', showOcrTests);
+
   ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
     const result = await readText(png);
     if (DEBUG) {
