@@ -73,10 +73,10 @@ const MIN_OCR_SCALE = 1;
 const MAX_OCR_SCALE = 4;
 // Used when the text's height can't be measured (an empty box, just dots).
 const OCR_SCALE = 2;
-// Letters shorter than this in the capture are probably a pixel font (old
-// games): they're enlarged by a whole number with hard edges, keeping each
-// pixel square, instead of being smoothed into a blur. A first guess.
-const PIXEL_FONT_HEIGHT = 14;
+// (Pixel fonts in old games may read better enlarged with hard edges. A
+// guess by letter height, "under 14 px is a pixel font", misfired on small
+// smooth text, Aokana's "N..." read as "NM...", so it was taken out until a
+// pixel-font game is in the OCR tests to check a real detection against.)
 // A pixel is part of the writing when its brightness is this far from the
 // box's usual brightness, lighter or darker (0 to 255).
 const TEXT_CONTRAST = 60;
@@ -85,12 +85,11 @@ const MIN_ROW_INK = 2;
 // Runs of writing rows shorter than this are lines or specks, not letters.
 const MIN_LETTER_HEIGHT = 3;
 
-// How a crop is enlarged for OCR: by `scale`, with or without smoothing.
-// `letterHeight` is the measured height of its lines of text in the capture's
-// pixels (null if none were found), shown by the picker's OCR test.
+// How much a crop is enlarged for OCR. `letterHeight` is the measured height
+// of its lines of text in the capture's pixels (null if none were found),
+// shown by the picker's OCR test.
 export interface OcrScale {
   scale: number;
-  hardEdges: boolean;
   letterHeight: number | null;
 }
 
@@ -140,18 +139,14 @@ export function ocrScale(
     }
   }
   if (runs.length === 0) {
-    return { scale: OCR_SCALE, hardEdges: false, letterHeight: null };
+    return { scale: OCR_SCALE, letterHeight: null };
   }
   const letterHeight = runs.sort((a, b) => a - b)[runs.length >> 1];
-  let scale = Math.min(
+  const scale = Math.min(
     MAX_OCR_SCALE,
     Math.max(MIN_OCR_SCALE, TARGET_LETTER_HEIGHT / letterHeight),
   );
-  const hardEdges = letterHeight < PIXEL_FONT_HEIGHT;
-  if (hardEdges) {
-    scale = Math.round(scale);
-  }
-  return { scale, hardEdges, letterHeight };
+  return { scale, letterHeight };
 }
 
 // How a crop is prepared for OCR:
@@ -171,14 +166,13 @@ export async function cropForOcr(
   video: HTMLVideoElement,
   box: VideoRect,
   prep: OcrPrep = 'clean',
-  { scale, hardEdges } = ocrScale(video, box),
+  { scale } = ocrScale(video, box),
 ) {
   const { sx, sy, sw, sh } = box;
   let canvas = document.createElement('canvas');
   canvas.width = Math.round(sw * scale);
   canvas.height = Math.round(sh * scale);
   const context = canvas.getContext('2d')!;
-  context.imageSmoothingEnabled = !hardEdges;
   context.imageSmoothingQuality = 'high';
   // `filter` works like the CSS property, applied to whatever is drawn next.
   context.filter = prep === 'clean' ? 'grayscale(1) contrast(1.5)' : 'none';

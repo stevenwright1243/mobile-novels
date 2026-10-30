@@ -139,11 +139,11 @@ button.addEventListener('click', async () => {
     URL.revokeObjectURL(image.src);
     image.src = URL.createObjectURL(blob);
     const result = await window.vn.readText(await pngBytes(blob));
-    // e.g. "3× hard edges (letters 11 px)".
+    // e.g. "3× (letters 11 px)".
     const letters = scale.letterHeight
       ? `letters ${scale.letterHeight} px`
       : 'no text measured';
-    const enlarged = `${+scale.scale.toFixed(2)}×${scale.hardEdges ? ' hard edges' : ''} (${letters})`;
+    const enlarged = `${+scale.scale.toFixed(2)}× (${letters})`;
     stats.textContent = `Confidence ${result.confidence}% · ${result.ms} ms · ${enlarged}`;
     output.textContent = result.text || '(no text found)';
     console.log('OCR result:', result);

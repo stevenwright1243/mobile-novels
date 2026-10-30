@@ -109,6 +109,10 @@ const MAX_WORD_HEIGHT = 1.8;
 // A line of its own made only of unsure words this short is a mark, not
 // text: the box's "next" arrow (▼ read as "wv"), the mouse pointer.
 const MAX_MARK_HEIGHT = 0.6;
+// So is a line of its own that lies entirely in this share of the box at its
+// right: where the "next" arrow sits (Miyuki's Realm's ▼ read as "h 4", the
+// "4" at 94%). A real line, even one wrapped word, starts at the left.
+const ARROW_ZONE = 0.2;
 // A word of only punctuation ("...", "—") can be tiny, so it's only checked
 // for being too tall.
 const PUNCTUATION_ONLY = /^[\p{P}\p{S}]+$/u;
@@ -118,7 +122,8 @@ const PUNCTUATION_ONLY = /^[\p{P}\p{S}]+$/u;
 // line isn't shown as if it were sure.
 const MAX_DROPPED_SHARE = 1 / 3;
 
-type Word = { text: string; confidence: number; height: number };
+// `left` is where the word starts, in pixels from the image's left edge.
+type Word = { text: string; confidence: number; height: number; left: number };
 
 function median(values: number[]) {
   return values.slice().sort((a, b) => a - b)[values.length >> 1];
@@ -138,11 +143,14 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
           text: word.text,
           confidence: word.confidence,
           height: word.bbox.y1 - word.bbox.y0,
+          left: word.bbox.x0,
         })),
       ),
     ),
   );
   const words = lines.flat();
+  // The image's width: a PNG stores it in bytes 16-19 (in its "IHDR" part).
+  const width = Buffer.from(png).readUInt32BE(16);
   const sure = words.filter((word) => word.confidence >= SURE_WORD);
   const usual = median((sure.length > 0 ? sure : words).map((w) => w.height));
   const fits = ({ text, height, confidence }: Word) =>
@@ -150,10 +158,11 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
     (PUNCTUATION_ONLY.test(text) || height >= MIN_WORD_HEIGHT * usual);
   const isMark = (line: Word[]) =>
     lines.length > 1 &&
-    line.every(
+    (line.every(
       (word) =>
         word.confidence < SURE_WORD && word.height < MAX_MARK_HEIGHT * usual,
-    );
+    ) ||
+      line.every((word) => word.left >= (1 - ARROW_ZONE) * width));
   // The words kept, line by line.
   const keptLines = lines.map((line) =>
     isMark(line) ? [] : line.filter(fits),
