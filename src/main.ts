@@ -16,6 +16,7 @@ import { readText } from './ocr';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import {
+  DEFAULT_BACKGROUND_Y,
   DEFAULT_REGIONS,
   DEFAULT_TEXT_STYLE,
   deleteProfile,
@@ -117,6 +118,7 @@ const snapshot = (current: GameProfile) =>
     regions: current.regions,
     clickMethod: current.clickMethod,
     textStyle: current.textStyle,
+    backgroundY: current.backgroundY,
   });
 
 const hasEdits = () => profile !== null && snapshot(profile) !== savedSnapshot;
@@ -434,6 +436,7 @@ app.whenReady().then(async () => {
     broadcast('regions-changed', profile.regions);
     broadcast('click-method-changed', profile.clickMethod);
     broadcast('text-style-changed', profile.textStyle);
+    broadcast('background-y-changed', profile.backgroundY);
     // The last game's line no longer applies.
     textLine = '';
     speaker = '';
@@ -616,6 +619,20 @@ app.whenReady().then(async () => {
     if (profile) {
       profile = { ...profile, textStyle: style };
       broadcast('text-style-changed', style, event.sender);
+      sendSaveState();
+    }
+  });
+
+  // Where the background sits in the portrait, top to bottom, part of the
+  // game's profile. The picker changes it; the portrait redraws.
+  ipcMain.handle(
+    'get-background-y',
+    () => profile?.backgroundY ?? DEFAULT_BACKGROUND_Y,
+  );
+  ipcMain.handle('set-background-y', (event, y: number) => {
+    if (profile) {
+      profile = { ...profile, backgroundY: y };
+      broadcast('background-y-changed', y, event.sender);
       sendSaveState();
     }
   });

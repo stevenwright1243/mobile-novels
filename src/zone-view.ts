@@ -4,11 +4,13 @@
  * back through it, and the picker, which outlines the part that's shown.
  */
 
-// How the background is zoomed and positioned in the portrait, for every
-// game: 20% of the way from "show all" to "fill", centered left to right, and
-// 20% of the way down. Fixed on purpose (the user's chosen layout, which the
-// text box is tuned against; see portrait-layout.md), so there are no
-// settings for it. Used by the portrait and the picker's "Portrait view".
+// How the background is zoomed and positioned in the portrait: 20% of the
+// way from "show all" to "fill", centered left to right, and 20% of the way
+// down. The zoom and left/right are fixed for every game, on purpose (the
+// user's chosen layout, which the text box is tuned against; see
+// portrait-layout.md). `y` is only the default: each game sets its own with
+// the picker's "Background height" slider (`backgroundY` in its profile).
+// Used by the portrait and the picker's "Portrait view".
 export const BACKGROUND_VIEW: ZoneView = { fill: 0.2, x: 0.5, y: 0.2 };
 
 // The whole region fits, centered, with space around it if the shapes

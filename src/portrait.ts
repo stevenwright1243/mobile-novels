@@ -28,12 +28,22 @@ interface Zone {
 const backgroundCanvas = document.querySelector<HTMLCanvasElement>(
   '#background-zone canvas',
 )!;
+// Where the background sits, top to bottom (the game's `backgroundY`), set
+// in the picker and kept up to date by main.
+let backgroundY = BACKGROUND_VIEW.y;
+window.vn.onBackgroundYChanged((y) => {
+  backgroundY = y;
+});
+window.vn.getBackgroundY().then((y) => {
+  backgroundY = y;
+});
+
 // The only zone drawn from the capture: the game's text and name are read
 // by OCR and shown as text, not as pictures.
 const backgroundZone: Zone = {
   canvas: backgroundCanvas,
   region: 'background',
-  view: () => BACKGROUND_VIEW,
+  view: () => ({ ...BACKGROUND_VIEW, y: backgroundY }),
 };
 
 // The current regions, kept up to date by main. Null until they arrive.

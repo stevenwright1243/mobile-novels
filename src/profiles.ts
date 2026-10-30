@@ -4,6 +4,7 @@
 import { app } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { BACKGROUND_VIEW } from './zone-view';
 
 // Used for a game that has no saved regions yet. The name box starts just
 // above the text box's left end, where most VNs put it.
@@ -18,6 +19,9 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   size: 1,
   nameSize: 1,
 };
+
+// The background sits 20% of the way down (see `BACKGROUND_VIEW`).
+export const DEFAULT_BACKGROUND_Y = BACKGROUND_VIEW.y;
 
 // The file format's version. 1 measured regions against the whole window
 // (title bar included), 2 against the game's content and was keyed by window
@@ -84,8 +88,9 @@ export async function loadProfile(
       regions: { ...DEFAULT_REGIONS, ...saved.regions },
       textStyle: { ...DEFAULT_TEXT_STYLE, ...saved.textStyle },
     };
-    // The background's zoom and position used to be saved per game; they're
-    // fixed now (see `BACKGROUND_VIEW`), so drop any old saved ones.
+    // The background's zoom and position used to be saved per game; only
+    // its height is now (`backgroundY`; the rest is fixed, see
+    // `BACKGROUND_VIEW`), so drop any old saved ones.
     delete profile.backgroundView;
     // Likewise the text mode: the text is always read now, never shown as
     // the text box's picture.
@@ -118,6 +123,7 @@ function newProfile(
     title,
     clickMethod: 'message',
     textStyle: DEFAULT_TEXT_STYLE,
+    backgroundY: DEFAULT_BACKGROUND_Y,
     regions: DEFAULT_REGIONS,
     window: null,
     lastPlayed: new Date().toISOString(),

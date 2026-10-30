@@ -66,6 +66,33 @@
           disabled
         />%
       </span>
+      <!-- Where the background sits in the portrait, top to bottom, per game
+           (background-view.ts). -->
+      <span
+        class="slider-field"
+        title="Where the game's picture sits in the portrait: 0% at the top, 100% at the bottom. Saved with the game's profile."
+      >
+        <label for="background-y">Background height</label>
+        <span>Top</span>
+        <input
+          type="range"
+          id="background-y"
+          min="0"
+          max="1"
+          step="0.01"
+          disabled
+        />
+        <span>Bottom</span>
+        <input
+          type="number"
+          id="background-y-percent"
+          min="0"
+          max="100"
+          step="1"
+          aria-label="Background height, percent from top to bottom"
+          disabled
+        />%
+      </span>
       <!-- The size of the portrait's corner buttons, for every game
            (button-size.ts). -->
       <span

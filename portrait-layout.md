@@ -14,7 +14,7 @@ A cap in `rem`/px doesn't mean the same size everywhere: the phone's display
 twice as many CSS pixels wide as the portrait window on the PC (150%), and a
 `rem` cap that's reached there looks small.
 
-## Background (fixed, the same for every game)
+## Background (zoom fixed for every game; height per game)
 
 The background fills the whole portrait. The message window lies over its
 bottom, and never moves it.
@@ -25,11 +25,14 @@ bottom, and never moves it.
 | Left ↔ Right          | **50%** | 0% = left edges together, 50% = centered, 100% = right edges together                                                             |
 | Top ↔ Bottom          | **20%** | 0% = top edges together, 100% = bottom edges together. At 20% a zoomed-out picture sits near the top, clear of the message window |
 
-- These are **fixed in code**, on purpose, so the text box can be tuned
-  against them: `BACKGROUND_VIEW` in `src/zone-view.ts`, the only place
-  they're defined. There are no sliders for them in the picker, and games no
-  longer save their own (older saved values are ignored).
-- The percentages are the same scale the old sliders used, for reference.
+- The zoom and Left ↔ Right are **fixed in code**, on purpose, so the text
+  box can be tuned against them: `BACKGROUND_VIEW` in `src/zone-view.ts`, the
+  only place they're defined.
+- Top ↔ Bottom is the picker's **Background height** slider (0–100%), saved
+  per game in its profile (`backgroundY`; slider in
+  `src/background-view.ts`). `BACKGROUND_VIEW.y` (20%) is the default for a
+  game that hasn't set one. Older profiles' saved `backgroundView` (all three
+  values) is ignored.
 - Space around a zoomed-out picture shows a blurred copy of it, washed with
   the theme's `--backdrop-tint` (in `src/theme.css`; pale sky in Aokana).
 - The zoom blends between "show all" and "fill" evenly: each slider step
@@ -158,6 +161,7 @@ old background settings are no longer used.)
 | What                               | Where                                             |
 | ---------------------------------- | ------------------------------------------------- |
 | Background zoom and position       | `BACKGROUND_VIEW` in `src/zone-view.ts`           |
+| Background height (per game)       | Background height slider in the picker            |
 | Base text size                     | `--base-font-size` in `src/portrait.css`          |
 | Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
 | Name tag size and position         | `#name-tag` in `src/portrait.css`                 |

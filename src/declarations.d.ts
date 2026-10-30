@@ -114,6 +114,9 @@ interface GameProfile {
   title: string;
   clickMethod: ClickMethod;
   textStyle: TextStyle;
+  // Where the background sits in the portrait, top (0) to bottom (1): the
+  // `y` of its `ZoneView` (the zoom and left/right are fixed).
+  backgroundY: number;
   regions: Regions;
   // The game's content size in pixels when last played.
   window: Size | null;
@@ -123,7 +126,10 @@ interface GameProfile {
 
 // A profile as listed in the picker: `Omit<T, K>` is T without the listed
 // properties. `isOpen` and `sourceId` say whether (and where) it's running.
-type ProfileSummary = Omit<GameProfile, 'version' | 'regions' | 'textStyle'> & {
+type ProfileSummary = Omit<
+  GameProfile,
+  'version' | 'regions' | 'textStyle' | 'backgroundY'
+> & {
   isOpen: boolean;
   sourceId?: string;
 };
@@ -175,6 +181,9 @@ interface Window {
     getTextStyle(): Promise<TextStyle>;
     setTextStyle(style: TextStyle): Promise<void>;
     onTextStyleChanged(callback: (style: TextStyle) => void): void;
+    getBackgroundY(): Promise<number>;
+    setBackgroundY(y: number): Promise<void>;
+    onBackgroundYChanged(callback: (y: number) => void): void;
     // The size of the portrait's background zone, sent by the portrait so
     // the picker can outline the part of the background that's shown.
     getBackgroundZoneSize(): Promise<Size | null>;

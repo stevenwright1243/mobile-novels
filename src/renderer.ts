@@ -7,8 +7,8 @@
 import './theme';
 import './index.css';
 import { playCapture, stopCapture } from './capture';
-// The "Portrait view" box in the preview.
-import './background-view';
+// The "Portrait view" box in the preview, and the "Background height" slider.
+import { enableBackgroundY } from './background-view';
 import './button-size';
 import './message-style';
 import { enableOcrTest } from './ocr-test';
@@ -42,6 +42,7 @@ async function pickWindow(source: GameWindow) {
   enableRegionEditing();
   enableOcrTest(preview);
   enableTextStyle();
+  enableBackgroundY();
   // Fold the window list away; its summary line still opens it again.
   windowsSection.open = false;
   sendToBackButton.disabled = false;
