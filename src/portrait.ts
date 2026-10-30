@@ -164,6 +164,21 @@ function placeZone(zone: Zone, regions: Regions) {
 const BACKDROP_SHRINK = 24;
 const backdrop = document.createElement('canvas');
 const backdropContext = backdrop.getContext('2d')!;
+// Each frame is shrunk into `latest` first, then only partly blended into
+// `backdrop` (a running average over the last few frames). Shrinking 24×
+// makes each tiny pixel stand for hundreds of real ones, so the slightest
+// flicker in the capture would make whole blocks of the blur shimmer; the
+// average smooths that out, while real movement still comes through, a
+// fraction of a second behind.
+const latest = document.createElement('canvas');
+const latestContext = latest.getContext('2d')!;
+// How much of each new frame goes into the average. Lower is steadier but
+// lags real movement more (at 0.15, a change is ~90% there in a quarter of a
+// second).
+const BACKDROP_BLEND = 0.15;
+// True when `backdrop` holds nothing worth blending into yet, so the next
+// frame is drawn whole.
+let backdropEmpty = true;
 
 // The colour washed over the backdrop, from the theme in theme.css. Read
 // again whenever the theme changes.
@@ -185,17 +200,22 @@ function drawBackdrop(
   const smallWidth = Math.max(1, Math.ceil(width / BACKDROP_SHRINK));
   const smallHeight = Math.max(1, Math.ceil(height / BACKDROP_SHRINK));
   if (backdrop.width !== smallWidth || backdrop.height !== smallHeight) {
-    backdrop.width = smallWidth;
-    backdrop.height = smallHeight;
+    backdrop.width = latest.width = smallWidth;
+    backdrop.height = latest.height = smallHeight;
+    backdropEmpty = true;
   }
-  const fill = placeInZone(sw, sh, backdrop.width, backdrop.height, {
+  const fill = placeInZone(sw, sh, latest.width, latest.height, {
     fill: 1,
     x: 0.5,
     y: 0.5,
   });
+  // 'high' averages over all the pixels being shrunk, instead of sampling
+  // a few of them (which is what makes small changes jump around).
+  latestContext.imageSmoothingQuality = 'high';
   // A light blur at this tiny size smooths out the blockiness.
-  backdropContext.filter = 'blur(1px)';
-  backdropContext.drawImage(
+  latestContext.filter = 'blur(1px)';
+  latestContext.clearRect(0, 0, latest.width, latest.height);
+  latestContext.drawImage(
     video,
     sx,
     sy,
@@ -206,6 +226,10 @@ function drawBackdrop(
     fill.dw,
     fill.dh,
   );
+  backdropContext.globalAlpha = backdropEmpty ? 1 : BACKDROP_BLEND;
+  backdropContext.drawImage(latest, 0, 0);
+  backdropEmpty = false;
+  context.imageSmoothingQuality = 'high';
   context.drawImage(backdrop, 0, 0, width, height);
   // Wash it with the theme's tint, so the real picture stands out.
   context.fillStyle = backdropTint;
@@ -297,6 +321,8 @@ backgroundCanvas.addEventListener('click', (event) => {
 });
 
 function showSource(sourceId: string | null) {
+  // Don't fade the new game in from the old one's backdrop.
+  backdropEmpty = true;
   if (sourceId) {
     status.hidden = true;
     playCapture(video, sourceId);
