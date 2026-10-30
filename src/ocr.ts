@@ -29,7 +29,7 @@ function getWorker() {
 // text, and a lowercase "l" on its own isn't an English word, so both are
 // almost certainly an "I" (e.g. "| wasn't", "l'm"). A "1" is only changed
 // where a number can't be: before "'m" and the like, or in a stammer
-// ("I-1 did it"). Telling Tesseract never
+// ("I-1 did it"). Likewise a "0" only inside a word of letters. Telling Tesseract never
 // to output `|` doesn't work: it just picks `[` instead.
 function fixCommonMistakes(text: string) {
   return (
@@ -39,6 +39,25 @@ function fixCommonMistakes(text: string) {
       // any letter, `\p{N}` any digit; `(?<!...)` and `(?!...)` check the
       // neighbours without including them in the match.
       .replace(/(?<![\p{L}\p{N}])l(?![\p{L}\p{N}])/gu, 'I')
+      // A "0" in a word that's otherwise letters is an "o": "so00000000"
+      // is a drawn-out "sooooooooo". Capital "O" in a capitalised word
+      // ("NO0O"). Words with other digits ("2000s", "10am") stay as they are,
+      // and so does "0th".
+      .replace(/[\p{L}\p{N}]+/gu, (word) => {
+        if (
+          !word.includes('0') ||
+          /[1-9]/.test(word) ||
+          /^0(?:st|nd|rd|th)$/i.test(word)
+        ) {
+          return word;
+        }
+        const letters = word.replace(/\P{L}/gu, '');
+        if (!letters) {
+          return word;
+        }
+        const capital = letters.length > 1 && letters === letters.toUpperCase();
+        return word.replaceAll('0', capital ? 'O' : 'o');
+      })
       // A "1" before an apostrophe and a letter: "1'm", "1'll", "1've".
       .replace(/(?<![\p{L}\p{N}])1(?=['’]\p{L})/gu, 'I')
       // A stammered "I" with a "1" in it: "I-1 did it", "1-I", "I-I-1".
