@@ -94,4 +94,11 @@ contextBridge.exposeInMainWorld('vn', {
   getPortraitOnPhone: () => ipcRenderer.invoke('get-portrait-on-phone'),
   setPortraitOnPhone: (onPhone) =>
     ipcRenderer.invoke('set-portrait-on-phone', onPhone),
+  getButtonSize: () => ipcRenderer.invoke('get-button-size'),
+  setButtonSize: (size) => ipcRenderer.invoke('set-button-size', size),
+  onButtonSizeChanged: (callback) => {
+    ipcRenderer.on('button-size-changed', (_event, size: number) =>
+      callback(size),
+    );
+  },
 } satisfies Window['vn']);

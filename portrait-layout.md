@@ -5,8 +5,14 @@ sees), in one place. Read this before tuning the layout, especially the text
 box, which is meant to be adjusted against the background defaults below.
 
 Percentages are what the picker's sliders and boxes show. "vw" is a percent of
-the portrait's width, so sizes follow the screen; `clamp(min, preferred, max)`
-keeps them within limits.
+the portrait's width, so sizes follow the screen; "vmin" is a percent of its
+shorter side (the width, in portrait); `clamp(min, preferred, max)` keeps them
+within limits.
+
+A cap in `rem`/px doesn't mean the same size everywhere: the phone's display
+(from Apollo) has the phone's full pixel count at 100% scaling, so it's about
+twice as many CSS pixels wide as the portrait window on the PC (150%), and a
+`rem` cap that's reached there looks small.
 
 ## Background (fixed, the same for every game)
 
@@ -49,21 +55,51 @@ bottom, and never moves it.
 - **Maximum height:** 60% of the portrait's height; longer text scrolls inside.
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right.
-- **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides and
-  bottom, so it floats.
-- **Corners:** rounded `clamp(0.75rem, 3vw, 1.25rem)`.
+- **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides, so
+  it floats. At the bottom, at least 5% of the portrait's height
+  (`max(gap, 5dvh)`), so it sits up off the edge, clear of the phone's gesture
+  bar. (Before 2026-10-29: the same as the sides.)
+- **Corners:** rounded `max(0.75rem, 3vmin)` (`.glass`, shared with the
+  history log's card).
 - Look: frosted white glass (`.glass`), a sky-blue ribbon on the top edge, a
   bobbing ▼ in the bottom-right corner.
 
 ## Corner buttons
 
-- **Menus** (top-left) and **Log** (top-right): frosted pills, at least 44px
-  tall, `clamp(0.5rem, 3vw, 1rem)` from the edges, text
-  `clamp(0.95rem, 4vw, 1.2rem)`.
+- **Menus** (top-left) and **Log** (top-right): frosted pills, at least 48px
+  tall, `max(0.75rem, 4.5vmin)` from the top and sides (set in a little
+  further than the message window), text
+  `clamp(1.05rem, 4.75vmin × Button size, 7vmin)`, padding `0.5em 1.15em`.
+  Set in `.corner-button` in `src/portrait.css`. Sized only by the screen
+  (no `rem` cap), so they look the same on the PC and the phone; the 7vmin
+  ceiling (about 150%) keeps both fitting side by side.
+- **Button size** (picker slider, 50–150%, default 100%): an app setting,
+  the same for every game, saved straight away (`buttonSize` in
+  `settings.json`, `src/settings.ts`; slider in `src/button-size.ts`).
+  (Before 2026-10-29: 44px, `clamp(0.5rem, 3vw, 1rem)` from the edges,
+  `clamp(0.95rem, 4vw, 1.2rem)`; then `clamp(0.75rem, 4.5vw, 2rem)` and
+  `clamp(1.05rem, 4.75vw, 1.75rem)`, whose `rem` cap left them small on the
+  phone.)
 - **Menus** shows the whole game screen in full (taps map 1:1) until tapped
   again ("Reader"). Not saved.
-- **Log** opens the history log: "Return to game" on top, one line in the
-  middle, big ◀ / ▶ buttons (at least `clamp(4rem, 16vw, 6rem)` tall) below.
+- **Log** opens the history log: "Return to game" on top (the
+  same size as the corner buttons, `--button-font-size`, following the
+  Button size slider; drawn `20vmin` lower with `translate`, so the line
+  below doesn't move; `#log-close`), one line in the middle, big ◀ / ▶ buttons below.
+
+## History log
+
+All sized in `vmin` with only a floor, no `rem` cap, so it looks the same on
+the PC and the phone (`#log…` and `.log-arrow` in `src/portrait.css`).
+
+- **Gap** around and between everything: `max(0.75rem, 4vmin)`.
+- **Under the arrows:** `max(gap, 3.5dvh)`: a share of the _height_, so on a
+  tall phone the arrows sit higher (nearer the thumb, clear of the gesture
+  bar); on the PC it's about the same as the gap.
+- **◀ / ▶ buttons:** at least `max(4rem, 14vmin)` tall, arrows
+  `max(1.75rem, 7vmin)`.
+- **Line card:** padding `max(1rem, 5vmin)`; the "2 / 4" count
+  `max(0.85rem, 3.5vmin)`; the line itself at the message window's text size.
 
 ## Current game profiles
 
@@ -84,5 +120,6 @@ old background settings are no longer used.)
 | Base text size                     | `--base-font-size` in `src/portrait.css`          |
 | Message window size, padding, gaps | `#text-zone` / `#text-line` in `src/portrait.css` |
 | Smallest shrink for long lines     | `SMALLEST_SIZE` in `src/portrait.ts`              |
+| Corner button size and gaps        | `.corner-button` in `src/portrait.css`            |
 | Slider ranges                      | `min` / `max` on the inputs in `index.html`       |
 | Colours and font                   | `src/theme.css`                                   |

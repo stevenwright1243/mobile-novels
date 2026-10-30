@@ -104,6 +104,14 @@ function setTextStyle(style: TextStyle) {
 window.vn.onTextStyleChanged(setTextStyle);
 window.vn.getTextStyle().then(setTextStyle);
 
+// The corner buttons' size (an app setting), passed to portrait.css as
+// `--button-size`.
+function setButtonSize(size: number) {
+  portrait.style.setProperty('--button-size', String(size));
+}
+window.vn.onButtonSizeChanged(setButtonSize);
+window.vn.getButtonSize().then(setButtonSize);
+
 // --- Keeping things in step -------------------------------------------------------
 
 // Something that affects the message window changed (text mode, text size,
