@@ -73,6 +73,9 @@ const MAX_SEARCHES = 6;
 // UTF-8 text: Steins;Gate). Each reads all of it, 0.15 to 1 s in the
 // background, and 5 s in Steins;Gate's 839 MB.
 const MAX_EMPTY_SEARCHES = 5;
+// OCR reads in a row with more of the line than the followed copies hold,
+// before they're dropped for good this run (see `lineForRead`).
+const MAX_WRONG_FOLLOWS = 2;
 // OCR lines in a row that aren't in the buffer before it's dropped and
 // searched for again (the game may have moved it).
 const MAX_MISSES = 5;
@@ -170,6 +173,10 @@ interface GameMemory {
   misses: number;
   searches: number;
   emptySearches: number;
+  // Followed copies that held less than OCR read, in a row, and whether
+  // copies are no longer followed this run (see `lineForRead`).
+  wrongFollows: number;
+  noFollowing: boolean;
   // The last line corrected from its copies, and OCR's read of it, so a
   // re-read of it (OCR reads it a little differently each time) keeps it.
   corrected: { read: string; line: string } | null;
@@ -217,6 +224,8 @@ function memoryOf(processId: number) {
       misses: 0,
       searches: 0,
       emptySearches: 0,
+      wrongFollows: 0,
+      noFollowing: false,
       corrected: null,
       searching: false,
       names: [],
@@ -378,6 +387,29 @@ export function lineForRead(processId: number, read: string): string | null {
     return read;
   }
   const { buffer } = memory;
+  if (buffer && isPartOf(buffer.line, read)) {
+    // OCR read clearly more of the line than the followed copies hold:
+    // they're not the game's line buffer but its typewriter
+    // effect (Ren'Py builds the line a letter at a time as new strings, and
+    // they can reuse the same memory: "I ponder the meaning of the note,
+    // the snowfall graduall" for "As I ponder … thickens."). After
+    // `MAX_WRONG_FOLLOWS`, copies are no longer followed this run, and lines
+    // are matched one by one instead, from this one on.
+    memory.wrongFollows++;
+    log(`OCR read "${read}"; the followed copies hold "${buffer.line}"`);
+    if (memory.wrongFollows >= MAX_WRONG_FOLLOWS) {
+      log(
+        'the followed copies only hold parts of lines; matching lines instead',
+      );
+      memory.noFollowing = true;
+      dropBuffer(memory);
+      void search(memory, read);
+    }
+    // OCR's read has more of the line.
+    return read;
+  } else if (buffer) {
+    memory.wrongFollows = 0;
+  }
   if (buffer) {
     if (
       letters(read).length < MIN_OCR_ONLY_LETTERS ||
@@ -407,6 +439,37 @@ export function lineForRead(processId: number, read: string): string | null {
   void search(memory, read);
   const found = memory.buffer as LineBuffer | null;
   return found ? found.line : read;
+}
+
+// Whether a line from memory holds all of what OCR read: not clearly
+// shorter, and starting the same way (OCR's mistakes aside).
+function holdsWhole(line: string, read: string) {
+  const fromMemory = letters(line);
+  const fromOcr = letters(read);
+  if (fromOcr.length < MIN_OCR_ONLY_LETTERS) {
+    return true;
+  }
+  // No letters from a writing system the read doesn't use (data before the
+  // string read as text: "䭠ᑏshy, joyous…" for "A shy, joyous…").
+  const systems = writingSystems(read);
+  return (
+    [...writingSystems(line)].every((system) => systems.has(system)) &&
+    fromOcr.length <= fromMemory.length * 1.05 + 1 &&
+    similarity(fromOcr.slice(0, 10), fromMemory.slice(0, 10)) >= 0.8
+  );
+}
+
+// Whether a line from memory is clearly only part of what OCR read: OCR
+// has much more, and memory's matches the start of it (allowing a word or
+// so missing there). Junk OCR adds to a read doesn't count, since it seldom
+// lines up with memory's line like that.
+function isPartOf(line: string, read: string) {
+  const fromMemory = letters(line);
+  const fromOcr = letters(read);
+  if (fromOcr.length <= fromMemory.length * 1.15 + 3) {
+    return false;
+  }
+  return similarity(fromOcr.slice(0, fromMemory.length + 4), fromMemory) >= 0.8;
 }
 
 // Starts following the copies that changed to `read` as the game's line.
@@ -807,24 +870,20 @@ async function search(memory: GameMemory, read: string) {
   if (memory.searching) {
     return;
   }
-  if (memory.candidates.length > 0) {
+  if (memory.candidates.length > 0 && !memory.noFollowing) {
+    // (None changing is no sign of the same line: in engines that make a
+    // new string for every line, none ever changes.)
     const changed = memory.candidates.filter(
       (spot) => textAt(memory, spot) !== spot.found,
     );
-    if (changed.length === 0) {
-      // Still the line searched for: nothing to learn yet.
-      return;
-    }
-    // Every copy that changed to this line is followed (see `LineBuffer`),
-    // UTF-16 ones first: in The Colorful World those are the ones the game
-    // draws from (its UTF-8 one is followed by a stray "A").
+    // Every copy that changed to all of this line is followed (see
+    // `LineBuffer`), UTF-16 ones first: in The Colorful World those are the
+    // ones the game draws from (its UTF-8 one is followed by a stray "A").
     const holding = changed
       .filter((spot) => {
         const text = textAt(memory, spot);
-        return (
-          text !== null &&
-          alike(text.slice(0, endFor(text, read)), read) >= MATCH
-        );
+        const line = text?.slice(0, endFor(text, read)) ?? '';
+        return alike(line, read) >= MATCH && holdsWhole(line, read);
       })
       .sort(
         (a, b) =>
@@ -945,7 +1004,24 @@ function bestCopy(copies: Spot[], read: string, needles: string[]) {
       }
     }
   }
-  return best;
+  return best === null ? null : withQuotes(best, read);
+}
+
+// The quote marks at a line's ends as OCR saw them: Ren'Py adds them as it
+// draws a character's line, so memory has the line without them, and a
+// copy can have a stray one from what's stored before it.
+const QUOTE = /["“”'‘’「」『』]/u;
+function withQuotes(line: string, read: string) {
+  let quoted = line;
+  const first = read[0] ?? '';
+  if (QUOTE.test(first) !== QUOTE.test(quoted[0] ?? '')) {
+    quoted = QUOTE.test(first) ? first + quoted : quoted.slice(1);
+  }
+  const last = read.at(-1) ?? '';
+  if (QUOTE.test(last) !== QUOTE.test(quoted.at(-1) ?? '')) {
+    quoted = QUOTE.test(last) ? quoted + last : quoted.slice(0, -1);
+  }
+  return quoted;
 }
 
 // Runs of whole words from the read to search for, at least `MIN_NEEDLE`
