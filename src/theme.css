@@ -325,7 +325,8 @@
   --font: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
   --text-weight: 800;
   --corner: 0.9;
-  --pill: 0.9rem;
+  /* Fully round buttons, like Aokana's. */
+  --pill: 999px;
 }
 
 /* MiSide's menu text sits on a dark drop shadow. */
