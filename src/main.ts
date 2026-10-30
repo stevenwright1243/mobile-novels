@@ -17,9 +17,10 @@ import { THEME_STYLES } from './look-options';
 import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
 import {
-  exactLine,
   forgetGame,
+  lineForRead,
   memoryTextStatus,
+  onMemoryLine,
   onMemoryTextStatus,
   setMemoryTextDebug,
   startReading,
@@ -1040,13 +1041,23 @@ app.whenReady().then(async () => {
   // (the portrait included) hears about the change.
   ipcMain.handle('get-text-line', () => textLine);
   ipcMain.handle('set-text-line', (_event, read: string) => {
-    // The game's own text for the line, when it's read from its memory and
-    // found there; otherwise OCR's read.
+    // When it's read from the game's memory (memory-text.ts), the game's own
+    // text, or nothing new once its line buffer leads; otherwise OCR's read.
     const line =
-      (profile?.textFromMemory &&
-        selectedSource &&
-        exactLine(processIdOf(hwndFromSourceId(selectedSource.id)), read)) ||
-      read;
+      profile?.textFromMemory && selectedSource
+        ? lineForRead(processIdOf(hwndFromSourceId(selectedSource.id)), read)
+        : read;
+    if (line !== null) {
+      showLine(line);
+    }
+  });
+  // Each new line the game writes to its line buffer, once that's found.
+  onMemoryLine((line) => {
+    if (profile?.textFromMemory && selectedSource) {
+      showLine(line);
+    }
+  });
+  function showLine(line: string) {
     if (line !== textLine) {
       lineChangedAt = performance.now();
     }
@@ -1062,7 +1073,7 @@ app.whenReady().then(async () => {
     if (nameRead !== speaker) {
       changeSpeaker(nameRead);
     }
-  });
+  }
   ipcMain.handle('get-text-history', () => textHistory);
 
   // The speaker's name, read from the name box the same way. Every change,

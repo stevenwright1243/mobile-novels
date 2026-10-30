@@ -6,21 +6,25 @@
  *
  *  1. A line comes from OCR. Its memory is searched (read only, nothing is
  *     changed or injected) for runs of its words, as UTF-16 and UTF-8 text.
- *     Every copy found is a candidate.
- *  2. The next, different line comes. Candidates now holding that line are
- *     the game's line buffer; the best one is kept.
- *  3. From then on each line OCR confirms is read from that buffer, and used
- *     in place of OCR's read when the two match closely enough.
+ *     Every copy found is a candidate, with what it holds then.
+ *  2. A later line comes. A candidate that has changed to it is the game's
+ *     line buffer (only a changed one: OCR reads the same line a little
+ *     differently each time, and a copy that never changes, like the game's
+ *     script, matches every read of it).
+ *  3. From then on the buffer leads: it's checked every `POLL_EVERY`, and
+ *     each new line written to it shows straight away, exactly, even when
+ *     OCR can't read it. OCR's reads are then only used for text that isn't
+ *     in the buffer: a clearly different line, read a while after the
+ *     buffer last changed.
  *
- * OCR stays in charge of when a line shows and whether it's a line at all:
- * the buffer's text is only used when it matches what OCR sees in the text
- * box, so menu or other text in memory can never show. A buffer can hold
- * the end of a longer, earlier line after the current one (The Colorful
- * World's: "You don't?~ take school too seriously.~"), so the line ends
- * where it best matches OCR's read, plus any closing punctuation right after
- * (OCR often misreads a line's last mark). Not at a fixed end mark: that
- * game's "~" is also its line break inside lines ("I think I~finally"),
- * which becomes a space.
+ * Menus and other text in memory never show: only the one buffer is read,
+ * and it was found by matching what OCR saw in the text box. A new line is
+ * written over the start of the last one, so the buffer can hold the end of
+ * a longer, earlier line after it (The Colorful World's: "You don't?~ take
+ * school too seriously.~"): the line ends where the old text's leftovers
+ * begin. The mark after a line when the buffer was found (that game's "~")
+ * is its end mark, taken off the end; inside a line it's the game's own line
+ * break ("I think I~finally"), so a space.
  */
 
 import { prefixDistances, similarity } from './text-similarity';
@@ -43,8 +47,20 @@ interface Spot {
 }
 
 // How alike (letters and digits only) the memory's text and OCR's read
-// must be for the memory's to be used: OCR gets a letter or two wrong.
+// must be to be the same line: OCR gets a letter or two wrong.
 const MATCH = 0.6;
+// Once the buffer leads, an OCR read this alike to its line is that line,
+// read badly ("Vow dem" for "You don't?").
+const LOOSE_MATCH = 0.4;
+// And any read this soon after the buffer changed is OCR catching up with
+// the new line, in milliseconds.
+const OCR_CATCH_UP = 3000;
+// Nor is a read with fewer letters than this a line the buffer missed: it's
+// junk from a scene change ("A 4").
+const MIN_OCR_ONLY_LETTERS = 8;
+// How often the buffer is checked once found, in milliseconds. A change
+// shows once two checks in a row agree, so a half-written line never does.
+const POLL_EVERY = 150;
 // The most text read from a spot, in characters.
 const MAX_LINE = 1024;
 // How alike two reads must be to count as the same line read again.
@@ -53,18 +69,25 @@ const SAME_LINE = 0.85;
 // reads all its memory, so a game that doesn't keep its line in one place
 // stops being searched.
 const MAX_SEARCHES = 6;
-// Lines in a row that don't match the buffer before it's dropped and
+// OCR lines in a row that aren't in the buffer before it's dropped and
 // searched for again (the game may have moved it).
-const MAX_MISSES = 10;
+const MAX_MISSES = 5;
+// Checks in a row a copy can't be read before it's dropped (freed).
+const MAX_FAILED_READS = 5;
+// How long the other copies get to change to a new line one copy has, in
+// milliseconds, before the ones that didn't are dropped.
+const FOLLOW_WAIT = 600;
 // The most candidates kept from one search.
 const MAX_CANDIDATES = 300;
 // Runs of this many letters or more are searched for.
 const MIN_NEEDLE = 12;
-// Reads with fewer letters than this (a line of "......") are left as they
-// are: every text with as few letters is alike to them.
+// Reads with fewer letters than this (a line of "......") aren't matched
+// against memory: every text with as few letters is alike to them.
 const MIN_LETTERS = 2;
-// Runs searched for per line.
-const NEEDLES = 3;
+// Runs searched for per line: several, since OCR may have got any word
+// wrong ("fTndnanage te get a single questieh": only "get a single" is
+// right).
+const NEEDLES = 8;
 
 // Found, still looking, gave up, or not in use (switched off, no game, or
 // the game's memory can't be read).
@@ -81,11 +104,44 @@ function setStatus(next: MemoryTextStatus) {
   }
 }
 
+// Each new line the buffer gets, once it's found.
+let lineListener: (line: string) => void = () => {};
+export const onMemoryLine = (listener: (line: string) => void) =>
+  (lineListener = listener);
+
 // Debug mode prints what the reader finds.
 let debug = false;
 export const setMemoryTextDebug = (on: boolean) => (debug = on);
 const log = (...parts: unknown[]) =>
   debug && console.log('[memory text]', ...parts);
+
+// One copy of the line the reader follows: its text at the last line, and
+// a different text seen once, since `seenAt` (taken when a check agrees).
+interface Copy {
+  spot: Spot;
+  raw: string;
+  pending: string | null;
+  seenAt: number;
+  // Whether the last check agreed with `pending`.
+  steady: boolean;
+  failedReads: number;
+}
+
+// The game's line, once found: every copy that changed to it (the game may
+// keep it in a fixed-size buffer that cuts long lines short, and in a
+// string it moves elsewhere when a line needs more room), and what's known
+// about it.
+interface LineBuffer {
+  copies: Copy[];
+  // The mark after each line ('' if none was seen).
+  end: string;
+  // The line shown, and when it changed (`performance.now()`).
+  line: string;
+  changedAt: number;
+  // The writing systems seen in its lines (see `writingSystem`).
+  systems: Set<string>;
+  timer: ReturnType<typeof setInterval>;
+}
 
 // What's known about the running game's memory.
 interface GameMemory {
@@ -95,8 +151,7 @@ interface GameMemory {
   // Spots that held the line last searched for (`searchedFor`).
   candidates: Spot[];
   searchedFor: string;
-  // The game's line buffer, once found.
-  buffer: Spot | null;
+  buffer: LineBuffer | null;
   misses: number;
   searches: number;
   searching: boolean;
@@ -107,6 +162,7 @@ let game: GameMemory | null = null;
 // closed, or the reader was switched off).
 export function forgetGame() {
   if (game) {
+    dropBuffer(game);
     closeProcess(game.process);
     game = null;
   }
@@ -172,21 +228,14 @@ function textAt(memory: GameMemory, spot: Spot) {
 // Marks that close a sentence or quote, taken along after a line's end.
 const CLOSING = /^[.!?…,"'”’)\]」』】]+/;
 
-// The line at a spot, as matched against OCR's read: as much of the text as
-// best matches the read (the rest is left over from an earlier, longer
-// line), with any closing marks right after.
-function lineAt(memory: GameMemory, spot: Spot, read: string) {
-  let text = textAt(memory, spot);
-  if (text === null) {
-    return null;
-  }
-  // A "~" that isn't on screen is the game's own line break (The Colorful
-  // World's "I think I~finally"), so it's a space.
-  if (!read.includes('~')) {
-    text = text.replaceAll('~', ' ');
-  }
+// Where the line in `text` ends, as matched against OCR's read: as much of
+// it as best matches the read (the rest is left over from an earlier,
+// longer line), with any closing marks right after.
+function endFor(text: string, read: string) {
+  // A "~" that isn't on screen is a line break (see the top), so a space.
+  const compared = read.includes('~') ? text : text.replaceAll('~', ' ');
   // Only as far as a little past the read's length can match.
-  const nearby = text.slice(0, Math.round(read.length * 1.5) + 20);
+  const nearby = compared.slice(0, Math.round(read.length * 1.5) + 20);
   const distances = prefixDistances(read.toLowerCase(), nearby.toLowerCase());
   let best = 0;
   let bestScore = -1;
@@ -199,58 +248,362 @@ function lineAt(memory: GameMemory, spot: Spot, read: string) {
       bestScore = score;
     }
   }
-  const closing = CLOSING.exec(text.slice(best))?.[0] ?? '';
-  return tidy(text.slice(0, best + closing.length));
+  return best + (CLOSING.exec(compared.slice(best))?.[0].length ?? 0);
 }
 
-const tidy = (line: string) => line.replace(/\s+/g, ' ').trim();
+// A line as shown: the end mark off its end, the same mark inside it a
+// space, and spacing tidied.
+function tidy(line: string, end: string) {
+  let text = line;
+  if (end) {
+    while (text.endsWith(end)) {
+      text = text.slice(0, -end.length);
+    }
+    text = text.replaceAll(end, ' ');
+  }
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+const isWordCharacter = (character: string | undefined) =>
+  character !== undefined && /[\p{L}\p{N}]/u.test(character);
+
+// The new line in the buffer's text `now`, written over `before`, as it is
+// in memory: where the two stop agreeing, counting back from the end, is
+// about where the new line ends (the rest is the old text's leftovers). The
+// new line may happen to end like the old one ("…for me.~" over "…in
+// here.~" agrees back to the "e"), so it runs on to the next end mark; with
+// none known, to the end of the word and its closing marks. A text of a
+// different length has no leftovers: all of it is new. `ended` says whether
+// the end mark came after it; a line without one was cut off (The Colorful
+// World's buffer holds about 94 characters), and `mark` is the mark the
+// leftovers start with, if any (to learn the end mark from).
+function newLine(now: string, before: string, end: string) {
+  let stop = now.length;
+  let mark = '';
+  if (now.length === before.length) {
+    while (stop > 0 && now[stop - 1] === before[stop - 1]) {
+      stop--;
+    }
+    const last = now[stop - 1];
+    if (last && !/[\p{L}\p{N}\s]/u.test(last) && !CLOSING.test(last)) {
+      mark = last;
+    }
+    const at = end ? now.indexOf(end, Math.max(0, stop - end.length)) : -1;
+    if (at !== -1) {
+      return { piece: now.slice(0, at), ended: true, mark };
+    }
+    while (isWordCharacter(now[stop - 1]) && isWordCharacter(now[stop])) {
+      stop++;
+    }
+    stop += CLOSING.exec(now.slice(stop))?.[0].length ?? 0;
+    return { piece: now.slice(0, stop), ended: !end, mark };
+  }
+  const ended = !end || now.endsWith(end);
+  return { piece: ended && end ? now.slice(0, -end.length) : now, ended, mark };
+}
+
+// The whole of a line the buffer only holds the start of: the shortest
+// longer copy in memory starting with it (the game keeps the whole line
+// elsewhere too, and its script has it; a reused buffer can hold leftovers
+// after it, so it's never the shortest).
+async function wholeLine(memory: GameMemory, start: string) {
+  const spots = await findSpots(memory, [start.slice(0, 40)]);
+  let whole: string | null = null;
+  for (const { found } of spots) {
+    if (
+      found.length > start.length &&
+      found.startsWith(start) &&
+      (whole === null || found.length < whole.length)
+    ) {
+      whole = found;
+    }
+  }
+  return whole;
+}
 
 /**
- * The game's own text for a line OCR read, or null if it isn't known (yet):
- * the buffer isn't found, or it doesn't hold this line. While the buffer
- * isn't found, each line also searches for it, in the background.
+ * What to show for a line OCR read: the game's own text when it's in the
+ * buffer, OCR's read otherwise, or null to leave the line shown as it is
+ * (once the buffer leads: OCR read nothing, or the same line, or is still
+ * catching up with a new one). While the buffer isn't found, each line also
+ * searches for it, in the background.
  */
-export function exactLine(processId: number, read: string) {
-  if (letters(read).length < MIN_LETTERS) {
-    return null;
-  }
+export function lineForRead(processId: number, read: string): string | null {
   const memory = memoryOf(processId);
   if (!memory) {
-    return null;
+    return read;
   }
-  if (!memory.buffer) {
-    // Checking the last search's candidates happens straight away, so the
-    // buffer may be found for this very line; a new search runs on its own.
-    void search(memory, read);
-    if (!memory.buffer) {
+  const { buffer } = memory;
+  if (buffer) {
+    if (
+      letters(read).length < MIN_OCR_ONLY_LETTERS ||
+      alike(read, buffer.line) >= LOOSE_MATCH ||
+      performance.now() - buffer.changedAt < OCR_CATCH_UP
+    ) {
+      memory.misses = 0;
       return null;
     }
-  }
-  const line = lineAt(memory, memory.buffer, read);
-  if (line !== null && alike(line, read) >= MATCH) {
-    memory.misses = 0;
-    if (line !== read) {
-      log(`"${read}" → "${line}"`);
+    log(`"${read}" isn't in the buffer ("${buffer.line}"): OCR's shows`);
+    memory.misses++;
+    if (memory.misses >= MAX_MISSES) {
+      log('lost the buffer; searching again');
+      dropBuffer(memory);
     }
-    return line;
+    return read;
   }
-  log(`no match for "${read}" (memory has "${line ?? ''}")`);
-  memory.misses++;
-  if (memory.misses >= MAX_MISSES) {
-    log('lost the buffer; searching again');
+  if (letters(read).length < MIN_LETTERS) {
+    return read;
+  }
+  // Checking the last search's candidates happens straight away, so the
+  // buffer may be found for this very line; a new search runs on its own.
+  void search(memory, read);
+  const found = memory.buffer as LineBuffer | null;
+  return found ? found.line : read;
+}
+
+// Starts following the copies that changed to `read` as the game's line.
+function useBuffer(memory: GameMemory, spots: Spot[], read: string) {
+  const [first] = spots;
+  const raw = textAt(memory, first) ?? '';
+  const stop = endFor(raw, read);
+  // The mark after the line, if it's one (a letter or space isn't), or
+  // what's left when that's only a mark or two (The Colorful World's UTF-8
+  // copy ends each line with "A"). With nothing after it, the line may have
+  // been cut off (see `newLine`), and the end mark is learned from a later
+  // line.
+  const after = raw.slice(stop);
+  let end = '';
+  if (after.length > 0 && after.length <= 2) {
+    end = after;
+  } else if (after.length > 2 && !/[\p{L}\p{N}\s]/u.test(after[0])) {
+    end = after[0];
+  }
+  const line = tidy(raw.slice(0, stop), end);
+  const buffer: LineBuffer = {
+    copies: spots.map((spot) => ({
+      spot,
+      raw: textAt(memory, spot) ?? '',
+      pending: null,
+      seenAt: 0,
+      steady: false,
+      failedReads: 0,
+    })),
+    end,
+    line,
+    changedAt: performance.now(),
+    systems: new Set(writingSystems(line)),
+    timer: setInterval(() => checkBuffer(memory), POLL_EVERY),
+  };
+  memory.buffer = buffer;
+  memory.candidates = [];
+  memory.misses = 0;
+  const where = spots
+    .map((spot) => `0x${spot.address.toString(16)} (${spot.encoding})`)
+    .join(', ');
+  log(`found the line at ${where}, lines end with "${end}": "${line}"`);
+  setStatus('found');
+  // OCR read clearly more than the copy holds: it was cut off.
+  if (letters(read).length > letters(line).length * 1.1) {
+    void showWhole(memory, buffer, raw.slice(0, stop));
+  }
+}
+
+// The writing system of each letter in a text: Latin, Han, Hiragana and so
+// on. Punctuation, digits and spaces belong to none. Invisible and unknown
+// characters count as "junk", which no game writes.
+const SYSTEMS = [
+  'Latin',
+  'Greek',
+  'Cyrillic',
+  'Han',
+  'Hiragana',
+  'Katakana',
+  'Hangul',
+  'Thai',
+  'Arabic',
+  'Hebrew',
+].map((name) => ({ name, pattern: new RegExp(`\\p{Script=${name}}`, 'u') }));
+function writingSystems(text: string) {
+  const systems = new Set<string>();
+  for (const character of text) {
+    if (/[\p{Cf}\p{Co}\p{Cn}�]/u.test(character)) {
+      systems.add('junk');
+    } else if (/[\p{L}]/u.test(character)) {
+      systems.add(
+        SYSTEMS.find(({ pattern }) => pattern.test(character))?.name ?? 'other',
+      );
+    }
+  }
+  return systems;
+}
+
+// Whether a line is in the writing systems the game's lines use. A copy the
+// game has moved away from gets other data written over it, which read as
+// text is a jumble of letters from elsewhere ("慮猧猠畱物" in an English
+// game, from bytes that aren't UTF-16 text).
+const familiar = (buffer: LineBuffer, line: string) =>
+  [...writingSystems(line)].every((system) => buffer.systems.has(system));
+
+// Finds the whole of a cut-off line and shows it, if the line hasn't moved
+// on meanwhile.
+async function showWhole(
+  memory: GameMemory,
+  buffer: LineBuffer,
+  start: string,
+) {
+  const cut = buffer.line;
+  const whole = await wholeLine(memory, start);
+  if (memory.buffer !== buffer || buffer.line !== cut) {
+    return;
+  }
+  if (whole === null) {
+    log(`only the start of the line is in memory: "${cut}"`);
+  } else {
+    // A whole line ends with the end mark, if no line has shown it yet.
+    const last = whole.at(-1) ?? '';
+    if (
+      !buffer.end &&
+      !isWordCharacter(last) &&
+      !/[\s.!?…,"'”’)\]」』】]/u.test(last)
+    ) {
+      buffer.end = last;
+      log(`lines end with "${last}"`);
+    }
+    buffer.line = tidy(whole, buffer.end);
+    log(`whole line: "${buffer.line}"`);
+  }
+  lineListener(buffer.line);
+}
+
+function dropBuffer(memory: GameMemory) {
+  if (memory.buffer) {
+    clearInterval(memory.buffer.timer);
     memory.buffer = null;
     memory.candidates = [];
+    memory.searchedFor = '';
     memory.searches = 0;
-    setStatus('searching');
+    memory.misses = 0;
+    if (game === memory) {
+      setStatus('searching');
+    }
   }
-  return null;
+}
+
+// Looks for a new line in the copies, and passes it on once they agree on
+// it. A copy changes once two checks in a row see the same new text. When
+// only some change, the others get `FOLLOW_WAIT` to follow, and then the
+// ones that went their own way are dropped: a copy the game moved away from
+// changes alone, or not at all. Of copies that disagree, the most that agree
+// win, if their line is in the game's writing systems.
+function checkBuffer(memory: GameMemory) {
+  const buffer = memory.buffer;
+  if (!buffer) {
+    return;
+  }
+  const now = performance.now();
+  for (const copy of buffer.copies) {
+    const raw = textAt(memory, copy.spot);
+    if (raw === null) {
+      copy.failedReads++;
+      continue;
+    }
+    copy.failedReads = 0;
+    if (raw === copy.raw) {
+      copy.pending = null;
+      copy.steady = false;
+    } else if (raw === copy.pending) {
+      copy.steady = true;
+    } else {
+      copy.pending = raw;
+      copy.seenAt = now;
+      copy.steady = false;
+    }
+  }
+  buffer.copies = buffer.copies.filter(
+    (copy) => copy.failedReads < MAX_FAILED_READS,
+  );
+  const changed = buffer.copies.filter((copy) => copy.steady);
+  if (changed.length === 0) {
+    if (buffer.copies.length === 0) {
+      log('the line can no longer be read; searching again');
+      dropBuffer(memory);
+    }
+    return;
+  }
+  const others = buffer.copies.filter((copy) => !copy.steady);
+  const firstSeen = Math.min(...changed.map((copy) => copy.seenAt));
+  if (others.length > 0 && now - firstSeen < FOLLOW_WAIT) {
+    return;
+  }
+  // Each changed copy's new line, grouped by how it starts.
+  const groups = new Map<
+    string,
+    { copies: Copy[]; piece: string; ended: boolean; mark: string }
+  >();
+  for (const copy of changed) {
+    const found = newLine(copy.pending!, copy.raw, buffer.end);
+    const key = letters(found.piece).slice(0, 24);
+    const group = groups.get(key);
+    if (!group) {
+      groups.set(key, { copies: [copy], ...found });
+    } else {
+      group.copies.push(copy);
+      // A whole line beats a cut-off one.
+      if (
+        (found.ended && !group.ended) ||
+        (found.ended === group.ended && found.piece.length > group.piece.length)
+      ) {
+        Object.assign(group, found);
+      }
+    }
+  }
+  const best = [...groups.values()]
+    .filter((group) => familiar(buffer, tidy(group.piece, buffer.end)))
+    .sort((a, b) => b.copies.length - a.copies.length)[0];
+  const kept = best?.copies ?? [];
+  const dropped = buffer.copies.length - kept.length;
+  if (dropped > 0) {
+    log(`dropped ${dropped} of ${buffer.copies.length} copies`);
+  }
+  buffer.copies = kept;
+  if (!best) {
+    log('no copy holds a line; searching again');
+    dropBuffer(memory);
+    return;
+  }
+  for (const copy of kept) {
+    copy.raw = copy.pending!;
+    copy.pending = null;
+    copy.steady = false;
+  }
+  if (!buffer.end && best.mark) {
+    buffer.end = best.mark;
+    log(`lines end with "${best.mark}"`);
+  }
+  const line = tidy(best.piece, buffer.end);
+  if (!line || line === buffer.line) {
+    return;
+  }
+  // Writing systems only the more trusted lines teach: ones two copies
+  // agree on.
+  if (kept.length > 1) {
+    for (const system of writingSystems(line)) {
+      buffer.systems.add(system);
+    }
+  }
+  buffer.line = line;
+  buffer.changedAt = now;
+  memory.misses = 0;
+  if (best.ended) {
+    log(`new line: "${line}"`);
+    lineListener(line);
+  } else {
+    void showWhole(memory, buffer, best.piece);
+  }
 }
 
 // Finds the buffer: checks whether a candidate from the last search has
-// changed to this line; if none has, searches for this line instead. Only
-// a changed one counts: OCR reads the same line a little differently each
-// time, and a copy that never changes (the game's script) matches every
-// read of it.
+// changed to this line; if none has, searches for this line instead.
 async function search(memory: GameMemory, read: string) {
   if (memory.searching) {
     return;
@@ -263,26 +616,26 @@ async function search(memory: GameMemory, read: string) {
       // Still the line searched for: nothing to learn yet.
       return;
     }
-    let best: Spot | null = null;
-    let bestScore = MATCH;
-    for (const spot of changed) {
-      const line = lineAt(memory, spot, read);
-      const score = line === null ? 0 : alike(line, read);
-      if (score >= bestScore) {
-        best = spot;
-        bestScore = score;
-      }
-    }
-    log(
-      `${changed.length} of ${memory.candidates.length} copies changed; ${best ? 'one' : 'none'} holds "${read}"`,
-    );
-    if (best) {
-      memory.buffer = best;
-      memory.candidates = [];
-      log(
-        `found the line buffer at 0x${best.address.toString(16)} (${best.encoding})`,
+    // Every copy that changed to this line is followed (see `LineBuffer`),
+    // UTF-16 ones first: in The Colorful World those are the ones the game
+    // draws from (its UTF-8 one is followed by a stray "A").
+    const holding = changed
+      .filter((spot) => {
+        const text = textAt(memory, spot);
+        return (
+          text !== null &&
+          alike(text.slice(0, endFor(text, read)), read) >= MATCH
+        );
+      })
+      .sort(
+        (a, b) =>
+          Number(b.encoding === 'utf16le') - Number(a.encoding === 'utf16le'),
       );
-      setStatus('found');
+    log(
+      `${changed.length} of ${memory.candidates.length} copies changed; ${holding.length} hold "${read}"`,
+    );
+    if (holding.length > 0) {
+      useBuffer(memory, holding, read);
       return;
     }
   }
@@ -342,9 +695,13 @@ function needlesFrom(read: string) {
       }
     }
   }
-  // Spread out: the first, the middle and the last.
-  const picks = [0, runs.length >> 1, runs.length - 1].map((i) => runs[i]);
-  return [...new Set(picks)].filter(Boolean).slice(0, NEEDLES);
+  // Spread out over the line.
+  const unique = [...new Set(runs)];
+  const step = Math.max(1, unique.length / NEEDLES);
+  return Array.from(
+    { length: Math.min(NEEDLES, unique.length) },
+    (_, i) => unique[Math.floor(i * step)],
+  );
 }
 
 // Every place in the game's memory holding one of the runs, as the start of
