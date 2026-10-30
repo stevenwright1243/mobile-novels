@@ -121,9 +121,24 @@ const PUNCTUATION_ONLY = /^[\p{P}\p{S}]+$/u;
 // line. Then the read keeps Tesseract's score for the whole of it, so a part
 // line isn't shown as if it were sure.
 const MAX_DROPPED_SHARE = 1 / 3;
+// Words in a line are a space apart; a gap wider than this many times the
+// usual word height splits the line, and only its part with the most
+// letters is kept (the leftmost, if two tie). Art seen through a
+// see-through box is read on the same line as the text, far from it: in
+// Katawa Shoujo a pale bed pole and rails beside "react to this?" read as
+// "react to this? I _ _" (several hundred pixels on; spaces are about a
+// third of the height).
+const MAX_WORD_GAP = 3;
 
-// `left` is where the word starts, in pixels from the image's left edge.
-type Word = { text: string; confidence: number; height: number; left: number };
+// `left` and `right` are where the word starts and ends, in pixels from the
+// image's left edge.
+type Word = {
+  text: string;
+  confidence: number;
+  height: number;
+  left: number;
+  right: number;
+};
 // A line's words, and its top and bottom edges in pixels.
 type Line = { words: Word[]; top: number; bottom: number };
 
@@ -172,6 +187,7 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
           confidence: word.confidence,
           height: word.bbox.y1 - word.bbox.y0,
           left: word.bbox.x0,
+          right: word.bbox.x1,
         })),
       })),
     ),
@@ -193,8 +209,26 @@ export async function readText(png: Uint8Array): Promise<OcrResult> {
     ) ||
       line.every((word) => word.left >= (1 - ARROW_ZONE) * width));
   // The words kept, line by line.
+  // A line's part with the most letters, where wide gaps split it (see
+  // `MAX_WORD_GAP`).
+  const mainPart = (line: Word[]) => {
+    const parts: Word[][] = [];
+    line.forEach((word, i) => {
+      const gap = i === 0 ? Infinity : word.left - line[i - 1].right;
+      if (gap > MAX_WORD_GAP * usual) {
+        parts.push([]);
+      }
+      parts.at(-1)!.push(word);
+    });
+    const letters = (part: Word[]) =>
+      part.reduce((sum, word) => sum + word.text.length, 0);
+    return parts.reduce(
+      (best, part) => (letters(part) > letters(best) ? part : best),
+      parts[0] ?? [],
+    );
+  };
   const keptLines = lines.map((line) =>
-    isMark(line) ? [] : line.filter(fits),
+    isMark(line) ? [] : mainPart(line.filter(fits)),
   );
 
   const kept = keptLines.flat();
