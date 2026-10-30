@@ -153,6 +153,11 @@ interface GameProfile {
   exePath: string | null;
   // The window title when last played.
   title: string;
+  // A shorter name to show for the game in the Menus sheet's Visual Novels
+  // (e.g. "YOU and ME and HER" for "YOU and ME and HER: A Love Story
+  // ver1.00"), if set; otherwise the title shows. Only set by hand in the
+  // profile's file for now.
+  name?: string;
   clickMethod: ClickMethod;
   textStyle: TextStyle;
   // Where the background sits in the portrait, top (0) to bottom (1): the

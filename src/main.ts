@@ -598,6 +598,7 @@ app.whenReady().then(async () => {
         exePath: saved.exePath,
         // A running game shows its current title, which may have changed.
         title: open?.name ?? saved.title,
+        name: saved.name,
         clickMethod: saved.clickMethod,
         window: saved.window,
         lastPlayed: saved.lastPlayed,

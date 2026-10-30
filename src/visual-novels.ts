@@ -28,7 +28,10 @@ function element(tag: string, className: string, text: string) {
   return created;
 }
 
-// What a game's button says under its title.
+// The game's short name if it has one, else its window title.
+const nameOf = (profile: ProfileSummary) => profile.name ?? profile.title;
+
+// What a game's button says under its name.
 function stateOf(profile: ProfileSummary, selected: string | null) {
   if (profile.sourceId) {
     return profile.sourceId === selected ? 'Playing' : 'Open';
@@ -62,7 +65,7 @@ async function showGames() {
       );
       button.disabled = !sourceId && !profile.exePath;
       const state = element('span', 'game-state', stateOf(profile, selected));
-      button.append(element('strong', 'game-title', profile.title), state);
+      button.append(element('strong', 'game-title', nameOf(profile)), state);
       button.addEventListener('click', async () => {
         if (sourceId) {
           // Main may ask about unsaved edits first; the list follows either
@@ -86,7 +89,7 @@ async function showGames() {
     .sort((a, b) => (a.openedAt ?? 0) - (b.openedAt ?? 0))[0];
   closeGameButton.disabled = !toClose;
   closeGameButton.textContent = toClose
-    ? `Close ${toClose.title}`
+    ? `Close ${nameOf(toClose)}`
     : 'Close game';
 }
 
