@@ -90,7 +90,8 @@ bottom, and never moves it.
   tag's overlap (`0.6em` of the tag) plus `0.1em` of the text, so a bigger
   Name size pushes the text down (at 100% the usual padding is already
   enough). It's the same with or without a name, so the text never moves
-  when a name comes or goes. (You and Me and Her has no overlap.)
+  when a name comes or goes, and the bottom always matches the top. (You
+  and Me and Her has no overlap.)
 - **Gap to the portrait's edges:** `clamp(0.5rem, 3vw, 1rem)` at the sides, so
   it floats. At the bottom, at least 5% of the portrait's height
   (`max(gap, 5dvh)`), so it sits up off the edge, clear of the phone's gesture

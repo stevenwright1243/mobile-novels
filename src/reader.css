@@ -119,21 +119,22 @@
     box-sizing: border-box;
     margin: 0;
     --line-height: 1.55;
-    --padding-block: clamp(0.9rem, 4.5cqw, 1.6rem);
-    /* At the top, room below the name tag's overlap, kept with or without
-       a name, so the text never moves when a name comes or goes, and a
-       bigger Name size pushes the text down (at 100%, the usual padding is
-       already enough). */
-    --padding-top: max(
-      var(--padding-block),
+    /* Top and bottom padding: at least the usual amount, and at the top
+       room below the name tag's overlap, kept with or without a name, so
+       the text never moves when a name comes or goes, and a bigger Name
+       size pushes the text down (at 100%, the usual padding is already
+       enough). The bottom gets the same, so the text sits evenly in the
+       window. */
+    --padding-block: max(
+      clamp(0.9rem, 4.5cqw, 1.6rem),
       var(--name-overlap) + var(--name-clearance)
     );
     /* Room for 3 lines, so the window stays the same size. */
     min-height: calc(
-      3 * var(--line-height) * var(--chosen-font-size) + var(--padding-top) +
+      3 * var(--line-height) * var(--chosen-font-size) + 2 *
         var(--padding-block)
     );
-    padding: var(--padding-top) var(--padding-inline) var(--padding-block);
+    padding: var(--padding-block) var(--padding-inline);
     font-family: var(--font);
     font-size: var(--chosen-font-size);
     font-weight: var(--text-weight);
