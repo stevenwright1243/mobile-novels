@@ -28,7 +28,7 @@ import { displayAdapterAt } from './win32';
 
 const VIRTUAL_DISPLAY_ADAPTER = /SudoMaker|SudoVDA/i;
 
-const isPhoneDisplay = (display: Display) => {
+export const isPhoneDisplay = (display: Display) => {
   const { x, y, width, height } = display.bounds;
   // Electron's positions are scaled for each display's scaling; Windows
   // wants real pixels. The middle of the display is safely inside it.

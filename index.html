@@ -78,6 +78,26 @@
           ></div>
           <p class="sheet-note">For both windows and every game.</p>
         </div>
+        <!-- Where this app's windows and the games it starts open
+             (open-on.ts): Windows' main display, or another monitor. -->
+        <div id="open-on-row" class="footer-row" hidden>
+          <span>Open on</span>
+          <span
+            id="open-on"
+            class="switch"
+            role="radiogroup"
+            aria-label="Open windows on"
+          >
+            <label
+              ><input type="radio" name="open-on" value="main" /> Main</label
+            >
+            <label
+              ><input type="radio" name="open-on" value="other" />
+              <span id="open-on-name"></span
+            ></label>
+          </span>
+          <select id="open-on-monitor" aria-label="Monitor" hidden></select>
+        </div>
         <div class="footer-row">
           <span id="apollo-status" aria-live="polite"></span>
           <span class="apollo-buttons">

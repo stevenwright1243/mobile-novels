@@ -1106,3 +1106,33 @@ export function startService(name: string): boolean {
     ShellExecute(0, 'runas', 'sc.exe', `start ${name}`, null, SW_HIDE) > 32
   );
 }
+
+const GetWindowRect = user32.func(
+  'bool __stdcall GetWindowRect(intptr_t hWnd, _Out_ RECT *lpRect)',
+);
+const SWP_NOZORDER = 0x0004;
+
+/** A window's place and size on screen, in real pixels, or null if it's
+ * gone. */
+export function windowBounds(hwnd: number) {
+  const rect: Partial<Rect> = {};
+  if (!GetWindowRect(hwnd, rect)) {
+    return null;
+  }
+  const { left, top, right, bottom } = rect as Rect;
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** Moves a window's top-left corner to a point (real pixels), keeping its
+ * size, without bringing it to the front. */
+export function moveWindow(hwnd: number, to: { x: number; y: number }) {
+  SetWindowPos(
+    hwnd,
+    0,
+    to.x,
+    to.y,
+    0,
+    0,
+    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+  );
+}

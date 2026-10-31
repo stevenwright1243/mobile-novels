@@ -236,6 +236,20 @@ type ProfileSummary = Omit<
   icon?: string;
 };
 
+// A monitor the picker's "Open on" setting can pick (open-on-display.ts),
+// by its name; `main` is Windows' main display.
+interface Monitor {
+  name: string;
+  main: boolean;
+}
+// The "Open on" setting: while `on`, this app's windows and the games it
+// starts open on `monitor` (a name, as in `Monitor`) instead of the main
+// display. An app setting.
+interface OpenOn {
+  on: boolean;
+  monitor: string | null;
+}
+
 // A Windows service's state (win32.ts's `serviceStatus`). `canStart` is
 // whether this account may start it without admin rights; Apollo's service
 // can't be, unless its permissions were changed (see apollo.ts).
@@ -379,6 +393,12 @@ interface Window {
     // screen on it), or null.
     getPhoneDisplay(): Promise<PhoneDisplay | null>;
     onPhoneDisplayChanged(callback: (phone: PhoneDisplay | null) => void): void;
+    // The monitors that can be picked, and the "Open on" setting, saved
+    // straight away. Turning it on moves the picker and the portrait there.
+    listMonitors(): Promise<Monitor[]>;
+    onMonitorsChanged(callback: () => void): void;
+    getOpenOn(): Promise<OpenOn>;
+    setOpenOn(openOn: OpenOn): Promise<void>;
     // Apollo, the streaming server, which runs as a Windows service: its
     // state, starting it (Windows asks for admin rights unless the service
     // allows this account), and opening its settings page in the browser.

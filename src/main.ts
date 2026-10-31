@@ -30,6 +30,12 @@ import {
   setMemoryTextDebug,
   startReading,
 } from './memory-text';
+import {
+  monitors,
+  moveAppWindows,
+  moveGameWindow,
+  openOnDisplay,
+} from './open-on-display';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import { steamAppIdOf } from './steam';
@@ -561,10 +567,12 @@ const createPortraitWindow = (bounds: Rectangle, picker: BrowserWindow) => {
 };
 
 // For now, open the two windows docked side by side and centered on the main
-// screen: the picker on the left, the portrait view on the right at a
-// phone-like 9:16. Sizes are capped so they fit smaller screens.
+// screen (or the "Open on" monitor, see open-on-display.ts): the picker on
+// the left, the portrait view on the right at a phone-like 9:16. Sizes are
+// capped so they fit smaller screens.
 const createWindows = () => {
-  const area = screen.getPrimaryDisplay().workArea;
+  const area = (openOnDisplay(settings.openOn) ?? screen.getPrimaryDisplay())
+    .workArea;
   const height = Math.round(Math.min(900, area.height * 0.85));
   const portraitWidth = Math.round((height * 9) / 16);
   const mainWidth = Math.round(
@@ -906,6 +914,12 @@ app.whenReady().then(async () => {
       pendingLaunch = null;
     }
     const launched = pendingLaunch && openWindows.get(pendingLaunch.id);
+    // A game started from the app goes to the "Open on" monitor, each
+    // window as it appears (a splash screen, then the game's own).
+    const openOn = openOnDisplay(settings.openOn);
+    if (launched && openOn) {
+      moveGameWindow(hwndFromSourceId(launched.id), openOn);
+    }
     if (launched && (!pendingLaunch!.picked || !selectedSource)) {
       pendingLaunch!.picked = true;
       selectGame(launched, portraitWindow);
@@ -1162,6 +1176,26 @@ app.whenReady().then(async () => {
       changeSpeaker(name);
     }
   });
+
+  // The "Open on" monitor, saved straight away. Turned on (or changed),
+  // the picker, and the portrait unless it's on the phone, move there.
+  ipcMain.handle('list-monitors', () => monitors());
+  ipcMain.handle('get-open-on', () => settings.openOn);
+  ipcMain.handle('set-open-on', async (_event, openOn: OpenOn) => {
+    settings = { ...settings, openOn };
+    await persistSettings();
+    const display = openOnDisplay(openOn);
+    if (display) {
+      const windows = BrowserWindow.getAllWindows().filter(
+        (window) =>
+          window.isVisible() &&
+          (window !== portraitWindow || !phoneDisplay?.portraitOnPhone),
+      );
+      moveAppWindows(windows, display);
+    }
+  });
+  screen.on('display-added', () => broadcast('monitors-changed'));
+  screen.on('display-removed', () => broadcast('monitors-changed'));
 
   // Apollo's service: checked every 2 seconds (it's cheap), and the
   // picker told when it starts or stops. See apollo.ts.

@@ -28,6 +28,9 @@ export type Settings = {
   // How long the user took to read recent lines, for the portrait's Auto
   // button to learn their pace from (auto-play.ts).
   readingSamples: ReadingSample[];
+  // The picker's "Open on" monitor: where this app's windows and the games
+  // it starts open while it's on (open-on-display.ts).
+  openOn: OpenOn;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +40,7 @@ const DEFAULT_SETTINGS: Settings = {
   messageStyle: { border: 'halo', arrow: 'chevron' },
   alphabets: {},
   readingSamples: [],
+  openOn: { on: false, monitor: null },
 };
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');

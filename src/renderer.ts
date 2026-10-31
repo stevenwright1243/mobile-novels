@@ -17,6 +17,7 @@ import './input-settings';
 import './message-style';
 import { enableOcrTest } from './ocr-test';
 import './apollo-status';
+import './open-on';
 import './phone-status';
 import { refreshSizesPage } from './picker-sizes';
 import './theme-picker';

@@ -134,6 +134,12 @@ contextBridge.exposeInMainWorld('vn', {
       (_event, phone: PhoneDisplay | null) => callback(phone),
     );
   },
+  listMonitors: () => ipcRenderer.invoke('list-monitors'),
+  onMonitorsChanged: (callback) => {
+    ipcRenderer.on('monitors-changed', () => callback());
+  },
+  getOpenOn: () => ipcRenderer.invoke('get-open-on'),
+  setOpenOn: (openOn) => ipcRenderer.invoke('set-open-on', openOn),
   getApollo: () => ipcRenderer.invoke('get-apollo'),
   onApolloChanged: (callback) => {
     ipcRenderer.on('apollo-changed', (_event, status: ServiceStatus) =>
