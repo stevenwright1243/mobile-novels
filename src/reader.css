@@ -142,6 +142,10 @@
     letter-spacing: 0.01em;
     /* Avoids a lone word on the last line where it can. */
     text-wrap: pretty;
+    /* Every line but the last reaches the right edge, like a book's: with
+       only a few big words a line, left-aligned text left a wide ragged
+       gap that looked like extra padding. */
+    text-align: justify;
     cursor: pointer;
   }
 

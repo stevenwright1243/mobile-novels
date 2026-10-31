@@ -85,6 +85,8 @@ bottom, and never moves it.
   screen's bottom with no scrolling.)
 
 - **Height:** room for **3 lines** at the chosen text size, plus padding.
+- **Lines:** justified (every line but the last reaches the right edge),
+  with "pretty" wrapping avoiding a lone word on the last line.
 - **Padding** (inside the window): `clamp(0.9rem, 4.5vw, 1.6rem)` top and
   bottom, and **a third of that** left and right (a full-screen text page
   likewise). The top is at least the name
