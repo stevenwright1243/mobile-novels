@@ -85,9 +85,8 @@ bottom, and never moves it.
   screen's bottom with no scrolling.)
 
 - **Height:** room for **3 lines** at the chosen text size, plus padding.
-- **Padding** (inside the window): `clamp(0.9rem, 4.5vw, 1.6rem)` top and
-  bottom, and **a third of that** left and right (a full-screen text page
-  likewise). The top is at least the name
+- **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
+  `clamp(1.1rem, 5.5vw, 2rem)` left and right. The top is at least the name
   tag's overlap (`0.6em` of the tag) plus `0.1em` of the text, so a bigger
   Name size pushes the text down (at 100% the usual padding is already
   enough). It's the same with or without a name, so the text never moves
