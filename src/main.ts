@@ -13,6 +13,7 @@ import {
 import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { apolloSettingsUrl, apolloStatus, startApollo } from './apollo';
 import { THEME_STYLES } from './look-options';
 import { readText } from './ocr';
 import { saveOcrTest, showOcrTests } from './ocr-tests';
@@ -1161,6 +1162,34 @@ app.whenReady().then(async () => {
       changeSpeaker(name);
     }
   });
+
+  // Apollo's service: checked every 2 seconds (it's cheap), and the
+  // picker told when it starts or stops. See apollo.ts.
+  let apollo = apolloStatus();
+  const checkApollo = () => {
+    const now = apolloStatus();
+    if (JSON.stringify(now) !== JSON.stringify(apollo)) {
+      apollo = now;
+      broadcast('apollo-changed', apollo);
+    }
+  };
+  setInterval(checkApollo, 2000);
+  ipcMain.handle('get-apollo', () => apollo);
+  ipcMain.handle('start-apollo', () => {
+    if (!startApollo()) {
+      void dialog.showMessageBox({
+        type: 'warning',
+        message: "Apollo didn't start",
+        detail:
+          'Windows refused to start its service (ApolloService), or the ' +
+          'permission prompt was turned down.',
+      });
+    }
+    checkApollo();
+  });
+  ipcMain.handle('open-apollo-settings', () =>
+    shell.openExternal(apolloSettingsUrl()),
+  );
 
   ipcMain.handle('get-phone-display', () => phoneDisplay);
   // The PC / Phone switch, saved straight away.

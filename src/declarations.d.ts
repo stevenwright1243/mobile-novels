@@ -236,6 +236,15 @@ type ProfileSummary = Omit<
   icon?: string;
 };
 
+// A Windows service's state (win32.ts's `serviceStatus`). `canStart` is
+// whether this account may start it without admin rights; Apollo's service
+// can't be, unless its permissions were changed (see apollo.ts).
+type ServiceState = 'running' | 'starting' | 'stopping' | 'stopped' | 'missing';
+interface ServiceStatus {
+  state: ServiceState;
+  canStart: boolean;
+}
+
 // The phone's display, added by Apollo while the phone is streaming (see
 // phone-display.ts). Width and height are in real pixels; `scale` is the
 // display's Windows scaling (e.g. 3 for 300%). `portraitOnPhone` is false
@@ -370,6 +379,13 @@ interface Window {
     // screen on it), or null.
     getPhoneDisplay(): Promise<PhoneDisplay | null>;
     onPhoneDisplayChanged(callback: (phone: PhoneDisplay | null) => void): void;
+    // Apollo, the streaming server, which runs as a Windows service: its
+    // state, starting it (Windows asks for admin rights unless the service
+    // allows this account), and opening its settings page in the browser.
+    getApollo(): Promise<ServiceStatus>;
+    onApolloChanged(callback: (status: ServiceStatus) => void): void;
+    startApollo(): Promise<void>;
+    openApolloSettings(): Promise<void>;
     // The PC / Phone switch: whether the portrait goes on the phone's display
     // (true) or stays on the PC (false). Saved as an app setting.
     getPortraitOnPhone(): Promise<boolean>;

@@ -1001,3 +1001,108 @@ export function loadLibraryNextTo(file: string) {
     throw new Error(`Couldn't load ${file}`);
   }
 }
+
+// For Windows services (programs Windows runs in the background, like
+// Apollo): asking whether one is running, and starting it. Each step opens a
+// "handle" asking only for the access it needs, so Windows can refuse just
+// the parts this account isn't allowed (starting needs admin by default).
+const advapi32 = koffi.load('advapi32.dll');
+koffi.struct('SERVICE_STATUS', {
+  dwServiceType: 'uint32_t',
+  dwCurrentState: 'uint32_t',
+  dwControlsAccepted: 'uint32_t',
+  dwWin32ExitCode: 'uint32_t',
+  dwServiceSpecificExitCode: 'uint32_t',
+  dwCheckPoint: 'uint32_t',
+  dwWaitHint: 'uint32_t',
+});
+const OpenSCManager = advapi32.func(
+  'intptr_t __stdcall OpenSCManagerW(str16 lpMachineName, str16 lpDatabaseName, uint32_t dwDesiredAccess)',
+);
+const OpenService = advapi32.func(
+  'intptr_t __stdcall OpenServiceW(intptr_t hSCManager, str16 lpServiceName, uint32_t dwDesiredAccess)',
+);
+const QueryServiceStatus = advapi32.func(
+  'bool __stdcall QueryServiceStatus(intptr_t hService, _Out_ SERVICE_STATUS *lpServiceStatus)',
+);
+const StartService = advapi32.func(
+  'bool __stdcall StartServiceW(intptr_t hService, uint32_t dwNumServiceArgs, void *lpServiceArgVectors)',
+);
+const CloseServiceHandle = advapi32.func(
+  'bool __stdcall CloseServiceHandle(intptr_t hSCObject)',
+);
+const ShellExecute = shell32.func(
+  'intptr_t __stdcall ShellExecuteW(intptr_t hwnd, str16 lpOperation, str16 lpFile, str16 lpParameters, str16 lpDirectory, int nShowCmd)',
+);
+const SC_MANAGER_CONNECT = 0x0001;
+const SERVICE_QUERY_STATUS = 0x0004;
+const SERVICE_START = 0x0010;
+const SERVICE_STATES: Record<number, ServiceState> = {
+  1: 'stopped',
+  2: 'starting',
+  3: 'stopping',
+  4: 'running',
+  5: 'starting', // resuming from paused
+  6: 'stopping', // pausing
+  7: 'stopped', // paused
+};
+const SW_HIDE = 0;
+
+/** Runs `use` with the service opened for `access`, or returns null if it
+ * isn't installed or this account may not have that access. */
+function withService<T>(
+  name: string,
+  access: number,
+  use: (service: number) => T,
+): T | null {
+  const manager = OpenSCManager(null, null, SC_MANAGER_CONNECT);
+  if (!manager) {
+    return null;
+  }
+  try {
+    const service = OpenService(manager, name, access);
+    if (!service) {
+      return null;
+    }
+    try {
+      return use(service);
+    } finally {
+      CloseServiceHandle(service);
+    }
+  } finally {
+    CloseServiceHandle(manager);
+  }
+}
+
+/** Whether a service is running, and whether this account may start it
+ * without asking for admin rights. */
+export function serviceStatus(name: string): ServiceStatus {
+  const state = withService(name, SERVICE_QUERY_STATUS, (service) => {
+    const status: { dwCurrentState?: number } = {};
+    return QueryServiceStatus(service, status)
+      ? (SERVICE_STATES[status.dwCurrentState!] ?? 'stopped')
+      : 'stopped';
+  });
+  if (state === null) {
+    return { state: 'missing', canStart: false };
+  }
+  // Opening it with start access only asks; it doesn't start it.
+  const canStart = withService(name, SERVICE_START, () => true) ?? false;
+  return { state, canStart };
+}
+
+/** Starts a service. Without the right to, asks Windows to run `sc start`
+ * as admin, which shows the "allow changes?" prompt. False if it couldn't
+ * (or the prompt was turned down). */
+export function startService(name: string): boolean {
+  const started = withService(name, SERVICE_START, (service) =>
+    StartService(service, 0, null),
+  );
+  if (started !== null) {
+    return started;
+  }
+  // Waits for the prompt's answer, then returns over 32 if sc.exe started.
+  return (
+    ShellExecute(0, 'runas', 'sc.exe', `start ${name}`, null, SW_HIDE) > 32
+  );
+}

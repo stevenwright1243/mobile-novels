@@ -47,8 +47,8 @@
         <ul id="window-list" class="side-list"></ul>
       </details>
 
-      <!-- The theme, then whether the phone is streaming and where the
-           portrait goes (phone-status.ts). -->
+      <!-- The theme, Apollo (apollo-status.ts), then whether the phone is
+           streaming and where the portrait goes (phone-status.ts). -->
       <footer class="side-footer">
         <!-- The colour scheme of both windows: opens a menu of every theme,
            each drawn in its own colours (theme-picker.ts). `popover` is the
@@ -77,6 +77,15 @@
             aria-labelledby="theme-menu-heading"
           ></div>
           <p class="sheet-note">For both windows and every game.</p>
+        </div>
+        <div class="footer-row">
+          <span id="apollo-status" aria-live="polite"></span>
+          <span class="apollo-buttons">
+            <button id="start-apollo" hidden>Start</button>
+            <button id="apollo-settings" title="Open Apollo's settings page">
+              Settings
+            </button>
+          </span>
         </div>
         <span id="phone-status" aria-live="polite"></span>
         <div class="footer-row">

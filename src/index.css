@@ -424,8 +424,9 @@ details[open] > summary.side-heading > span::before {
   font-size: 0.85rem;
 }
 
-/* "Phone connected" / "Phone not connected" (phone-status.ts). */
-#phone-status {
+/* "Phone connected" / "Phone not connected" (phone-status.ts), and
+   whether Apollo is running (apollo-status.ts). */
+:is(#phone-status, #apollo-status) {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -446,9 +447,20 @@ details[open] > summary.side-heading > span::before {
     font-weight: 700;
   }
 
-  &.connected::before {
+  &:is(.connected, .running)::before {
     background: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+/* Apollo's Start and Settings: smaller than the usual buttons. */
+.apollo-buttons {
+  display: flex;
+  gap: 0.35rem;
+
+  & button {
+    padding: 0.2rem 0.65rem;
+    font-size: 0.8rem;
   }
 }
 

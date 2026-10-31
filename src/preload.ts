@@ -134,6 +134,14 @@ contextBridge.exposeInMainWorld('vn', {
       (_event, phone: PhoneDisplay | null) => callback(phone),
     );
   },
+  getApollo: () => ipcRenderer.invoke('get-apollo'),
+  onApolloChanged: (callback) => {
+    ipcRenderer.on('apollo-changed', (_event, status: ServiceStatus) =>
+      callback(status),
+    );
+  },
+  startApollo: () => ipcRenderer.invoke('start-apollo'),
+  openApolloSettings: () => ipcRenderer.invoke('open-apollo-settings'),
   getPortraitOnPhone: () => ipcRenderer.invoke('get-portrait-on-phone'),
   setPortraitOnPhone: (onPhone) =>
     ipcRenderer.invoke('set-portrait-on-phone', onPhone),
