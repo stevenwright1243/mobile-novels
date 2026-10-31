@@ -5,13 +5,7 @@
  * came back.
  */
 
-import {
-  cropForOcr,
-  getClientArea,
-  ocrScale,
-  pngBytes,
-  regionInVideo,
-} from './capture';
+import { grabClientArea, readTextBoxOnce } from './ocr-debug';
 
 const debugTools = document.querySelector<HTMLElement>('#debug-tools')!;
 const button = document.querySelector<HTMLButtonElement>('#ocr-test-button')!;
@@ -22,17 +16,6 @@ const stats = document.querySelector<HTMLElement>('#ocr-stats')!;
 const output = document.querySelector<HTMLElement>('#ocr-output')!;
 const liveName = document.querySelector<HTMLElement>('#live-name span')!;
 const liveText = document.querySelector<HTMLElement>('#live-text span')!;
-
-// Copies the text region out of the preview, ready for OCR, with how much it
-// was enlarged (see `ocrScale()`).
-async function grabTextRegion(video: HTMLVideoElement, clean: boolean) {
-  const clientArea = await getClientArea();
-  const { text: region } = await window.vn.getRegions();
-  const box = regionInVideo(video, clientArea, region);
-  const scale = ocrScale(video, box);
-  const blob = await cropForOcr(video, box, clean ? 'clean' : 'none', scale);
-  return { blob, scale };
-}
 
 // The live preview to read from; set once a game is picked.
 let video: HTMLVideoElement | null = null;
@@ -63,32 +46,6 @@ const testNameBox = document.querySelector<HTMLInputElement>('#test-name-box')!;
 const testPage = document.querySelector<HTMLInputElement>('#test-page')!;
 const expectedPage =
   document.querySelector<HTMLTextAreaElement>('#expected-page')!;
-
-// The game's content (its client area) as a PNG, at the capture's full size.
-async function grabClientArea(video: HTMLVideoElement) {
-  const area = await getClientArea();
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(area.w * video.videoWidth);
-  canvas.height = Math.round(area.h * video.videoHeight);
-  canvas
-    .getContext('2d')!
-    .drawImage(
-      video,
-      area.x * video.videoWidth,
-      area.y * video.videoHeight,
-      canvas.width,
-      canvas.height,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
-  return pngBytes(
-    await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image')))),
-    ),
-  );
-}
 
 saveTestButton.addEventListener('click', async () => {
   if (!video || video.videoWidth === 0) {
@@ -150,18 +107,11 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = 'Reading…';
   try {
-    const { blob, scale } = await grabTextRegion(video, cleanUp.checked);
+    const read = await readTextBoxOnce(video, cleanUp.checked);
     URL.revokeObjectURL(image.src);
-    image.src = URL.createObjectURL(blob);
-    const result = await window.vn.readText(await pngBytes(blob));
-    // e.g. "3× (letters 11 px)".
-    const letters = scale.letterHeight
-      ? `letters ${scale.letterHeight} px`
-      : 'no text measured';
-    const enlarged = `${+scale.scale.toFixed(2)}× (${letters})`;
-    stats.textContent = `Confidence ${result.confidence}% · ${result.ms} ms · ${enlarged}`;
-    output.textContent = result.text || '(no text found)';
-    console.log('OCR result:', result);
+    image.src = URL.createObjectURL(read.image);
+    stats.textContent = read.stats;
+    output.textContent = read.text || '(no text found)';
   } catch (error) {
     stats.textContent = 'OCR failed';
     output.textContent = String(error);

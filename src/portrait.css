@@ -435,9 +435,9 @@ body {
   gap: 0.6em;
 }
 
-/* The Sizes, Visual Novels and Input Settings drop-downs: each heading is
+/* The Sizes, Visual Novels, Input Settings and Debug drop-downs: each heading is
    the button that opens it, with a chevron that turns when it's open. */
-:is(#sizes, #visual-novels, #input-settings) summary {
+:is(#sizes, #visual-novels, #input-settings, #debug) summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -447,11 +447,12 @@ body {
   cursor: pointer;
 }
 
-:is(#sizes, #visual-novels, #input-settings) summary::-webkit-details-marker {
+:is(#sizes, #visual-novels, #input-settings, #debug)
+  summary::-webkit-details-marker {
   display: none;
 }
 
-:is(#sizes, #visual-novels, #input-settings) summary::after {
+:is(#sizes, #visual-novels, #input-settings, #debug) summary::after {
   content: '';
   width: 0.5em;
   height: 0.5em;
@@ -463,12 +464,12 @@ body {
   transition: rotate 0.2s;
 }
 
-:is(#sizes, #visual-novels, #input-settings)[open] summary::after {
+:is(#sizes, #visual-novels, #input-settings, #debug)[open] summary::after {
   rotate: 225deg;
   translate: 0 0.15em;
 }
 
-:is(#sizes, #visual-novels, #input-settings) h2 {
+:is(#sizes, #visual-novels, #input-settings, #debug) h2 {
   margin: 0;
 }
 
@@ -635,6 +636,31 @@ body {
     .game-state {
       color: inherit;
     }
+  }
+}
+
+/* Debug: its tools spaced apart, and a read's image (black text on white
+   when cleaned up) at the drop-down's width, with what came back under
+   it. */
+.debug-body {
+  display: grid;
+  gap: 0.6em;
+
+  .sheet-note,
+  figure {
+    margin: 0;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: calc(0.4em * var(--corner));
+  }
+
+  .debug-text {
+    margin: 0.3em 0 0;
+    white-space: pre-wrap;
   }
 }
 

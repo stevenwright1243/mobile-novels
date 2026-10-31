@@ -25,6 +25,7 @@ import { ARROW_SHAPES } from './arrow-shapes';
 import './menus-sheet';
 import './visual-novels';
 import './input-settings';
+import { startDebugPanel } from './debug-panel';
 import './zoom-pad';
 import './quick-save';
 import {
@@ -665,6 +666,8 @@ const findRegion = (name: RegionName) => () =>
   regions && video.videoWidth > 0
     ? regionInVideo(video, clientArea, regions[name])
     : null;
+// The Menus sheet's Debug tools read the same capture.
+startDebugPanel(video);
 // Auto carries on through a line OCR couldn't read (the line is empty, but
 // the box shows writing), where it would rest for a truly empty box.
 setAutoBoxCheck(() => {

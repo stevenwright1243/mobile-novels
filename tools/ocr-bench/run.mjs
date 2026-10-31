@@ -50,7 +50,7 @@ const scales = option('--scales', '1,0.8,0.6').split(',').map(Number);
 const versions = ['now', ...args];
 
 // --- Tests ---
-const tests = existsSync(testsFolder)
+const saved = existsSync(testsFolder)
   ? readdirSync(testsFolder)
       .filter((file) => file.endsWith('.json') && file.includes(only))
       .map((file) => ({
@@ -59,6 +59,18 @@ const tests = existsSync(testsFolder)
         ...JSON.parse(readFileSync(path.join(testsFolder, file), 'utf8')),
       }))
   : [];
+// Tests saved from the phone in one tap hold what the app showed, not the
+// right text, until someone fills that in (and takes out `unchecked`).
+const tests = saved.filter((test) => !test.unchecked);
+const unchecked = saved.filter((test) => test.unchecked);
+if (unchecked.length > 0) {
+  console.log(
+    `Skipped ${unchecked.length} unchecked OCR tests (fill in their right text, then remove "unchecked"):`,
+  );
+  for (const test of unchecked) {
+    console.log(`  ${test.id}`);
+  }
+}
 if (tests.length === 0) {
   console.log(`No OCR tests in ${testsFolder}.`);
   console.log(

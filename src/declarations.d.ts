@@ -175,6 +175,10 @@ interface OcrTest {
   // What the app was showing when the test was saved, for reference.
   shownText: string;
   shownName: string;
+  // Saved from the Menus sheet in one tap (the portrait can't be typed
+  // in), so the expected text is only what was shown: to be filled in from
+  // the frame, and this taken out. The bench skips it until then.
+  unchecked?: true;
 }
 
 // Everything the app remembers about one game, saved as JSON (profiles.ts).
