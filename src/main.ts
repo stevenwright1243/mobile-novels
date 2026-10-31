@@ -36,6 +36,7 @@ import {
   moveGameWindow,
   openOnDisplay,
 } from './open-on-display';
+import { keepPhoneDisplayClear } from './keep-phone-clear';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import { steamAppIdOf } from './steam';
@@ -564,6 +565,15 @@ const createPortraitWindow = (bounds: Rectangle, picker: BrowserWindow) => {
     settings.portraitOnPhone,
   );
   setPortraitOnPhone = placement.setOnPhone;
+
+  // Nothing but the portrait goes on the phone's display.
+  const portraitHwnd = Number(
+    portrait.getNativeWindowHandle().readBigUInt64LE(),
+  );
+  keepPhoneDisplayClear(
+    () => (portrait.isDestroyed() ? [] : [portraitHwnd]),
+    () => openOnDisplay(settings.openOn),
+  );
 };
 
 // For now, open the two windows docked side by side and centered on the main

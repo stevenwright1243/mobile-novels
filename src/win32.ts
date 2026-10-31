@@ -1136,3 +1136,107 @@ export function moveWindow(hwnd: number, to: { x: number; y: number }) {
     SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
   );
 }
+
+// For keeping other programs' windows off the phone's display
+// (keep-phone-clear.ts): every top-level window, through a callback Windows
+// calls once per window. koffi turns a JS function passed for it into a C
+// function pointer for the length of the call.
+const EnumWindowsProc = koffi.proto(
+  'bool __stdcall EnumWindowsProc(intptr_t hwnd, intptr_t lParam)',
+);
+const EnumWindows = user32.func(
+  `bool __stdcall EnumWindows(${koffi.pointer(EnumWindowsProc).name} lpEnumFunc, intptr_t lParam)`,
+);
+const IsWindowVisible = user32.func(
+  'bool __stdcall IsWindowVisible(intptr_t hWnd)',
+);
+const IsZoomed = user32.func('bool __stdcall IsZoomed(intptr_t hWnd)');
+const GetWindowTextLength = user32.func(
+  'int __stdcall GetWindowTextLengthW(intptr_t hWnd)',
+);
+const GetClassName = user32.func(
+  'int __stdcall GetClassNameW(intptr_t hWnd, _Out_ uint16_t *lpClassName, int nMaxCount)',
+);
+// The same function as DwmGetWindowAttribute above, for a number instead.
+const DwmGetWindowNumber = dwmapi.func(
+  'long __stdcall DwmGetWindowAttribute(intptr_t hwnd, uint32_t dwAttribute, _Out_ uint32_t *pvAttribute, uint32_t cbAttribute)',
+);
+const DWMWA_CLOAKED = 14;
+const WS_EX_TOOLWINDOW = 0x00000080;
+const WS_EX_TRANSPARENT = 0x00000020;
+const WS_EX_NOACTIVATE = 0x08000000;
+const SW_MAXIMIZE = 3;
+// The taskbars and the desktop, which span or belong to every monitor.
+const SHELL_CLASSES = new Set([
+  'Shell_TrayWnd',
+  'Shell_SecondaryTrayWnd',
+  'Progman',
+  'WorkerW',
+]);
+
+function classNameOf(hwnd: number) {
+  const name = Buffer.alloc(512);
+  const length = GetClassName(hwnd, name, 256);
+  return name.toString('utf16le', 0, length * 2);
+}
+
+/** The windows a person would call "a program's window": shown, not
+ * minimized, not hidden by Windows (other virtual desktops, suspended Store
+ * apps), with a title, and not a tool window, click-through overlay or
+ * notification, nor the taskbar or desktop. */
+export function programWindows() {
+  const found: number[] = [];
+  EnumWindows((hwnd: number) => {
+    found.push(hwnd);
+    return true;
+  }, 0);
+  return found.filter((hwnd) => {
+    if (!IsWindowVisible(hwnd) || IsIconic(hwnd)) {
+      return false;
+    }
+    const style = Number(GetWindowLongPtr(hwnd, GWL_EXSTYLE));
+    if (style & (WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE)) {
+      return false;
+    }
+    const cloaked = [0];
+    DwmGetWindowNumber(hwnd, DWMWA_CLOAKED, cloaked, 4);
+    return (
+      cloaked[0] === 0 &&
+      GetWindowTextLength(hwnd) > 0 &&
+      !SHELL_CLASSES.has(classNameOf(hwnd))
+    );
+  });
+}
+
+/** The part of a window that shows, in real pixels: its frame without the
+ * invisible borders Windows adds for resizing (a maximized window's reach
+ * past its monitor's edges by about 8 pixels). */
+export function visibleBounds(hwnd: number) {
+  const rect: Partial<Rect> = {};
+  if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, rect, 16)) {
+    return windowBounds(hwnd);
+  }
+  const { left, top, right, bottom } = rect as Rect;
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+export const isMaximized = (hwnd: number) => IsZoomed(hwnd);
+export const restore = (hwnd: number) => ShowWindow(hwnd, SW_RESTORE);
+export const maximize = (hwnd: number) => ShowWindow(hwnd, SW_MAXIMIZE);
+
+/** Moves and sizes a window (real pixels), without bringing it to the
+ * front. */
+export function placeWindow(
+  hwnd: number,
+  to: { x: number; y: number; width: number; height: number },
+) {
+  SetWindowPos(
+    hwnd,
+    0,
+    to.x,
+    to.y,
+    to.width,
+    to.height,
+    SWP_NOZORDER | SWP_NOACTIVATE,
+  );
+}

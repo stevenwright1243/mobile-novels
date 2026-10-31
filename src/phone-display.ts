@@ -40,7 +40,7 @@ export const isPhoneDisplay = (display: Display) => {
 };
 
 // The phone's display, if one is connected.
-const findPhoneDisplay = () =>
+export const findPhoneDisplay = () =>
   screen.getAllDisplays().find(isPhoneDisplay) ?? null;
 
 // What the picker shows about it. Sizes are in real pixels: Electron gives
