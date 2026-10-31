@@ -368,7 +368,15 @@ const MARKUP = /<\/?[a-z][^<>]{0,40}>|\{\/?[a-z]+(?:=[^{}]{0,20})?\}/gi;
 // a UTF-8 line), half of a UTF-16 pair, invisible formatting and
 // private-use characters.
 const JUNK = /[\uFFFD\p{Cs}\p{Cf}\p{Co}]/gu;
-const clean = (text: string) => text.replace(MARKUP, '').replace(JUNK, '');
+// Control characters, data mixed into a string (Aokana: "\u2402Pretty sure\u2026",
+// drawn as a small "STX"); those that are spacing (tabs, line breaks) are
+// kept, since a game may break its lines with them.
+const CONTROL = /\p{Cc}/gu;
+const clean = (text: string) =>
+  text
+    .replace(MARKUP, '')
+    .replace(JUNK, '')
+    .replace(CONTROL, (character) => (/\s/.test(character) ? character : ''));
 
 // A line as shown: formatting codes out, the end mark off its end, the same
 // mark inside it a space, and spacing tidied.
@@ -1217,10 +1225,10 @@ function knownTo(read: string) {
 // ("【Girl】：Also, this is…" in Aokana), or a code ("`You do know…" in The
 // Colorful World).
 const NOT_A_START = /[\s】」』）)\]：:;,、。`]/u;
-// Symbols and control characters belong to no writing system, so data just
-// before a line can read as one (Aokana: "␂The person I was…", drawn as a
-// small "STX"). One only starts a line when OCR's read starts with it too.
-const SYMBOL = /[\p{S}\p{Cc}]/u;
+// Symbols belong to no writing system, so data just before a line can read
+// as one. One only starts a line when OCR's read starts with it too.
+// (Control characters, like Aokana's "␂", are already out: `clean`.)
+const SYMBOL = /\p{S}/u;
 
 // A line from memory made ready to show for OCR's read: formatting codes
 // and junk out, characters from other writing systems (and symbols OCR
