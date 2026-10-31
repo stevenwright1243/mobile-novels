@@ -678,3 +678,31 @@ const showOnPhone = (phone: PhoneDisplay | null) =>
   );
 window.vn.onPhoneDisplayChanged(showOnPhone);
 window.vn.getPhoneDisplay().then(showOnPhone);
+
+// On the phone the mouse pointer is hidden (portrait.css), but a mouse paired
+// with the phone needs it. A tap jumps the pointer once, while a mouse moves
+// it in a run of small steps: after a few moves in a row with no button held,
+// show it, and hide it again once it's been still for a while.
+const MOVES_TO_SHOW = 3;
+// Moves further apart than this (ms) start a new run.
+const MOVE_RUN = 300;
+const HIDE_AFTER = 2000;
+let moves = 0;
+let lastMove = 0;
+let hidePointer: number | undefined;
+document.addEventListener('pointermove', (event) => {
+  if (event.pointerType !== 'mouse' || event.buttons) {
+    return;
+  }
+  moves = event.timeStamp - lastMove < MOVE_RUN ? moves + 1 : 1;
+  lastMove = event.timeStamp;
+  if (moves < MOVES_TO_SHOW) {
+    return;
+  }
+  document.documentElement.classList.add('pointer-shown');
+  clearTimeout(hidePointer);
+  hidePointer = window.setTimeout(
+    () => document.documentElement.classList.remove('pointer-shown'),
+    HIDE_AFTER,
+  );
+});
