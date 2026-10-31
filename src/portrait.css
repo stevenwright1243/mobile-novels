@@ -758,7 +758,10 @@ body {
 
   /* Room for 3 lines while it's empty or short, like the message window. */
   #page-text {
+    /* Its sides a third of its top and bottom, like the message window's
+       (reader.css). */
     --padding-block: clamp(0.9rem, 4.5vw, 1.6rem);
+    --padding-inline: calc(var(--padding-block) / 3);
     --line-height: 1.5;
     min-height: calc(
       3 * var(--line-height) * var(--page-font-size) + 2 * var(--padding-block)
