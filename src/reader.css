@@ -98,6 +98,16 @@
        for the arrow (`#text-line::after`) can be worked out from them. */
     --padding-inline: clamp(1.1rem, 5.5cqw, 2rem);
     --arrow-inset: clamp(0.75rem, 3.5cqw, 1.25rem);
+    /* The name tag's text size: 72% of the chosen text size at Name size
+       100%. How far the tag reaches down into the message window (about a
+       third of its height), and the least room kept between that and the
+       first line's box (whose own spacing above its letters adds about
+       another half a letter). */
+    --name-font-size: calc(
+      var(--chosen-font-size) * 0.72 * var(--name-size, 1)
+    );
+    --name-overlap: calc(0.6 * var(--name-font-size));
+    --name-clearance: calc(0.1 * var(--chosen-font-size));
     padding: 0 var(--gap) var(--gap-bottom);
   }
 
@@ -109,13 +119,21 @@
     box-sizing: border-box;
     margin: 0;
     --line-height: 1.55;
-    /* Room for 3 lines, so the window stays the same size. */
     --padding-block: clamp(0.9rem, 4.5cqw, 1.6rem);
+    /* At the top, room below the name tag's overlap, kept with or without
+       a name, so the text never moves when a name comes or goes, and a
+       bigger Name size pushes the text down (at 100%, the usual padding is
+       already enough). */
+    --padding-top: max(
+      var(--padding-block),
+      var(--name-overlap) + var(--name-clearance)
+    );
+    /* Room for 3 lines, so the window stays the same size. */
     min-height: calc(
-      3 * var(--line-height) * var(--chosen-font-size) + 2 *
+      3 * var(--line-height) * var(--chosen-font-size) + var(--padding-top) +
         var(--padding-block)
     );
-    padding: var(--padding-block) var(--padding-inline);
+    padding: var(--padding-top) var(--padding-inline) var(--padding-block);
     font-family: var(--font);
     font-size: var(--chosen-font-size);
     font-weight: var(--text-weight);
@@ -172,11 +190,12 @@
     width: fit-content;
     max-width: 80%;
     box-sizing: border-box;
-    /* Overlaps the window by about half its height. */
-    margin: 0 0 -0.6em clamp(0.75rem, 4cqw, 1.5rem);
-    /* 72% of the chosen text size at Name size 100%. In `em`s from here on
-       (padding, the overlap, the dot), so the whole tag scales with it. */
-    font-size: calc(var(--chosen-font-size) * 0.72 * var(--name-size, 1));
+    /* Overlaps the window by `--name-overlap`, which the window's top
+       padding makes room for. */
+    margin: 0 0 calc(-1 * var(--name-overlap)) clamp(0.75rem, 4cqw, 1.5rem);
+    /* `--name-font-size`; in `em`s from here on (padding, the dot), so the
+       whole tag scales with it. */
+    font-size: var(--name-font-size);
     cursor: pointer;
   }
 

@@ -81,8 +81,11 @@
 
 /* The haze: the whole text zone fades from clear to white, edge to edge and
    down to the bottom of the screen, with room above the text for the fade.
-   (More specific than portrait.css's text zone rules, so it wins.) */
+   (More specific than portrait.css's text zone rules, so it wins.) The
+   name sits on the haze above the text, not over the window's edge, so
+   there's no overlap to make room for. */
 :root[data-theme='kimikano'] .portrait :is(#text-zone, .text-zone) {
+  --name-overlap: 0px;
   padding-top: 3rem;
   background: linear-gradient(
     to bottom,
@@ -104,7 +107,6 @@
 /* The speaker's name as plain accent-coloured text on the haze, with no
    pill, as in the game. */
 :root[data-theme='kimikano'] .portrait :is(#name-tag, .name-tag) {
-  margin-bottom: 0;
   padding-inline: 0;
   color: var(--accent-deep);
   background: none;
