@@ -205,7 +205,8 @@ export function backgroundYCapFor(
     tag.offsetHeight +
     parseFloat(tagStyle.marginTop) +
     parseFloat(tagStyle.marginBottom) +
-    parseFloat(getComputedStyle(lines).minHeight) +
+    // The window at 3 lines (in Top, its `min-height` fits shorter text).
+    parseFloat(getComputedStyle(lines).getPropertyValue('--three-lines')) +
     // The Text padding, above the zone (a fifth of the screen at 100%).
     (textStyle.get().padding ?? 0) * TEXT_PADDING_SHARE * screenHeight;
   // The picture's height on screen (it doesn't depend on its position),

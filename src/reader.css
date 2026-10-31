@@ -9,6 +9,15 @@
    laid out as the real one is. In the portrait itself the two are the
    same. */
 
+/* The message window's height at 3 lines (below). Registered as a length
+   so it's worked out to pixels, which sizes-sample.ts reads for the
+   Portrait height cap. */
+@property --three-lines {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
 :root {
   /* The text size at 100%: follows the screen's width, within
      limits. Used by the message window and the history log. (Raised by half
@@ -129,11 +138,14 @@
       clamp(0.9rem, 4.5cqw, 1.6rem),
       var(--name-overlap) + var(--name-clearance)
     );
-    /* Room for 3 lines, so the window stays the same size. */
-    min-height: calc(
+    /* Room for 3 lines, so the window stays the same size: its top edge
+       (the window grows upward) and so its text never move. (Text position
+       Top fits the text instead: see below.) */
+    --three-lines: calc(
       3 * var(--line-height) * var(--chosen-font-size) + 2 *
         var(--padding-block)
     );
+    min-height: var(--three-lines);
     padding: var(--padding-block) var(--padding-inline);
     font-family: var(--font);
     font-size: var(--chosen-font-size);
@@ -263,10 +275,14 @@
   flex: none;
 }
 
-/* Shrinks to the room left, down to its 3-line `min-height`, then scrolls
-   (by dragging too: drag-scroll.ts). */
+/* As tall as its text: here the window hangs from its top edge, so only
+   its bottom moves and the text stays put. It shrinks to the room left,
+   but never below 3 lines (or its text, if shorter), then scrolls (by
+   dragging too: drag-scroll.ts). `calc-size()` gives the smaller of the
+   text's height (`size`, from `max-content`) and 3 lines. */
 .portrait[data-text-position='top']
   :is(#text-line, .text-zone .message-window) {
+  min-height: calc-size(max-content, min(size, var(--three-lines)));
   flex: 0 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;

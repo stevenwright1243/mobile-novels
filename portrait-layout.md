@@ -84,7 +84,12 @@ bottom, and never moves it.
   cap. (Before 2026-10-30: it stopped at 60% of the way down, then at the
   screen's bottom with no scrolling.)
 
-- **Height:** room for **3 lines** at the chosen text size, plus padding.
+- **Height:** room for **3 lines** at the chosen text size, plus padding
+  (`--three-lines`), so with Text position Bottom the window's top edge and
+  text never move. With **Top**, the window fits its text instead (only its
+  bottom edge moves), but is never squeezed below 3 lines (or its text, if
+  shorter) when the picture pushes it down; past that it scrolls
+  (`calc-size()`).
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right. The top is at least the name
   tag's overlap (`0.6em` of the tag) plus `0.1em` of the text, so a bigger
