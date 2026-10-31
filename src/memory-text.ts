@@ -368,9 +368,8 @@ const MARKUP = /<\/?[a-z][^<>]{0,40}>|\{\/?[a-z]+(?:=[^{}]{0,20})?\}/gi;
 // a UTF-8 line), half of a UTF-16 pair, invisible formatting and
 // private-use characters.
 const JUNK = /[\uFFFD\p{Cs}\p{Cf}\p{Co}]/gu;
-// Control characters, data mixed into a string (Aokana: "\u2402Pretty sure\u2026",
-// drawn as a small "STX"); those that are spacing (tabs, line breaks) are
-// kept, since a game may break its lines with them.
+// Control characters, data mixed into a string; those that are spacing
+// (tabs, line breaks) are kept, since a game may break its lines with them.
 const CONTROL = /\p{Cc}/gu;
 const clean = (text: string) =>
   text
@@ -1226,8 +1225,9 @@ function knownTo(read: string) {
 // Colorful World).
 const NOT_A_START = /[\s】」』）)\]：:;,、。`]/u;
 // Symbols belong to no writing system, so data just before a line can read
-// as one. One only starts a line when OCR's read starts with it too.
-// (Control characters, like Aokana's "␂", are already out: `clean`.)
+// as one (Aokana: "␂Pretty sure…", U+2402, which separates each language's
+// version of a line in its script, drawn as a small "STX"). One only starts
+// a line when OCR's read starts with it too.
 const SYMBOL = /\p{S}/u;
 
 // A line from memory made ready to show for OCR's read: formatting codes
