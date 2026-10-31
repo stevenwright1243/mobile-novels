@@ -88,7 +88,8 @@ bottom, and never moves it.
   (`--three-lines`), so with Text position Bottom the window's top edge and
   text never move. With **Top**, the window fits its text instead (only its
   bottom edge moves), but is never squeezed below 3 lines (or its text, if
-  shorter) when the picture pushes it down; past that it scrolls
+  shorter) when the picture pushes it down; past that it scrolls. It's at
+  least 1 line tall, so an empty window isn't a thin strip
   (`calc-size()`).
 - **Padding:** `clamp(0.9rem, 4.5vw, 1.6rem)` top and bottom,
   `clamp(1.1rem, 5.5vw, 2rem)` left and right. The top is at least the name

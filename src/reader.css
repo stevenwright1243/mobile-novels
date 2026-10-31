@@ -278,11 +278,19 @@
 /* As tall as its text: here the window hangs from its top edge, so only
    its bottom moves and the text stays put. It shrinks to the room left,
    but never below 3 lines (or its text, if shorter), then scrolls (by
-   dragging too: drag-scroll.ts). `calc-size()` gives the smaller of the
-   text's height (`size`, from `max-content`) and 3 lines. */
+   dragging too: drag-scroll.ts). `calc-size()` gives the text's height
+   (`size`, from `max-content`), at most 3 lines and at least 1, so an
+   empty window isn't a thin strip. */
 .portrait[data-text-position='top']
   :is(#text-line, .text-zone .message-window) {
-  min-height: calc-size(max-content, min(size, var(--three-lines)));
+  min-height: calc-size(
+    max-content,
+    clamp(
+      var(--line-height) * var(--chosen-font-size) + 2 * var(--padding-block),
+      size,
+      var(--three-lines)
+    )
+  );
   flex: 0 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
