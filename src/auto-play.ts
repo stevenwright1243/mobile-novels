@@ -8,9 +8,10 @@
  * the last `MAX_SAMPLES` are kept in settings.json, so it carries on
  * learning from one session to the next). From those, `fitPace` works out
  * your pace as a pause every line takes plus a time per letter, the line
- * that fits them best. Taps much quicker than anyone reads (skipping a
- * scene you've seen), long waits (you looked away) and lines you went to
- * Menus during are left out, so they don't skew it.
+ * that fits them best, so a long line gets more time than a short one.
+ * Taps much quicker than anyone reads (skipping a scene you've seen), long
+ * waits (you looked away) and lines you went to Menus during are left out,
+ * so they don't skew it.
  *
  * Playing: each new line is clicked on `waitFor` its letters after it
  * appeared, with a bar along the bottom of the button filling up until
@@ -19,6 +20,8 @@
  * or the next line is the same text), it's clicked again, at most
  * `MAX_CLICKS` times in all. Auto rests in Menus mode and while the text box
  * is empty (a scene change, a choice), and is off whenever the app starts.
+ * An empty line with writing still in the box is a line OCR couldn't read,
+ * not a pause: Auto carries on through it, as a line of the usual length.
  */
 
 import { similarity } from './text-similarity';
@@ -65,6 +68,11 @@ const MIN_LEFT = 1000;
 // `MAX_CLICKS` times in all.
 const RETRY_AFTER = 3000;
 const MAX_CLICKS = 3;
+// While the line is empty, how often (ms) the box is looked at for writing
+// OCR couldn't read.
+const LOOK_AGAIN = 1000;
+// The length of a line OCR couldn't read, until lines have been learned.
+const USUAL_LETTERS = 40;
 // A changed read this alike to the last one is the same line, corrected
 // (memory's exact text replacing OCR's) or read again.
 const SAME_LINE = 0.6;
@@ -81,30 +89,54 @@ function median(values: number[]) {
     : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
+// The middle value of weighted values: the one with half the total weight
+// on either side.
+function weightedMedian(values: [value: number, weight: number][]) {
+  const sorted = [...values].sort((a, b) => a[0] - b[0]);
+  const half = sorted.reduce((sum, [, weight]) => sum + weight, 0) / 2;
+  let total = 0;
+  for (const [value, weight] of sorted) {
+    total += weight;
+    if (total >= half) {
+      return value;
+    }
+  }
+  return sorted.at(-1)![0];
+}
+
 const clamp = (value: number, [low, high]: number[]) =>
   Math.min(high, Math.max(low, value));
 
 // The pace that best fits the samples. The time per letter is the median of
-// the slopes between every pair of lines (the Theil–Sen estimator), and the
-// pause the median of what's left of each line's time once its letters are
-// taken off: medians, so a few odd lines barely move it, where an average
-// would follow them. Then blended with the default by how many lines there
-// are to go on.
+// the slopes between every pair of lines (the Theil–Sen estimator), each
+// pair counting by how far apart its letters are: two short lines' times
+// differ mostly by chance (a voice line, a look at the art), a short and a
+// long line's by the reading. (Counted equally, the many short lines made a
+// line's length barely matter: 20 ms a letter, where weighted it's 45.) The
+// pause is the median of what's left of each line's time once its letters
+// are taken off: medians, so a few odd lines barely move it, where an
+// average would follow them. Then blended with the default by how many
+// lines there are to go on.
 function fitPace(samples: ReadingSample[]): Pace {
   if (samples.length === 0) {
     return DEFAULT_PACE;
   }
-  const slopes: number[] = [];
+  const slopes: [slope: number, weight: number][] = [];
   for (let i = 0; i < samples.length; i++) {
     for (let j = i + 1; j < samples.length; j++) {
       const spread = samples[j].letters - samples[i].letters;
       if (Math.abs(spread) >= MIN_LETTER_SPREAD) {
-        slopes.push((samples[j].ms - samples[i].ms) / spread);
+        slopes.push([
+          (samples[j].ms - samples[i].ms) / spread,
+          Math.abs(spread),
+        ]);
       }
     }
   }
   const perLetter = clamp(
-    slopes.length >= MIN_PAIRS ? median(slopes) : DEFAULT_PACE.perLetter,
+    slopes.length >= MIN_PAIRS
+      ? weightedMedian(slopes)
+      : DEFAULT_PACE.perLetter,
     PER_LETTER_RANGE,
   );
   const pause = clamp(
@@ -126,6 +158,13 @@ const lettersIn = (text: string) => text.match(/[\p{L}\p{N}]/gu)?.length ?? 0;
 const waitFor = (letters: number) =>
   clamp(pace.pause + pace.perLetter * letters, [MIN_WAIT, MAX_WAIT]);
 
+// How many letters a line usually has: what a line OCR couldn't read is
+// given.
+const usualLetters = () =>
+  samples.length
+    ? median(samples.map(({ letters }) => letters))
+    : USUAL_LETTERS;
+
 let samples: ReadingSample[] = [];
 let pace = DEFAULT_PACE;
 window.vn.getReadingSamples().then((saved) => {
@@ -137,6 +176,8 @@ window.vn.getReadingSamples().then((saved) => {
 // Moves the game on (portrait.ts: clicks the text box, or the page's
 // corner); false if there's no game to click.
 let moveOn: () => boolean = () => false;
+// Whether the text box shows writing (portrait.ts), for an empty line.
+let boxHasWriting: () => boolean = () => false;
 let on = false;
 // Menus mode: Auto doesn't click.
 let paused = false;
@@ -148,8 +189,12 @@ let shownAt = 0;
 let letters = 0;
 let lastText = '';
 // Whether the text box went empty (a scene change), so the line showing
-// again starts a fresh wait.
+// again starts a fresh wait, and whether that was in full-screen text.
 let blank = false;
+let blankPage = false;
+// While it's empty, when writing OCR couldn't read was first seen in the
+// box (0 for not seen).
+let unreadSince = 0;
 // Whether its time isn't a fair sample: Auto was on or switched, Menus was
 // opened, or it went away and came back.
 let unfair = true;
@@ -212,7 +257,14 @@ function stop() {
 // `RETRY_AFTER` after Auto's last click.
 function schedule() {
   stop();
-  if (!on || paused || blank || letters === 0 || clicks >= MAX_CLICKS) {
+  if (!on || paused) {
+    return;
+  }
+  if (blank) {
+    scheduleUnread();
+    return;
+  }
+  if (letters === 0 || clicks >= MAX_CLICKS) {
     return;
   }
   const now = performance.now();
@@ -223,15 +275,42 @@ function schedule() {
   timer = window.setTimeout(click, left);
 }
 
+// While the line is empty: a line OCR couldn't read is clicked on like a
+// line of the usual length, counted from when it was seen or the last
+// click. Lines it can't read can't be told apart, so each click is taken to
+// bring the next (no retries, no `MAX_CLICKS`). A truly empty box (a scene
+// change, a choice) is looked at again in a moment, and so is a full-screen
+// page, which has no box.
+function scheduleUnread() {
+  if (blankPage || !boxHasWriting()) {
+    unreadSince = 0;
+    timer = window.setTimeout(schedule, LOOK_AGAIN);
+    return;
+  }
+  const now = performance.now();
+  unreadSince ||= now;
+  const wait = waitFor(usualLetters());
+  const left = Math.max(MIN_LEFT, Math.max(unreadSince, tappedAt) + wait - now);
+  showCountdown(left, wait);
+  timer = window.setTimeout(click, left);
+}
+
 function click() {
   timer = undefined;
+  if (blank && !boxHasWriting()) {
+    // The box emptied during the wait: look again in a moment.
+    schedule();
+    return;
+  }
   if (!on || paused || !moveOn()) {
     stop();
     return;
   }
   tappedAt = performance.now();
   tapByAuto = true;
-  clicks++;
+  if (!blank) {
+    clicks++;
+  }
   schedule();
 }
 
@@ -239,10 +318,13 @@ function click() {
 export function noteText(text: string, page: boolean) {
   const count = lettersIn(text);
   if (count === 0) {
-    // Nothing to read: wait for the next line.
+    // Nothing to read: wait for the next line (or carry on through a line
+    // OCR couldn't read).
     blank = true;
+    blankPage = page;
+    unreadSince = 0;
     unfair = true;
-    stop();
+    schedule();
     return;
   }
   const now = performance.now();
@@ -288,6 +370,10 @@ export function noteTap() {
   }
   tappedAt = performance.now();
   tapByAuto = false;
+  if (blank) {
+    // On to another line OCR can't read, most likely: its wait starts now.
+    schedule();
+  }
 }
 
 /** Menus mode (true) or back to the reader (false). */
@@ -300,6 +386,11 @@ export function setAutoPaused(value: boolean) {
     clicks = 0;
   }
   schedule();
+}
+
+/** How Auto tells whether the text box shows writing (portrait.ts). */
+export function setAutoBoxCheck(callback: () => boolean) {
+  boxHasWriting = callback;
 }
 
 /** How Auto moves the game on (portrait.ts); false if it couldn't. */

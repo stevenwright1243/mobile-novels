@@ -14,7 +14,13 @@ import {
   stopCapture,
 } from './capture';
 import './history-log';
-import { noteTap, noteText, setAutoMoveOn, setAutoPaused } from './auto-play';
+import {
+  noteTap,
+  noteText,
+  setAutoBoxCheck,
+  setAutoMoveOn,
+  setAutoPaused,
+} from './auto-play';
 import { ARROW_SHAPES } from './arrow-shapes';
 import './menus-sheet';
 import './visual-novels';
@@ -47,7 +53,7 @@ import {
   sampleParts,
   setUpSample,
 } from './sizes-sample';
-import { startTextReader } from './text-reader';
+import { boxHasWriting, startTextReader } from './text-reader';
 import { BACKGROUND_VIEW, placeInZone, SHOW_ALL } from './zone-view';
 
 // Each zone of the layout: its canvas, which region it shows, and how it's
@@ -659,6 +665,14 @@ const findRegion = (name: RegionName) => () =>
   regions && video.videoWidth > 0
     ? regionInVideo(video, clientArea, regions[name])
     : null;
+// Auto carries on through a line OCR couldn't read (the line is empty, but
+// the box shows writing), where it would rest for a truly empty box.
+setAutoBoxCheck(() => {
+  const box = findRegion('text')();
+  return box !== null && box.sw >= 1 && box.sh >= 1
+    ? boxHasWriting(video, box)
+    : false;
+});
 // The text box is also checked by its picture: for short lines OCR isn't
 // sure of, and lines of only dots (see text-reader.ts).
 // Both rest in full-screen text mode, when the page is read instead, except

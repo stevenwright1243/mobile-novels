@@ -204,6 +204,11 @@ function hasWriting({ median, ink, total, letter }: Ink) {
   );
 }
 
+/** Whether the box in the video is a light text box with writing on it
+ * (Auto: an empty line there is one OCR couldn't read, not a pause). */
+export const boxHasWriting = (video: HTMLVideoElement, box: VideoRect) =>
+  hasWriting(measureInk(video, box));
+
 // The line's dots, e.g. "……" for six, or '' when the box isn't just dots.
 // (It marks counted pixels as 2, so each measurement is used for it once.)
 function readDots({ width, median, ink, total, letter }: Ink) {
