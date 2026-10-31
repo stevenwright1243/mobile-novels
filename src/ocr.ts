@@ -73,6 +73,9 @@ function fixCommonMistakes(text: string) {
         const capital = letters.length > 1 && letters === letters.toUpperCase();
         return word.replaceAll('0', capital ? 'O' : 'o');
       })
+      // A stammered "O" read as a zero, alone before the dash so the rule
+      // above doesn't see it: "0-Okay" is "O-Okay" (Aokana), "0-oh" "o-oh".
+      .replace(/(?<![\p{L}\p{N}])0(?=[-–—]([Oo]))/gu, (_zero, letter) => letter)
       // Some fonts' "?" reads as a "7" (Katawa Shoujo's "???" as "777" or
       // "7?"). A word of only 7s and question marks is a run of "?"s, if it
       // has a "?" in it or three or more 7s (so a "77" stays a number).
