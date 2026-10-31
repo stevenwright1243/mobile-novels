@@ -195,39 +195,18 @@ function measureInk(
   return { width, median, ink, total, letter: (height / 10) ** 2 };
 }
 
-// Whether the box is a light text box with writing on it (more than dots).
-function hasWriting({ median, ink, total, letter }: Ink) {
-  return (
-    median >= MIN_BOX_BRIGHTNESS &&
-    total > MAX_DOTS_INK * letter &&
-    total <= MAX_WRITING_SHARE * ink.length
-  );
-}
-
-/** Whether the box in the video is a light text box with writing on it
- * (Auto: an empty line there is one OCR couldn't read, not a pause). */
-export const boxHasWriting = (video: HTMLVideoElement, box: VideoRect) =>
-  hasWriting(measureInk(video, box));
-
-// The line's dots, e.g. "……" for six, or '' when the box isn't just dots.
-// (It marks counted pixels as 2, so each measurement is used for it once.)
-function readDots({ width, median, ink, total, letter }: Ink) {
-  if (median < MIN_BOX_BRIGHTNESS) {
-    return '';
-  }
-  if (total < MIN_DOTS_INK * letter || total > MAX_DOTS_INK * letter) {
-    return '';
-  }
-  // Count the separate marks: from each dark pixel not counted yet, follow
-  // its dark neighbours (a "flood fill") to find the whole mark and its
-  // size. Specks are skipped; anything letter-sized means it isn't dots.
-  let dots = 0;
+// The sizes of the separate dark marks in the box, in pixels: from each
+// dark pixel not counted yet, its dark neighbours are followed (a "flood
+// fill") to find the whole mark.
+function markSizes({ width, ink }: Ink) {
+  const counted = new Uint8Array(ink.length);
+  const sizes: number[] = [];
   const stack: number[] = [];
   for (let start = 0; start < ink.length; start++) {
-    if (ink[start] !== 1) {
+    if (!ink[start] || counted[start]) {
       continue;
     }
-    ink[start] = 2;
+    counted[start] = 1;
     stack.push(start);
     let size = 0;
     while (stack.length > 0) {
@@ -241,19 +220,50 @@ function readDots({ width, median, ink, total, letter }: Ink) {
         i + width,
       ];
       for (const n of neighbours) {
-        if (n >= 0 && n < ink.length && ink[n] === 1) {
-          ink[n] = 2;
+        if (n >= 0 && n < ink.length && ink[n] && !counted[n]) {
+          counted[n] = 1;
           stack.push(n);
         }
       }
     }
-    if (size > MAX_DOT * letter) {
-      return '';
-    }
-    if (size >= MIN_DOT * letter) {
-      dots++;
-    }
+    sizes.push(size);
   }
+  return sizes;
+}
+
+// Whether the box is a light text box with writing on it: more dark than
+// dots, or a mark bigger than a dot, a letter (a short line like "Ah..."
+// has less ink than a row of dots).
+function hasWriting(measured: Ink) {
+  const { median, ink, total, letter } = measured;
+  return (
+    median >= MIN_BOX_BRIGHTNESS &&
+    total <= MAX_WRITING_SHARE * ink.length &&
+    (total > MAX_DOTS_INK * letter ||
+      markSizes(measured).some((size) => size > MAX_DOT * letter))
+  );
+}
+
+/** Whether the box in the video is a light text box with writing on it
+ * (Auto: an empty line there is one OCR couldn't read, not a pause). */
+export const boxHasWriting = (video: HTMLVideoElement, box: VideoRect) =>
+  hasWriting(measureInk(video, box));
+
+// The line's dots, e.g. "……" for six, or '' when the box isn't just dots:
+// specks are skipped, and anything letter-sized means it isn't dots.
+function readDots(measured: Ink) {
+  const { median, total, letter } = measured;
+  if (median < MIN_BOX_BRIGHTNESS) {
+    return '';
+  }
+  if (total < MIN_DOTS_INK * letter || total > MAX_DOTS_INK * letter) {
+    return '';
+  }
+  const sizes = markSizes(measured);
+  if (sizes.some((size) => size > MAX_DOT * letter)) {
+    return '';
+  }
+  const dots = sizes.filter((size) => size >= MIN_DOT * letter).length;
   return '…'.repeat(Math.floor(dots / 3)) + '.'.repeat(dots % 3);
 }
 
