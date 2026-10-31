@@ -1217,16 +1217,23 @@ function knownTo(read: string) {
 // ("【Girl】：Also, this is…" in Aokana), or a code ("`You do know…" in The
 // Colorful World).
 const NOT_A_START = /[\s】」』）)\]：:;,、。`]/u;
+// Symbols and control characters belong to no writing system, so data just
+// before a line can read as one (Aokana: "␂The person I was…", drawn as a
+// small "STX"). One only starts a line when OCR's read starts with it too.
+const SYMBOL = /[\p{S}\p{Cc}]/u;
 
 // A line from memory made ready to show for OCR's read: formatting codes
-// and junk out, characters from other writing systems off its ends, and a
-// "~" OCR didn't see (a line break) a space.
+// and junk out, characters from other writing systems (and symbols OCR
+// didn't see) off its start, others off its end, and a "~" OCR didn't see
+// (a line break) a space.
 function polish(text: string, read: string) {
   const known = knownTo(read);
   const characters = [...tidy(text, '')];
   while (
     characters.length > 0 &&
-    (!known(characters[0]) || NOT_A_START.test(characters[0]))
+    (!known(characters[0]) ||
+      NOT_A_START.test(characters[0]) ||
+      (SYMBOL.test(characters[0]) && !read.startsWith(characters[0])))
   ) {
     characters.shift();
   }
