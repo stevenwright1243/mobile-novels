@@ -7,16 +7,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app, BrowserWindow, ipcMain } = require('electron');
 
-const { dir, tests, scales, userData, repo, verbose } = JSON.parse(
-  process.env.OCR_BENCH,
-);
+const { dir, tests, scales, repo, verbose } = JSON.parse(process.env.OCR_BENCH);
 
-// The built ocr.cjs asks for tesseract.js, which lives in the repo's
-// node_modules, not next to the build.
+// The built ocr.cjs asks for koffi, which lives in the repo's node_modules,
+// not next to the build.
 const resolve = Module._resolveFilename;
 Module._resolveFilename = function (request, ...rest) {
-  if (request === 'tesseract.js') {
-    request = path.join(repo, 'node_modules/tesseract.js');
+  if (request === 'koffi') {
+    request = path.join(repo, 'node_modules/koffi');
   }
   return resolve.call(this, request, ...rest);
 };
@@ -25,8 +23,6 @@ Module._resolveFilename = function (request, ...rest) {
 app.setPath('userData', path.join(dir, 'profile'));
 
 app.whenReady().then(async () => {
-  // ocr.ts keeps Tesseract's language data in the app's own folder.
-  app.setPath('userData', userData);
   const { readText } = require(path.join(dir, 'ocr.cjs'));
   let ocrMs = 0;
   ipcMain.handle('read-text', async (_event, png) => {

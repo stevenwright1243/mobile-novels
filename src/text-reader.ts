@@ -13,7 +13,7 @@
  *     line, finished; send it to main and stop reading.
  */
 
-import { cropForOcr, type OcrPrep, pngBytes, type VideoRect } from './capture';
+import { cropBox, pngBytes, type VideoRect } from './capture';
 
 // How often to check the text box, in milliseconds. Counted from the end of
 // the previous check, so a slow read never piles up behind another.
@@ -81,15 +81,11 @@ function hasChanged(sample: Uint8Array, previous: Uint8Array | null) {
 // so join everything into one line with single spaces.
 const tidy = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-// Telling real text from garbage. During scene transitions the text box
-// fades or disappears, and OCR "reads" whatever art is there. Such reads have
-// low confidence (real lines score around 80) and are mostly not words.
-const MIN_CONFIDENCE = 55;
-// A read with the background removed (see `OcrPrep`) has to be far surer:
-// it turns any edges in the art into strokes, which OCR can read as letters.
-// In Aokana a real name reads at 96 that way, while a character's hair
-// outline read as "7 WN" at 55.
-const MIN_FLATTENED_CONFIDENCE = 80;
+// Telling real text from garbage, if OCR ever reads some (during scene
+// transitions, when the text box fades and art shows). OneOCR reads bare art
+// as nothing at all, and real lines at 88-99%, but quote marks and dots pull
+// a short line down: "...I see." reads at 59%, a lone "“" at 8%.
+const MIN_CONFIDENCE = 40;
 const MIN_WORD_SHARE = 0.7;
 // One word: letters or digits, joined by apostrophes or dashes ("don't",
 // "clean-up", "inch—of"), maybe in quotes or brackets or after trailing-off
@@ -101,12 +97,8 @@ const WORD =
 // neither for nor against.
 const PUNCTUATION = /^[.,!?…"'“”‘’\-–—]+$/u;
 
-function looksLikeText(
-  text: string,
-  confidence: number,
-  minConfidence = MIN_CONFIDENCE,
-) {
-  if (confidence < minConfidence) {
+function looksLikeText(text: string, confidence: number) {
+  if (confidence < MIN_CONFIDENCE) {
     return false;
   }
   const words = text.split(' ').filter((word) => !PUNCTUATION.test(word));
@@ -119,14 +111,13 @@ function looksLikeText(
 
 // --- Looking at the text box itself -------------------------------------------
 
-// Two things OCR gets wrong are caught by looking at the text box's picture:
-// a light box, with dark writing ("ink") on it.
-//  - A line of only dots, like "...": OCR sees nothing there at all. Each
-//    separate small dark mark is a dot, and the line is shown with as many
-//    ("…" for each three).
-//  - A short line, like "...I see.": OCR reads it right but isn't sure
-//    (51%, under `MIN_CONFIDENCE`), since the dots drag its score down.
-//    When the box clearly has writing on it, a less sure read is kept.
+// Looking at the text box's picture, a light box with dark writing ("ink")
+// on it, tells two things OCR can't:
+//  - A line of only dots, like "...": OCR may see nothing there at all
+//    (Tesseract never did). Each separate small dark mark is a dot, and the
+//    line is shown with as many ("…" for each three).
+//  - Whether the box has writing on it at all (Auto: an empty read of a box
+//    with writing is a line OCR couldn't read, not a pause).
 // Measured in Aokana at full size: three dots are 42 dark pixels, an empty
 // box 6, a line of text over 12,000 (4% of the box), and the bare art (no
 // text box) is darker overall or far busier.
@@ -149,8 +140,6 @@ const MAX_DOT = 0.2;
 // Writing: more dark than dots, but at most this share of the box (a full
 // line is about 4%, three lines about 12%; busy art can be 24%).
 const MAX_WRITING_SHARE = 0.15;
-// How sure OCR must be about a line in a box that clearly has writing.
-const MIN_WRITING_CONFIDENCE = 35;
 
 const inkCanvas = document.createElement('canvas');
 const inkContext = inkCanvas.getContext('2d', { willReadFrequently: true })!;
@@ -271,17 +260,12 @@ function readDots(measured: Ink) {
 // line, each tidied into one line.
 const PARAGRAPH_BREAK = '\n\n';
 
-// Reads a box with OCR, prepared as `prep` says. `text` is what was read,
-// tidied, and `ok` whether it passes as text (garbage counts as an empty
-// box). With `page`, `text` keeps the paragraphs (see `PARAGRAPH_BREAK`).
-async function readBox(
-  video: HTMLVideoElement,
-  box: VideoRect,
-  prep: OcrPrep,
-  page = false,
-) {
+// Reads a box with OCR. `text` is what was read, tidied, and `ok` whether
+// it passes as text (garbage counts as an empty box). With `page`, `text`
+// keeps the paragraphs (see `PARAGRAPH_BREAK`).
+async function readBox(video: HTMLVideoElement, box: VideoRect, page = false) {
   const { text, confidence, paragraphs } = await window.vn.readText(
-    await pngBytes(await cropForOcr(video, box, prep)),
+    await pngBytes(await cropBox(video, box)),
   );
   const tidied = tidy(text);
   if (page) {
@@ -289,17 +273,13 @@ async function readBox(
     const kept = paragraphs.map(tidy).filter((paragraph) => paragraph !== '');
     return { text: kept.join(PARAGRAPH_BREAK), confidence, ok };
   }
-  const minConfidence =
-    prep === 'flatten' ? MIN_FLATTENED_CONFIDENCE : MIN_CONFIDENCE;
-  const ok = tidied !== '' && looksLikeText(tidied, confidence, minConfidence);
+  const ok = tidied !== '' && looksLikeText(tidied, confidence);
   return { text: tidied, confidence, ok };
 }
 
 // Starts reading. `findTextBox` says where the box is in the video right
 // now, or null when there's nothing to read yet (no capture or regions).
 // `onRead` gets each confirmed read ('' when the box is empty). With
-// `retryFlattened`, a box that reads as nothing is read again with its
-// background removed (see `OcrPrep`), for names on shaded plates. With
 // `textBox`, the box's picture is checked too (see "Looking at the text box
 // itself"): a less sure read is kept when the box clearly has writing, and
 // a box of only dots reads as its dots. With `page`, the box is a page of
@@ -311,7 +291,6 @@ export function startTextReader(
   findTextBox: () => VideoRect | null,
   onRead: (text: string) => void,
   {
-    retryFlattened = false,
     textBox = false,
     page = false,
     // `(): boolean` so TypeScript doesn't take the default's `true` as the
@@ -346,27 +325,10 @@ export function startTextReader(
         dotsAppeared
       ) {
         lastSample = sample;
-        let clean = await readBox(video, box, 'clean', page);
-        if (textBox) {
-          // White text drawn straight over the art may read better from its
-          // white alone (see `OcrPrep`); whichever is surer wins.
-          const white = await readBox(video, box, 'white');
-          if (white.ok && (!clean.ok || white.confidence > clean.confidence)) {
-            clean = white;
-          }
-        }
-        let read = clean.ok ? clean.text : '';
+        const result = await readBox(video, box, page);
+        let read = result.ok ? result.text : '';
         if (!read && textBox) {
-          const ink = measureInk(video, box);
-          const sureEnough =
-            clean.text !== '' &&
-            hasWriting(ink) &&
-            looksLikeText(clean.text, clean.confidence, MIN_WRITING_CONFIDENCE);
-          read = sureEnough ? clean.text : readDots(ink);
-        }
-        if (!read && retryFlattened) {
-          const flattened = await readBox(video, box, 'flatten');
-          read = flattened.ok ? flattened.text : '';
+          read = readDots(measureInk(video, box));
         }
         if (read === lastRead && read !== confirmed) {
           confirmed = read;

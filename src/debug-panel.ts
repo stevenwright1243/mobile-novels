@@ -32,22 +32,6 @@ body.innerHTML = `
     <code>npm run ocr-bench</code>. The right text is filled in later on the
     PC, from the picture.
   </p>
-  <div class="toggle-row">
-    <span id="debug-clean-up-label">Clean up image</span>
-    <span class="toggle">
-      <span class="toggle-side">Off</span>
-      <button
-        id="debug-clean-up"
-        class="toggle-switch"
-        role="switch"
-        aria-checked="true"
-        aria-labelledby="debug-clean-up-label"
-      >
-        <span class="toggle-knob"></span>
-      </button>
-      <span class="toggle-side">On</span>
-    </span>
-  </div>
   <div class="sheet-actions">
     <button id="debug-read" class="chip">Read the text box now</button>
   </div>
@@ -77,7 +61,6 @@ body.innerHTML = `
 
 const saveButton = body.querySelector<HTMLButtonElement>('#debug-save')!;
 const saveStatus = body.querySelector<HTMLElement>('#debug-save-status')!;
-const cleanUp = body.querySelector<HTMLButtonElement>('#debug-clean-up')!;
 const readButton = body.querySelector<HTMLButtonElement>('#debug-read')!;
 const result = body.querySelector<HTMLElement>('#debug-read-result')!;
 const image = result.querySelector<HTMLImageElement>('img')!;
@@ -91,7 +74,7 @@ const setOn = (toggle: HTMLButtonElement, on: boolean) =>
   toggle.setAttribute('aria-checked', String(on));
 
 // A switch flips when it or a word beside it is tapped.
-for (const toggle of [cleanUp, logOcr]) {
+for (const toggle of [logOcr]) {
   for (const target of toggle.closest('.toggle')!.children) {
     target.addEventListener('click', () => {
       setOn(toggle, !isOn(toggle));
@@ -150,7 +133,7 @@ export function startDebugPanel(video: HTMLVideoElement) {
     readButton.disabled = true;
     readButton.textContent = 'Reading…';
     try {
-      const read = await readTextBoxOnce(video, isOn(cleanUp));
+      const read = await readTextBoxOnce(video);
       URL.revokeObjectURL(image.src);
       image.src = URL.createObjectURL(read.image);
       stats.textContent = read.stats;

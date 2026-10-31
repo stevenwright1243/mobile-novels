@@ -5,40 +5,20 @@
  * OCR test (ocr-tests.ts).
  */
 
-import {
-  cropForOcr,
-  getClientArea,
-  ocrScale,
-  pngBytes,
-  regionInVideo,
-} from './capture';
-
-// Copies the text region out of the video, ready for OCR, with how much it
-// was enlarged (see `ocrScale()`).
-async function grabTextRegion(video: HTMLVideoElement, clean: boolean) {
-  const clientArea = await getClientArea();
-  const { text: region } = await window.vn.getRegions();
-  const box = regionInVideo(video, clientArea, region);
-  const scale = ocrScale(video, box);
-  const blob = await cropForOcr(video, box, clean ? 'clean' : 'none', scale);
-  return { blob, scale };
-}
+import { cropBox, getClientArea, pngBytes, regionInVideo } from './capture';
 
 /** Reads the text box once: the image that was read, the text ('' for
- * none), and a line about the read ("Confidence 91% · 240 ms · 2× (letters
- * 27 px)"). */
-export async function readTextBoxOnce(video: HTMLVideoElement, clean: boolean) {
-  const { blob, scale } = await grabTextRegion(video, clean);
+ * none), and a line about the read ("Confidence 91% · 24 ms"). */
+export async function readTextBoxOnce(video: HTMLVideoElement) {
+  const clientArea = await getClientArea();
+  const { text: region } = await window.vn.getRegions();
+  const blob = await cropBox(video, regionInVideo(video, clientArea, region));
   const result = await window.vn.readText(await pngBytes(blob));
-  const letters = scale.letterHeight
-    ? `letters ${scale.letterHeight} px`
-    : 'no text measured';
-  const enlarged = `${+scale.scale.toFixed(2)}× (${letters})`;
   console.log('OCR result:', result);
   return {
     image: blob,
     text: result.text,
-    stats: `Confidence ${result.confidence}% · ${result.ms} ms · ${enlarged}`,
+    stats: `Confidence ${result.confidence}% · ${result.ms} ms`,
   };
 }
 

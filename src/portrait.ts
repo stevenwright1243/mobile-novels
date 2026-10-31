@@ -691,13 +691,12 @@ startTextReader(
   },
   { textBox: true, active: () => boxesActive() || probesBox() },
 );
-// Names are often light text on a shaded plate, so they get a second try
-// with the background removed.
+// The name box: who's speaking.
 startTextReader(
   video,
   findRegion('name'),
   (name) => window.vn.setSpeaker(tidyName(name)),
-  { retryFlattened: true, active: boxesActive },
+  { active: boxesActive },
 );
 // The page of full-screen text, read with its paragraphs (page-view.ts);
 // with Auto, also while the text box has been empty a moment, to see if

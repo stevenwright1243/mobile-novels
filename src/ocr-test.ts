@@ -9,7 +9,6 @@ import { grabClientArea, readTextBoxOnce } from './ocr-debug';
 
 const debugTools = document.querySelector<HTMLElement>('#debug-tools')!;
 const button = document.querySelector<HTMLButtonElement>('#ocr-test-button')!;
-const cleanUp = document.querySelector<HTMLInputElement>('#ocr-clean-up')!;
 const panel = document.querySelector<HTMLElement>('#ocr-test')!;
 const image = document.querySelector<HTMLImageElement>('#ocr-image')!;
 const stats = document.querySelector<HTMLElement>('#ocr-stats')!;
@@ -23,7 +22,6 @@ let video: HTMLVideoElement | null = null;
 export function enableOcrTest(preview: HTMLVideoElement) {
   video = preview;
   button.disabled = false;
-  cleanUp.disabled = false;
   saveTestButton.disabled = false;
 }
 
@@ -107,7 +105,7 @@ button.addEventListener('click', async () => {
   button.disabled = true;
   button.textContent = 'Reading…';
   try {
-    const read = await readTextBoxOnce(video, cleanUp.checked);
+    const read = await readTextBoxOnce(video);
     URL.revokeObjectURL(image.src);
     image.src = URL.createObjectURL(read.image);
     stats.textContent = read.stats;

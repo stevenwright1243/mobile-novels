@@ -76,9 +76,9 @@ Where each kind of fault lives (see CLAUDE.md for the full rules):
 
 | What you see                              | Where to look                                                                          |
 | ----------------------------------------- | -------------------------------------------------------------------------------------- |
-| Wrong letters ("0-Okay", "777" for "???") | `fixCommonMistakes` in `src/ocr.ts`                                                    |
-| Right text read but shown empty (low %)   | `looksLikeText`, `hasWriting`, `MIN_CONFIDENCE` in `src/text-reader.ts`                |
-| Junk words from the frame or art          | word filters in `readText` in `src/ocr.ts`                                             |
+| Wrong letters ("I-l", "N..")              | `fixCommonMistakes` in `src/ocr.ts`                                                    |
+| Right text read but shown empty (low %)   | `looksLikeText`, `MIN_CONFIDENCE` in `src/text-reader.ts`                              |
+| Junk words, a line read twice, stray dots | `joinMarks`, `withoutDoubles`, `withoutLoneEnd` in `src/ocr.ts`                        |
 | Only dots, read as nothing                | `readDots` in `src/text-reader.ts`                                                     |
 | Wrong mode, junk around the line          | `src/auto-page.ts`                                                                     |
 | Memory didn't correct it                  | `src/memory-text.ts` (it needs a run of 8 to 12 letters from OCR's read to search for) |

@@ -947,3 +947,57 @@ export function readMemoryAsync(
     ),
   );
 }
+
+// --- Apps from the Microsoft Store ---------------------------------------------
+//
+// Store apps live in folders named after their version, under the locked
+// WindowsApps folder, so their folder is asked for: by "package family" (the
+// app's name and publisher, the same in every version) to the installed
+// version's full name, then to its folder.
+const GetPackagesByPackageFamily = kernel32.func(
+  'long __stdcall GetPackagesByPackageFamily(str16 packageFamilyName, _Inout_ uint32_t *count, void *packageFullNames, _Inout_ uint32_t *bufferLength, void *buffer)',
+);
+const GetPackagePathByFullName = kernel32.func(
+  'long __stdcall GetPackagePathByFullName(str16 packageFullName, _Inout_ uint32_t *pathLength, void *path)',
+);
+// LoadLibraryEx's flag for looking for a DLL's own DLLs in its folder first.
+const LOAD_WITH_ALTERED_SEARCH_PATH = 0x8;
+const LoadLibraryEx = kernel32.func(
+  'intptr_t __stdcall LoadLibraryExW(str16 lpLibFileName, intptr_t hFile, uint32_t dwFlags)',
+);
+
+/** The folder of an installed Store app (e.g. the Snipping Tool's,
+ * "Microsoft.ScreenSketch_8wekyb3d8bbwe"), or null if it isn't installed. */
+export function packageFolder(family: string): string | null {
+  // Asked with no room first, Windows says how much room the names take.
+  const count = [0];
+  const length = [0];
+  GetPackagesByPackageFamily(family, count, null, length, null);
+  if (count[0] === 0) {
+    return null;
+  }
+  const names = Buffer.alloc(count[0] * 8);
+  const text = Buffer.alloc(length[0] * 2);
+  if (GetPackagesByPackageFamily(family, count, names, length, text) !== 0) {
+    return null;
+  }
+  // The full names, one after another, each ended by a 0 character.
+  const fullName = text.toString('utf16le').split('\0')[0];
+  const pathLength = [0];
+  GetPackagePathByFullName(fullName, pathLength, null);
+  const path = Buffer.alloc(pathLength[0] * 2);
+  if (GetPackagePathByFullName(fullName, pathLength, path) !== 0) {
+    return null;
+  }
+  return path.toString('utf16le', 0, (pathLength[0] - 1) * 2);
+}
+
+/** Loads a DLL so that the DLLs it needs are looked for in its own folder
+ * first (koffi.load then finds it already loaded). Without this, Windows
+ * looks only in the app's and its own folders, which may hold a different
+ * version of the same DLL (Windows 11 has its own onnxruntime.dll). */
+export function loadLibraryNextTo(file: string) {
+  if (!LoadLibraryEx(file, 0, LOAD_WITH_ALTERED_SEARCH_PATH)) {
+    throw new Error(`Couldn't load ${file}`);
+  }
+}

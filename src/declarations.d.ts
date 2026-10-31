@@ -144,11 +144,12 @@ interface Size {
 // What OCR read from an image (ocr.ts).
 interface OcrResult {
   text: string;
-  // Tesseract's own guess at how right it is, 0 to 100.
+  // How sure OCR is that it's right, 0 to 100: the average of its words'.
   confidence: number;
   // How long the reading took, in milliseconds.
   ms: number;
-  // Words left out as junk (the wrong height for the line; see ocr.ts),
+  // Words left out as junk (a lone letter after a sentence ends, a line
+  // read twice; see ocr.ts),
   // logged in debug mode.
   dropped: string[];
   // The text split into paragraphs where the gap between lines is bigger

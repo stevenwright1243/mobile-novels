@@ -33,7 +33,15 @@ const userData = path.join(process.env.APPDATA ?? os.homedir(), 'mobile-novel');
 const testsFolder = path.join(userData, 'ocr-tests');
 const buildFolder = path.join(os.tmpdir(), 'mobile-novel-ocr-bench');
 // The files the reader is made of; each version is built from these.
-const SOURCES = ['src/ocr.ts', 'src/capture.ts', 'src/text-reader.ts'];
+// (A version from before OneOCR, which used tesseract.js, can't be run any
+// more: tesseract.js isn't installed.)
+const SOURCES = [
+  'src/ocr.ts',
+  'src/oneocr.ts',
+  'src/win32.ts',
+  'src/capture.ts',
+  'src/text-reader.ts',
+];
 
 // --- Options ---
 const args = process.argv.slice(2);
@@ -87,13 +95,20 @@ function build(version) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(path.join(dir, 'src'), { recursive: true });
   for (const file of SOURCES) {
-    const text =
-      version === 'now'
-        ? readFileSync(path.join(repo, file), 'utf8')
-        : execFileSync('git', ['show', `${version}:${file}`], {
-            cwd: repo,
-            encoding: 'utf8',
-          });
+    let text;
+    try {
+      text =
+        version === 'now'
+          ? readFileSync(path.join(repo, file), 'utf8')
+          : execFileSync('git', ['show', `${version}:${file}`], {
+              cwd: repo,
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+            });
+    } catch {
+      // Not in this version (files added later).
+      continue;
+    }
     writeFileSync(path.join(dir, file), text);
   }
   writeFileSync(
@@ -121,7 +136,7 @@ function build(version) {
     '--external',
     'electron',
     '--external',
-    'tesseract.js',
+    'koffi',
     '--file',
     'ocr.cjs',
   );

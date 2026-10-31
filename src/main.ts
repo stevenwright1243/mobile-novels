@@ -1058,8 +1058,25 @@ app.whenReady().then(async () => {
     logOcr = on;
   });
 
+  // If OneOCR can't be loaded (no Snipping Tool, or an update changed it),
+  // every read fails the same way: said once, in a message box, since
+  // nothing on screen would show why the text never appears.
+  let ocrFailureShown = false;
   ipcMain.handle('read-text', async (_event, png: Uint8Array) => {
-    const result = await readText(png);
+    let result: OcrResult;
+    try {
+      result = await readText(png);
+    } catch (error) {
+      if (!ocrFailureShown) {
+        ocrFailureShown = true;
+        console.error(error);
+        dialog.showErrorBox(
+          "Can't read the game's text",
+          `${(error as Error).message}\n\nText from the game's memory still works where it's on.`,
+        );
+      }
+      throw error;
+    }
     if (DEBUG && logOcr) {
       const dropped =
         result.dropped.length > 0
