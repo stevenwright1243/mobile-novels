@@ -848,6 +848,18 @@ export const openForReading = (processId: number): number =>
 
 export const closeProcess = (process: number) => CloseHandle(process);
 
+// Whether a process runs as 32-bit under Windows' WOW64 layer.
+const IsWow64Process = kernel32.func(
+  'bool __stdcall IsWow64Process(intptr_t hProcess, _Out_ bool *Wow64Process)',
+);
+
+// The size of a pointer in a process's memory, in bytes: 4 in a 32-bit
+// game (Aokana), 8 in a 64-bit one.
+export function pointerSizeOf(process: number): 4 | 8 {
+  const wow64 = [false];
+  return IsWow64Process(process, wow64) && wow64[0] ? 4 : 8;
+}
+
 // The stretches of a process's memory where a game keeps text it builds at
 // run time (in use, its own, writable), as addresses and sizes.
 export function writableRegions(process: number) {

@@ -17,6 +17,11 @@
  *     in the buffer: a clearly different line, read a while after the
  *     buffer last changed.
  *
+ * Engines that make a new string for every line (Unity, Ren'Py) never
+ * rewrite a buffer, but still note which string is on screen: a pointer to
+ * it, set to each new line's string. Those are found and followed the same
+ * way (see "Following a pointer to the line"), so memory leads there too.
+ *
  * Menus and other text in memory never show: only the one buffer is read,
  * and it was found by matching what OCR saw in the text box. A new line is
  * written over the start of the last one, so the buffer can hold the end of
@@ -38,17 +43,21 @@ import { prefixDistances, similarity } from './text-similarity';
 import {
   closeProcess,
   openForReading,
+  pointerSizeOf,
   readMemory,
   readMemoryAsync,
   writableRegions,
 } from './win32';
 
 // A place in the game's memory that may hold its line, how its text is
-// stored there (text-codec.ts), and the text it held when found.
+// stored there (text-codec.ts), and the text it held when found. With
+// `pointer`, `address` holds a pointer instead (`size` bytes), and the text
+// is `offset` bytes past where it points (past the string's header).
 interface Spot {
   address: number;
   codec: Codec;
   found: string;
+  pointer?: { size: 4 | 8; offset: number };
 }
 
 // How alike (letters and digits only) the memory's text and OCR's read
@@ -216,6 +225,13 @@ interface GameMemory {
   // Where the last line matched one by one starts in memory, to look for
   // the next one right after it (see `nextInScript`).
   lastLine: { codec: Codec; address: number } | null;
+  // Pointers to the strings holding the last line matched one by one (see
+  // "Following a pointer to the line"), looking for them, and how many
+  // looks found none that followed the line.
+  pointerSize: 4 | 8;
+  pointerCandidates: Spot[];
+  findingPointers: boolean;
+  pointerSearches: number;
 }
 let game: GameMemory | null = null;
 
@@ -289,6 +305,10 @@ function memoryOf(processId: number) {
       alphabetAssumed: savedAlphabet !== null,
       hotRegions: [],
       lastLine: null,
+      pointerSize: pointerSizeOf(process),
+      pointerCandidates: [],
+      findingPointers: false,
+      pointerSearches: 0,
     };
     setStatus('searching');
   }
@@ -315,12 +335,31 @@ function codecsOf(memory: GameMemory) {
     : [UTF16, UTF8, memory.alphabet];
 }
 
+// Where a pointer spot's text is now: past the header of the string it
+// points to. Null if it can't be read or points nowhere.
+function pointedTo(memory: GameMemory, spot: Spot) {
+  const { size, offset } = spot.pointer!;
+  const bytes = readMemory(memory.process, spot.address, size);
+  if (!bytes || bytes.length < size) {
+    return null;
+  }
+  const target =
+    size === 4
+      ? bytes.readUInt32LE(0)
+      : bytes.readUInt32LE(4) * 2 ** 32 + bytes.readUInt32LE(0);
+  return target === 0 ? null : target + offset;
+}
+
 // The text at a spot, up to its first control character (a zero ends
 // strings in memory).
 function textAt(memory: GameMemory, spot: Spot) {
+  const address = spot.pointer ? pointedTo(memory, spot) : spot.address;
+  if (address === null) {
+    return null;
+  }
   const bytes = readMemory(
     memory.process,
-    spot.address,
+    address,
     MAX_LINE * spot.codec.width,
   );
   if (!bytes) {
@@ -521,6 +560,7 @@ export function lineForRead(processId: number, read: string): string | null {
     memory.emptySearches = 0;
     setStatus('matching');
     log(`next in the script: "${read}" → "${next}"`);
+    lookForPointers(memory, next);
     return next;
   }
   // Checking the last search's candidates happens straight away, so the
@@ -565,7 +605,8 @@ function isPartOf(line: string, read: string) {
 function useBuffer(memory: GameMemory, spots: Spot[], read: string) {
   const [first] = spots;
   const raw = textAt(memory, first) ?? '';
-  const stop = endFor(raw, read);
+  // A pointer leads to a string of just the line (see `findPointers`).
+  const stop = first.pointer ? raw.length : endFor(raw, read);
   // The mark after the line, if it's one (a letter or space isn't), or
   // what's left when that's only a mark or two (The Colorful World's UTF-8
   // copy ends each line with "A"). With nothing after it, the line may have
@@ -597,14 +638,22 @@ function useBuffer(memory: GameMemory, spots: Spot[], read: string) {
   };
   memory.buffer = buffer;
   memory.candidates = [];
+  memory.pointerCandidates = [];
   memory.misses = 0;
+  if (first.pointer) {
+    memory.pointerSearches = 0;
+  }
   const where = spots
-    .map((spot) => `0x${spot.address.toString(16)} (${spot.codec.name})`)
+    .map(
+      (spot) =>
+        `0x${spot.address.toString(16)} (${spot.pointer ? 'pointer to ' : ''}${spot.codec.name})`,
+    )
     .join(', ');
   log(`found the line at ${where}, lines end with "${end}": "${line}"`);
   setStatus('found');
-  // OCR read clearly more than the copy holds: it was cut off.
-  if (letters(read).length > letters(line).length * 1.1) {
+  // OCR read clearly more than the copy holds: it was cut off (never a
+  // pointer's string, which is the whole line).
+  if (!first.pointer && letters(read).length > letters(line).length * 1.1) {
     void showWhole(memory, buffer, raw.slice(0, stop));
   }
 }
@@ -688,6 +737,7 @@ function dropBuffer(memory: GameMemory) {
     clearInterval(memory.buffer.timer);
     memory.buffer = null;
     memory.candidates = [];
+    memory.pointerCandidates = [];
     memory.searchedFor = '';
     memory.searches = 0;
     memory.misses = 0;
@@ -749,7 +799,11 @@ function checkBuffer(memory: GameMemory) {
     { copies: Copy[]; piece: string; ended: boolean; mark: string }
   >();
   for (const copy of changed) {
-    const found = newLine(copy.pending!, copy.raw, buffer.end);
+    // A pointer's new string is all new: nothing of the old line is left in
+    // it.
+    const found = copy.spot.pointer
+      ? { piece: copy.pending!, ended: true, mark: '' }
+      : newLine(copy.pending!, copy.raw, buffer.end);
     const key = letters(found.piece).slice(0, 24);
     const group = groups.get(key);
     if (!group) {
@@ -1009,26 +1063,37 @@ async function findName(memory: GameMemory, buffer: LineBuffer, read: string) {
 // Follows the copies from the last search that changed to this line, if any
 // did: the game's line buffer. Returns whether it found them.
 function followChangedCopies(memory: GameMemory, read: string) {
-  if (memory.candidates.length === 0 || memory.noFollowing) {
+  const candidates = [...memory.candidates, ...memory.pointerCandidates];
+  if (candidates.length === 0 || memory.noFollowing) {
     return false;
   }
   // (None changing is no sign of the same line: in engines that make a
   // new string for every line, none ever changes.)
-  const changed = memory.candidates.filter(
+  const changed = candidates.filter(
     (spot) => textAt(memory, spot) !== spot.found,
   );
   // Every copy that changed to all of this line is followed (see
   // `LineBuffer`), UTF-16 ones first: in The Colorful World those are the
   // ones the game draws from (its UTF-8 one is followed by a stray "A").
+  // A pointer's string must be just the line, nothing after it (a pointer
+  // to the script's entry, with every language's version, isn't followed).
   const holding = changed
     .filter((spot) => {
       const text = textAt(memory, spot);
-      const line = text?.slice(0, endFor(text, read)) ?? '';
-      return alike(line, read) >= MATCH && holdsWhole(line, read);
+      if (text === null) {
+        return false;
+      }
+      const stop = endFor(text, read);
+      const line = text.slice(0, stop);
+      return (
+        alike(line, read) >= MATCH &&
+        holdsWhole(line, read) &&
+        (!spot.pointer || letters(text.slice(stop)) === '')
+      );
     })
     .sort((a, b) => Number(b.codec === UTF16) - Number(a.codec === UTF16));
   log(
-    `${changed.length} of ${memory.candidates.length} copies changed; ${holding.length} hold "${read}"`,
+    `${changed.length} of ${candidates.length} copies changed; ${holding.length} hold "${read}"`,
   );
   if (holding.length === 0) {
     return false;
@@ -1121,6 +1186,7 @@ async function search(memory: GameMemory, read: string) {
         memory.corrected = { read, line: exact };
         setStatus('matching');
         correctionListener(read, exact);
+        lookForPointers(memory, exact);
       }
     }
   } finally {
@@ -1153,6 +1219,7 @@ function catchUp(memory: GameMemory, searched: string) {
   setStatus('matching');
   log(`next in the script (after the search): "${read}" → "${next}"`);
   correctionListener(read, next);
+  lookForPointers(memory, next);
 }
 
 // The line OCR read as the game has it: of the copies found, the one that
@@ -1462,6 +1529,154 @@ function runsOf(read: string, minLength: number) {
     { length: Math.min(NEEDLES, unique.length) },
     (_, i) => unique[Math.floor(i * step)],
   );
+}
+
+// --- Following a pointer to the line --------------------------------------------
+//
+// Engines that make a new string for every line (Unity, Ren'Py) never
+// rewrite one buffer, but the game still notes which string is on screen:
+// a field holding a pointer to it, set to each new line's string (Aokana
+// has three: two to the English line, one to the script's entry with every
+// language). Once a line is matched one by one, the strings holding just
+// that line are found, then every pointer to them. A pointer that has moved
+// on to the next line OCR reads is followed like a buffer
+// (`followChangedCopies`), its text read through it, so memory leads: every
+// line exact as soon as it shows, even ones OCR can't read ("......").
+//
+// Nothing here is one engine's: the pointer's size is the game's (4 bytes
+// in a 32-bit game, 8 in a 64-bit one), and the string's header, between
+// where the pointer points and its text, is learned (Mono's is 12 bytes in
+// a 32-bit game, 20 in a 64-bit one; Python's longer).
+
+// The longest string header allowed for, in bytes.
+const MAX_HEADER = 64;
+// Looks for pointers that found none that followed the line, per run of the
+// game, before it stops looking (each reads all its memory, about a second
+// in the background). Reset once one is followed, so a pointer lost at a
+// scene change is looked for again.
+const MAX_POINTER_SEARCHES = 5;
+
+// A line was matched one by one: look for pointers to it, if that may
+// still find one.
+function lookForPointers(memory: GameMemory, line: string) {
+  if (
+    memory.buffer ||
+    memory.noFollowing ||
+    memory.findingPointers ||
+    memory.pointerSearches >= MAX_POINTER_SEARCHES ||
+    needlesFrom(line).length === 0
+  ) {
+    return;
+  }
+  void findPointers(memory, line);
+}
+
+// Where a string found in memory starts. Text found by walking back from a
+// run of its words (`startOfText`) can begin with the string's length,
+// read as a character ("%I almost drop…": a length of 37, "%" in UTF-16):
+// a first character whose code is the length of the rest is skipped.
+function textStart(spot: Spot) {
+  const code = spot.found.codePointAt(0);
+  const rest = spot.found.length - 1;
+  return code !== undefined && rest > 0 && (code === rest || code === rest * 2)
+    ? spot.codec.width
+    : 0;
+}
+
+// Finds the strings holding just this line, and every pointer to them, as
+// the pointer candidates (replacing the last line's).
+async function findPointers(memory: GameMemory, line: string) {
+  memory.findingPointers = true;
+  memory.pointerSearches++;
+  const started = performance.now();
+  try {
+    const needles = needlesFrom(line).slice(0, FIRST_NEEDLES);
+    const spots = await findSpots(memory, needles);
+    if (stale(memory) || memory.buffer) {
+      return;
+    }
+    // Strings of just the line, not ones with more around it (the script,
+    // the backlog) or formatting codes (Unity's typewriter effect), where
+    // their text starts.
+    const wanted = letters(line);
+    const texts = spots.flatMap((spot) => {
+      const skip = textStart(spot);
+      return letters(spot.found.slice(skip / spot.codec.width)) === wanted
+        ? [{ codec: spot.codec, at: spot.address + skip }]
+        : [];
+    });
+    if (texts.length === 0) {
+      log(
+        `pointer search ${memory.pointerSearches}: no string of just "${line}"`,
+      );
+      return;
+    }
+    // Every value a pointer to one of them could hold: its text, or up to
+    // `MAX_HEADER` before it, in steps of the pointer's size (headers are
+    // whole pointers long).
+    const size = memory.pointerSize;
+    const targets = new Map<number, { codec: Codec; offset: number }>();
+    for (const { codec, at } of texts) {
+      for (let offset = 0; offset <= MAX_HEADER; offset += 4) {
+        targets.set(at - offset, { codec, offset });
+      }
+    }
+    const values = [...targets.keys()];
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const pointers: Spot[] = [];
+    for (const region of writableRegions(memory.process)) {
+      if (stale(memory) || pointers.length >= MAX_CANDIDATES) {
+        break;
+      }
+      const read = await readMemoryAsync(
+        memory.process,
+        region.address,
+        region.size,
+      );
+      if (!read) {
+        continue;
+      }
+      await breather();
+      // Read as 4-byte numbers (copied if they don't start on a multiple of
+      // 4, which typed arrays need).
+      const bytes = read.byteOffset % 4 === 0 ? read : Buffer.from(read);
+      const words = new Uint32Array(
+        bytes.buffer,
+        bytes.byteOffset,
+        bytes.length >> 2,
+      );
+      const step = size / 4;
+      for (let i = 0; i + step <= words.length; i += step) {
+        const value = size === 4 ? words[i] : words[i + 1] * 2 ** 32 + words[i];
+        if (value < low || value > high) {
+          continue;
+        }
+        const target = targets.get(value);
+        if (target) {
+          pointers.push({
+            address: region.address + i * 4,
+            codec: target.codec,
+            found: '',
+            pointer: { size, offset: target.offset },
+          });
+        }
+      }
+    }
+    if (stale(memory) || memory.buffer) {
+      return;
+    }
+    // What each leads to now, to tell later which ones move on.
+    for (const spot of pointers) {
+      spot.found = textAt(memory, spot) ?? '';
+    }
+    memory.pointerCandidates = pointers;
+    log(
+      `pointer search ${memory.pointerSearches}: ${pointers.length} pointers to ${texts.length} strings of "${line}" in ${Math.round(performance.now() - started)} ms`,
+    );
+  } finally {
+    memory.findingPointers = false;
+  }
 }
 
 // --- Learning a game's own alphabet --------------------------------------------
