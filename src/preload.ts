@@ -151,6 +151,9 @@ contextBridge.exposeInMainWorld('vn', {
       callback(theme),
     );
   },
+  getReadingSamples: () => ipcRenderer.invoke('get-reading-samples'),
+  setReadingSamples: (samples) =>
+    ipcRenderer.invoke('set-reading-samples', samples),
   getMessageStyle: () => ipcRenderer.invoke('get-message-style'),
   setMessageStyle: (style) => ipcRenderer.invoke('set-message-style', style),
   onMessageStyleChanged: (callback) => {

@@ -603,7 +603,8 @@
   border-radius: var(--pill);
 }
 
-/* The corner buttons (Menus top-left, Log top-right): frosted pills over
+/* The corner buttons (Menus top-left; top-right, Auto in the reader and Log
+   in Menus mode): frosted pills over
    the background, set in a little from the edges. Sized as a share of the
    portrait's shorter side (`cqmin`), so they look the same on any screen:
    the phone's display is many pixels wide at 100% scaling, so a cap in

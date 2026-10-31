@@ -1186,6 +1186,16 @@ app.whenReady().then(async () => {
     broadcast('message-style-changed', style);
     await persistSettings();
   });
+  // The reading times the portrait's Auto button learns from, saved
+  // straight away. Only the portrait uses them.
+  ipcMain.handle('get-reading-samples', () => settings.readingSamples);
+  ipcMain.handle(
+    'set-reading-samples',
+    async (_event, samples: ReadingSample[]) => {
+      settings = { ...settings, readingSamples: samples };
+      await persistSettings();
+    },
+  );
 
   settings = await loadSettings();
   savedButtonSize = settings.buttonSize;

@@ -25,6 +25,9 @@ export type Settings = {
   // their text as UTF-16 or UTF-8 (learned from memory, memory-text.ts),
   // so it's only learned once.
   alphabets: Record<string, Alphabet>;
+  // How long the user took to read recent lines, for the portrait's Auto
+  // button to learn their pace from (auto-play.ts).
+  readingSamples: ReadingSample[];
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -33,6 +36,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: 'aokana',
   messageStyle: { border: 'halo', arrow: 'chevron' },
   alphabets: {},
+  readingSamples: [],
 };
 
 const file = () => path.join(app.getPath('userData'), 'settings.json');

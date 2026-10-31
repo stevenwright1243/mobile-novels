@@ -227,7 +227,8 @@ game's name box (the `name` region, per game).
 
 ## Corner buttons
 
-- **Menus** (top-left) and **Log** (top-right): frosted pills, at least 48px
+- **Menus** (top-left) and, top-right, **Auto** in the reader and **Log**
+  in Menus mode: frosted pills, at least 48px
   tall, `max(0.75rem, 4.5vmin)` from the top and sides (set in a little
   further than the message window), text
   `clamp(1.05rem, 4.75vmin × Button size, 7vmin)`, padding `0.5em 1.15em`.
@@ -244,7 +245,12 @@ game's name box (the `name` region, per game).
   phone.)
 - **Menus** shows the whole game screen in full (taps map 1:1) until tapped
   again ("Reader"). Not saved.
-- **Log** opens the history log: "Return to game" on top (the
+- **Auto** (`#auto-button`, `src/auto-play.ts`) plays the scene by itself at
+  the pace it learns from your taps. While on: the accent gradient with
+  `--on-accent` text, and a bar `0.18em` tall along its bottom, `1em` in
+  from the sides and `0.3em` up (`.auto-progress` in `src/portrait.css`),
+  filling until the next click. The Sizes sample shows it too.
+- **Log** (Menus mode only) opens the history log: "Return to game" on top (the
   same size as the corner buttons, `--button-font-size`, following the
   Button size slider; drawn `20vmin` lower with `translate`, so the line
   below doesn't move; `#log-close`), one line in the middle, big ◀ / ▶ buttons below.

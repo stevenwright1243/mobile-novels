@@ -14,6 +14,7 @@ import {
   stopCapture,
 } from './capture';
 import './history-log';
+import { noteTap, noteText, setAutoMoveOn, setAutoPaused } from './auto-play';
 import { ARROW_SHAPES } from './arrow-shapes';
 import './menus-sheet';
 import './visual-novels';
@@ -105,6 +106,8 @@ rawButton.addEventListener('click', () => {
   // switches, so the zoom pad sees the game's slot).
   resetZoom();
   rawButton.classList.toggle('raw', rawMode);
+  // Auto doesn't click while you're in the game's menus.
+  setAutoPaused(rawMode);
   rawButton.setAttribute(
     'aria-label',
     rawMode ? 'Back to the reader layout' : 'Menus: show the whole game',
@@ -436,28 +439,52 @@ function showRipple(event: MouseEvent) {
 // A tap on the text clicks the middle of the game's text box, which moves on
 // to the next line in most VNs.
 const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
-function clickTextBox(event: MouseEvent) {
-  if (regions) {
-    const { x, y, w, h } = regions.text;
-    showRipple(event);
-    window.vn.clickGame({ x: x + w / 2, y: y + h / 2 });
+function clickTextBox() {
+  if (!regions) {
+    return false;
   }
+  const { x, y, w, h } = regions.text;
+  window.vn.clickGame({ x: x + w / 2, y: y + h / 2 });
+  return true;
 }
-textLine.addEventListener('click', clickTextBox);
-// The name tag too, as it's part of the message window.
-nameTag.addEventListener('click', clickTextBox);
 
 // In full-screen text mode, a tap on the page clicks the page region's
 // bottom-right corner: anywhere moves the game on, and there the mouse
 // pointer (which the capture shows) stays clear of the text being read.
 const PAGE_CORNER = 0.98;
-pageView.addEventListener('click', (event) => {
-  if (regions) {
-    const { x, y, w, h } = regions.page;
-    showRipple(event);
-    window.vn.clickGame({ x: x + w * PAGE_CORNER, y: y + h * PAGE_CORNER });
+function clickPageCorner() {
+  if (!regions) {
+    return false;
   }
-});
+  const { x, y, w, h } = regions.page;
+  window.vn.clickGame({ x: x + w * PAGE_CORNER, y: y + h * PAGE_CORNER });
+  return true;
+}
+
+// A tap in the reader that clicks the game: shown with a ripple, and noted
+// for Auto to learn your reading pace from (auto-play.ts).
+function tapWith(clickGame: () => boolean) {
+  return (event: MouseEvent) => {
+    if (clickGame()) {
+      showRipple(event);
+      noteTap();
+    }
+  };
+}
+textLine.addEventListener('click', tapWith(clickTextBox));
+// The name tag too, as it's part of the message window.
+nameTag.addEventListener('click', tapWith(clickTextBox));
+pageView.addEventListener('click', tapWith(clickPageCorner));
+
+// Auto moves the game on the same way a tap on the text would, if there's a
+// game to click.
+setAutoMoveOn(() =>
+  video.videoWidth > 0
+    ? isPageMode()
+      ? clickPageCorner()
+      : clickTextBox()
+    : false,
+);
 
 // Full-screen text mode (switched in the Menus sheet): the page shows in
 // place of the line and name (the `page-mode` class), and only the page
@@ -491,6 +518,10 @@ backgroundCanvas.addEventListener('click', (event) => {
   if (point) {
     showRipple(event);
     window.vn.clickGame(point);
+    // In the reader this moves the game on too; in Menus it's a menu.
+    if (!rawMode) {
+      noteTap();
+    }
   }
 });
 
@@ -523,6 +554,9 @@ function showTextLine(line: string) {
   if (line === textLine.textContent) {
     return;
   }
+  // Auto times its next click from it (in full-screen text, each new
+  // paragraph comes here too).
+  noteText(line, isPageMode());
   textLine.textContent = line;
   // A new line starts from its beginning, if it scrolls.
   textLine.scrollTop = 0;

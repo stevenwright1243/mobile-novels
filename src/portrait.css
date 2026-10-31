@@ -41,8 +41,36 @@ body {
   left: var(--corner-gap);
 }
 
+/* The top-right corner: Auto in the reader, Log in Menus mode. */
+#auto-button,
 #log-button {
   right: var(--corner-gap);
+}
+
+.portrait:not(.raw-mode) #log-button,
+.portrait.raw-mode #auto-button {
+  display: none;
+}
+
+/* Auto, while on: the accent colour, like a pressed key. */
+#auto-button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--on-accent) 50%, transparent);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
+}
+
+/* The bar along Auto's bottom edge that fills until its next click
+   (auto-play.ts animates its `scale`). Inside the pill's rounded ends. */
+.auto-progress {
+  position: absolute;
+  inset: auto 1em 0.3em;
+  height: 0.18em;
+  border-radius: var(--pill);
+  background: currentColor;
+  opacity: 0.8;
+  scale: 0 1;
+  transform-origin: left;
+  pointer-events: none;
 }
 
 /* The Menus button shows the icon and label of the layout it switches

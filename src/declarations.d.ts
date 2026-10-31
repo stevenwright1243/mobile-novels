@@ -127,6 +127,14 @@ interface HistoryEntry {
   line: string;
 }
 
+// One line the user read before tapping on: how many letters it had, and
+// how long it showed (ms). The portrait's Auto button learns the user's
+// reading pace from these (auto-play.ts).
+interface ReadingSample {
+  letters: number;
+  ms: number;
+}
+
 // A size in pixels.
 interface Size {
   width: number;
@@ -370,6 +378,10 @@ interface Window {
     getTheme(): Promise<ThemeName>;
     setTheme(theme: ThemeName): Promise<void>;
     onThemeChanged(callback: (theme: ThemeName) => void): void;
+    // How long the user took to read recent lines (Auto's reading pace).
+    // Saved as an app setting.
+    getReadingSamples(): Promise<ReadingSample[]>;
+    setReadingSamples(samples: ReadingSample[]): Promise<void>;
     // The message window's border and arrow. Saved as an app setting.
     getMessageStyle(): Promise<MessageStyle>;
     setMessageStyle(style: MessageStyle): Promise<void>;

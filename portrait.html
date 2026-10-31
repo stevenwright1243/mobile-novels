@@ -246,7 +246,19 @@
         <span class="to-reader">Reader</span>
       </button>
 
-      <!-- Opens the history log (history-log.ts). -->
+      <!-- Auto (the reader only): moves the game on from each line by itself,
+           at the reading pace it learns from your taps (auto-play.ts). The
+           bar along its bottom fills until the next click. -->
+      <button id="auto-button" class="corner-button glass" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6l7 6-7 6zM13 6l7 6-7 6z" />
+        </svg>
+        Auto
+        <span class="auto-progress" aria-hidden="true"></span>
+      </button>
+
+      <!-- Opens the history log (history-log.ts), in Menus mode, where Auto
+           sits in the reader. -->
       <button
         id="log-button"
         class="corner-button glass"

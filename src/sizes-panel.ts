@@ -34,7 +34,7 @@ const slider = (id: string, name: string, min: number, max: number) => `
   </label>`;
 
 // `inert`: the sample is only a picture, nothing in it can be clicked or
-// focused. Its corner buttons are the Menus and Log buttons, as on the
+// focused. Its corner buttons are the Menus and Auto buttons, as on the
 // reader screen.
 body.innerHTML = `
   <div id="sizes-sample" aria-hidden="true" inert>
@@ -45,10 +45,8 @@ body.innerHTML = `
         Menus
       </span>
       <span class="corner-button glass sample-right">
-        <svg viewBox="0 0 24 24">
-          <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 3" />
-        </svg>
-        Log
+        <svg viewBox="0 0 24 24"><path d="M4 6l7 6-7 6zM13 6l7 6-7 6z" /></svg>
+        Auto
       </span>
       <div class="text-zone">
         <div class="name-tag"><span class="name-text"></span></div>
