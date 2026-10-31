@@ -6,11 +6,15 @@
  * game's memory; art and menus read by OCR aren't, or not as sentences).
  *
  *  - Text box in use: once the box has been empty for `QUIET_BOX`, the page
- *    region is read too (`probesPage`). Game text there means full-screen
- *    text.
+ *    region is read too (`probesPage`). Game text there, besides the text
+ *    box's own line, means full-screen text. (Where the page covers the
+ *    box, as in Aokana, the page read holds the box's line too: a scene
+ *    change empties the box, its next line then shows on the page, and on
+ *    its own it once switched to the page.)
  *  - Page in use: the text box is still read (`probesBox`). A line of game
- *    text there that isn't part of the page means the game is back to its
- *    text box, and so does the page staying empty for `QUIET_PAGE`.
+ *    text there means the game is back to its text box, if it isn't part of
+ *    the page or it's the only game text on it; and so does the page
+ *    staying empty for `QUIET_PAGE`.
  *
  * Where the game's memory can't be read (Steins;Gate keeps its text in its
  * own codes), a page read counts if it's clearly prose: several lines, many
@@ -28,12 +32,17 @@ const QUIET_PAGE = 1500;
 const MIN_PROSE_LINES = 2;
 const MIN_PROSE_LETTERS = 80;
 
+// How the page reader separates paragraphs (text-reader.ts).
+const PARAGRAPH_BREAK = '\n\n';
+
 const letters = (text: string) =>
   text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
 let boxEmptySince: number | null = null;
 let pageEmptySince: number | null = null;
 let pageText = '';
+// The text box's latest line (not cleared when it empties).
+let boxLine = '';
 // One check with main at a time, and the latest read that came during one
 // (checked next); the last text checked, so it's not asked about again
 // until the mode changes.
@@ -56,18 +65,31 @@ export const probesBox = () => auto() && isPageMode();
 // A confirmed read of the text box ('' when it's empty). Returns whether
 // it's the text box's line to show (false while the page is in use).
 export function boxRead(line: string) {
+  if (line) {
+    boxLine = line;
+  }
   if (!isPageMode()) {
     boxEmptySince = line ? null : (boxEmptySince ?? performance.now());
     return true;
   }
+  const backToBox = () => {
+    if (isPageMode() && auto()) {
+      boxEmptySince = null;
+      switchTo(false);
+      window.vn.setTextLine(line);
+    }
+  };
   if (line && !isPartOfPage(line)) {
-    void check(line, (isGame) => {
-      if (isGame && isPageMode() && auto()) {
-        boxEmptySince = null;
-        switchTo(false);
-        window.vn.setTextLine(line);
-      }
-    });
+    void check(line, (isGame) => isGame && backToBox());
+  } else if (line) {
+    // Part of the page: back to the box if the rest of the page isn't the
+    // game's text.
+    const rest = withoutBoxLine(pageText);
+    if (rest) {
+      void check(rest, (isGame) => !isGame && backToBox());
+    } else {
+      backToBox();
+    }
   }
   return false;
 }
@@ -81,15 +103,31 @@ export function pageRead(text: string) {
     return true;
   }
   if (text) {
-    void check(text, (isGame) => {
-      if (isGame && !isPageMode() && auto()) {
-        pageText = text;
-        pageEmptySince = null;
-        switchTo(true);
-      }
-    });
+    checkPage(text);
   }
   return false;
+}
+
+// Switches to the page if it holds game text besides the text box's line.
+// The box may read its line while main is asked, so that's checked again
+// after.
+function checkPage(text: string) {
+  const rest = withoutBoxLine(text);
+  if (!rest) {
+    return;
+  }
+  void check(rest, (isGame) => {
+    if (!isGame || isPageMode() || !auto()) {
+      return;
+    }
+    if (withoutBoxLine(text) !== rest) {
+      checkPage(text);
+      return;
+    }
+    pageText = text;
+    pageEmptySince = null;
+    switchTo(true);
+  });
 }
 
 // The page read when Auto switched to it (the page reader won't send it
@@ -157,4 +195,22 @@ function isPartOfPage(line: string) {
   }
   const found = words.filter((word) => page.includes(word)).length;
   return found / words.length >= 0.6;
+}
+
+// The page without the paragraphs that are the text box's line (most of
+// their longer words in it), '' if that's all of it.
+function withoutBoxLine(page: string) {
+  const box = letters(boxLine);
+  return page
+    .split(PARAGRAPH_BREAK)
+    .filter((paragraph) => {
+      const words = paragraph
+        .split(/\s+/)
+        .map(letters)
+        .filter((word) => word.length >= 4);
+      const found = words.filter((word) => box.includes(word)).length;
+      return !box || words.length === 0 || found / words.length < 0.6;
+    })
+    .join(PARAGRAPH_BREAK)
+    .trim();
 }
