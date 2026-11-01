@@ -499,20 +499,12 @@ export async function sendClick(hwnd: number, point: { x: number; y: number }) {
 
 // --- Parking the cursor --------------------------------------------------------
 
-const GetSystemMetrics = user32.func(
-  'int __stdcall GetSystemMetrics(int nIndex)',
-);
-const SM_CXCURSOR = 13;
 // The high bit (0x8000, so negative as a 16-bit number) is set while the key
 // or button is held down, whichever window has the input.
 const GetAsyncKeyState = user32.func(
   'int16_t __stdcall GetAsyncKeyState(int vKey)',
 );
 const VK_LBUTTON = 0x01;
-
-/** The cursor picture's width in pixels: how far right of the spot it
- * points at it can reach. */
-export const cursorWidth = (): number => GetSystemMetrics(SM_CXCURSOR);
 
 /** Moves the real cursor to a pixel of the game's client area, and brings
  * the game to the front, so a click there goes to it and not to a window

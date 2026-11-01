@@ -2,65 +2,49 @@
  * Parking the cursor on the game (main process). On the phone, a mouse
  * paired with it moves the PC's real cursor, which the stream shows. After a
  * click in the reader, the cursor is moved off the phone's display onto the
- * game itself, just beside its text box: out of the stream, out of the box
- * OCR reads, and somewhere a click still moves the game on. The mouse's next
- * clicks then go straight to the game. They're watched for, so Auto still
- * learns your pace from them (`onClick`, sent to the portrait as
+ * game itself, just inside its text box's bottom-right corner: out of the
+ * stream, and where a click moves the game on (taps click the box too). The
+ * cursor's picture is drawn right of and below the spot it points at, so
+ * from there it lies outside the box OCR reads, but for its very tip. (Just
+ * left of the box was tried first: a game's quick menu popped up there on
+ * hover, over the text, and the next click could have hit Exit.) The
+ * mouse's next clicks then go straight to the game. They're watched for, so
+ * Auto still learns your pace from them (`onClick`, sent to the portrait as
  * `game-clicked`).
  */
 import {
   clientSize,
   cursorOverClient,
-  cursorWidth,
   leftButtonDown,
   parkCursor,
 } from './win32';
 
-// Room left between the cursor's picture and the box (pixels).
-const CLEARANCE = 4;
+// How far inside the box's bottom-right corner the cursor points (pixels):
+// enough that the click lands in the box though its edges fall between
+// pixels.
+const INSET = 2;
 // How often (ms) clicks on the game are looked for while the cursor is
 // parked on it.
 const WATCH_EVERY = 30;
 
-/**
- * Where to park the cursor, in pixels of the game's client area. The
- * cursor's picture is drawn right of and below the spot it points at, up to
- * `cursor` pixels wide, so the spot is far enough left of the box (or right
- * of it, or under it) that none of it reaches in.
- */
+/** Where to park the cursor, in pixels of the game's client area: just
+ * inside the bottom-right corner of the text box (or full-screen text's
+ * page). */
 export function parkSpot(
   regions: Regions,
   park: ParkSpot,
   size: { width: number; height: number },
-  cursor: number,
 ) {
   const box = regions[park];
-  const left = box.x * size.width;
-  const right = (box.x + box.w) * size.width;
-  const top = box.y * size.height;
-  const bottom = (box.y + box.h) * size.height;
-  const last = { x: size.width - 1, y: size.height - 1 };
-  const inGame = (x: number, y: number) => ({
-    x: Math.round(Math.min(x, last.x)),
-    y: Math.round(Math.min(y, last.y)),
-  });
-
-  // Full-screen text covers nearly all of the game: just past the page's
-  // bottom-right corner, with the picture outside it (or off the game).
-  if (park === 'page') {
-    return inGame(right + CLEARANCE, bottom + CLEARANCE);
-  }
-  const middle = (top + bottom) / 2;
-  if (left - cursor - CLEARANCE >= 0) {
-    return inGame(left - cursor - CLEARANCE, middle);
-  }
-  if (right + CLEARANCE <= last.x) {
-    return inGame(right + CLEARANCE, middle);
-  }
-  if (bottom + CLEARANCE <= last.y) {
-    return inGame((left + right) / 2, bottom + CLEARANCE);
-  }
-  return last;
+  const corner = (start: number, length: number, pixels: number) =>
+    Math.max(
+      Math.ceil(start * pixels),
+      Math.min(pixels, Math.floor((start + length) * pixels)) - 1 - INSET,
+    );
+  return {
+    x: corner(box.x, box.w, size.width),
+    y: corner(box.y, box.h, size.height),
+  };
 }
 
 let watch: ReturnType<typeof setInterval> | undefined;
@@ -89,7 +73,7 @@ export function parkOnGame(
   if (!size) {
     return;
   }
-  parkCursor(hwnd, parkSpot(regions, park, size, cursorWidth()));
+  parkCursor(hwnd, parkSpot(regions, park, size));
   stopWatching();
   let wasDown = leftButtonDown();
   watch = setInterval(() => {
