@@ -37,6 +37,7 @@ import {
   openOnDisplay,
 } from './open-on-display';
 import { keepPhoneDisplayClear } from './keep-phone-clear';
+import { asOwnClick, parkOnGame } from './park-cursor';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import { steamAppIdOf } from './steam';
@@ -810,21 +811,34 @@ app.whenReady().then(async () => {
   );
 
   // A tap in the portrait, as a point in the game's client area (fractions).
-  ipcMain.handle('click-game', async (_event, point: GamePoint) => {
-    if (!selectedSource) {
-      return;
-    }
-    const hwnd = hwndFromSourceId(selectedSource.id);
-    // A minimized game can't be clicked: restore it first, and give it a
-    // moment to start running again so the tap isn't lost.
-    if (isMinimized(hwnd)) {
-      restoreBehind(hwnd);
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    }
-    return profile?.clickMethod === 'mouse'
-      ? sendClick(hwnd, point)
-      : postClick(hwnd, point);
-  });
+  ipcMain.handle(
+    'click-game',
+    async (_event, point: GamePoint, park?: ParkSpot) => {
+      if (!selectedSource) {
+        return;
+      }
+      const hwnd = hwndFromSourceId(selectedSource.id);
+      // A minimized game can't be clicked: restore it first, and give it a
+      // moment to start running again so the tap isn't lost.
+      if (isMinimized(hwnd)) {
+        restoreBehind(hwnd);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      await asOwnClick(() =>
+        profile?.clickMethod === 'mouse'
+          ? sendClick(hwnd, point)
+          : postClick(hwnd, point),
+      );
+      // A tap in the reader on the phone: the cursor goes onto the game,
+      // out of the stream, where the mouse's next clicks move it on
+      // (park-cursor.ts).
+      if (park && profile && phoneDisplay?.portraitOnPhone) {
+        parkOnGame(hwnd, profile.regions, park, () =>
+          portraitWindow?.webContents.send('game-clicked'),
+        );
+      }
+    },
+  );
 
   // The Menus sheet's Screenshot button. All the games are Steam games for
   // now, so Steam takes it, on its screenshot key (F12, the user's) pressed

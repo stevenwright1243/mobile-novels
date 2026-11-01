@@ -444,14 +444,18 @@ function showRipple(event: MouseEvent) {
 }
 
 // A tap on the text clicks the middle of the game's text box, which moves on
-// to the next line in most VNs.
+// to the next line in most VNs. `tapped`: by you, not by Auto, so on the
+// phone the cursor is then parked beside the box (park-cursor.ts).
 const nameTag = document.querySelector<HTMLElement>('#name-tag')!;
-function clickTextBox() {
+function clickTextBox(tapped = false) {
   if (!regions) {
     return false;
   }
   const { x, y, w, h } = regions.text;
-  window.vn.clickGame({ x: x + w / 2, y: y + h / 2 });
+  window.vn.clickGame(
+    { x: x + w / 2, y: y + h / 2 },
+    tapped ? 'text' : undefined,
+  );
   return true;
 }
 
@@ -459,12 +463,15 @@ function clickTextBox() {
 // bottom-right corner: anywhere moves the game on, and there the mouse
 // pointer (which the capture shows) stays clear of the text being read.
 const PAGE_CORNER = 0.98;
-function clickPageCorner() {
+function clickPageCorner(tapped = false) {
   if (!regions) {
     return false;
   }
   const { x, y, w, h } = regions.page;
-  window.vn.clickGame({ x: x + w * PAGE_CORNER, y: y + h * PAGE_CORNER });
+  window.vn.clickGame(
+    { x: x + w * PAGE_CORNER, y: y + h * PAGE_CORNER },
+    tapped ? 'page' : undefined,
+  );
   return true;
 }
 
@@ -483,10 +490,18 @@ function tapWith(clickGame: () => boolean) {
 // clicker works wherever its pointer is. (A drag that scrolls the window or
 // the page has its click stopped before it gets here: drag-scroll.ts.)
 const moveOnTap = tapWith(() =>
-  isPageMode() ? clickPageCorner() : clickTextBox(),
+  isPageMode() ? clickPageCorner(true) : clickTextBox(true),
 );
 const textZone = document.querySelector<HTMLElement>('#text-zone')!;
 textZone.addEventListener('click', moveOnTap);
+
+// With the cursor parked on the game (on the phone, after a tap), the
+// mouse's clicks go straight to it: still taps for Auto to learn from.
+window.vn.onGameClicked(() => {
+  if (!rawMode) {
+    noteTap();
+  }
+});
 
 // Auto moves the game on the same way a tap on the text would, if there's a
 // game to click.
@@ -529,8 +544,11 @@ backgroundCanvas.addEventListener('click', (event) => {
   const point = tapToGame(backgroundZone, event);
   if (point) {
     showRipple(event);
-    window.vn.clickGame(point);
     // In the reader this moves the game on too; in Menus it's a menu.
+    window.vn.clickGame(
+      point,
+      rawMode ? undefined : isPageMode() ? 'page' : 'text',
+    );
     if (!rawMode) {
       noteTap();
     }

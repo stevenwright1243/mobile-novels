@@ -46,6 +46,11 @@ type Points = Record<PointName, GamePoint | null>;
 // window; 'mouse' simulates real mouse input (see win32.ts).
 type ClickMethod = 'message' | 'mouse';
 
+// Which box a reader tap was on (the text box, or full-screen text's page):
+// on the phone, the cursor is then parked on the game beside it
+// (park-cursor.ts).
+type ParkSpot = 'text' | 'page';
+
 // How reading the game's lines from its memory is going (memory-text.ts):
 // following its line buffer, matching each line OCR reads with its copies
 // (engines that never rewrite a buffer), still looking, gave up, or not in
@@ -303,8 +308,12 @@ interface Window {
     getPoints(): Promise<Points>;
     setPoint(name: PointName, point: GamePoint): Promise<void>;
     onPointsChanged(callback: (points: Points) => void): void;
-    // Clicks the game at a point given as fractions of its client area.
-    clickGame(point: GamePoint): Promise<void>;
+    // Clicks the game at a point given as fractions of its client area. With
+    // `park`, a tap in the reader: on the phone, the cursor is then parked
+    // on the game beside that box.
+    clickGame(point: GamePoint, park?: ParkSpot): Promise<void>;
+    // A click straight on the game while the cursor is parked there.
+    onGameClicked(callback: () => void): void;
     // Has Steam screenshot the game (presses its F12 key in the game).
     screenshotGame(): Promise<void>;
     getClickMethod(): Promise<ClickMethod>;
