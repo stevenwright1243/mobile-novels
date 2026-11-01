@@ -478,10 +478,15 @@ function tapWith(clickGame: () => boolean) {
     }
   };
 }
-textLine.addEventListener('click', tapWith(clickTextBox));
-// The name tag too, as it's part of the message window.
-nameTag.addEventListener('click', tapWith(clickTextBox));
-pageView.addEventListener('click', tapWith(clickPageCorner));
+// Anywhere in the text zone moves the game on: the message window, the name
+// tag, the page, and the empty space around them, so a mouse used as a
+// clicker works wherever its pointer is. (A drag that scrolls the window or
+// the page has its click stopped before it gets here: drag-scroll.ts.)
+const moveOnTap = tapWith(() =>
+  isPageMode() ? clickPageCorner() : clickTextBox(),
+);
+const textZone = document.querySelector<HTMLElement>('#text-zone')!;
+textZone.addEventListener('click', moveOnTap);
 
 // Auto moves the game on the same way a tap on the text would, if there's a
 // game to click.
@@ -529,6 +534,10 @@ backgroundCanvas.addEventListener('click', (event) => {
     if (!rawMode) {
       noteTap();
     }
+  } else if (!rawMode) {
+    // Off the picture (the blurred space around it): in the reader, moves
+    // the game on like a tap on the text, so no spot is dead.
+    moveOnTap(event);
   }
 });
 
@@ -608,7 +617,6 @@ window.vn.getSpeaker().then(showSpeaker);
 // The highest the picture may sit with text position "top" (see
 // `backgroundYCapFor`), measured on the reader's text zone, or in Menus
 // mode (where that's hidden) on the Sizes sample's. Worked out each frame.
-const textZone = document.querySelector<HTMLElement>('#text-zone')!;
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
 
 function updateBackgroundYCap(regions: Regions) {
@@ -729,30 +737,53 @@ const showOnPhone = (phone: PhoneDisplay | null) =>
 window.vn.onPhoneDisplayChanged(showOnPhone);
 window.vn.getPhoneDisplay().then(showOnPhone);
 
-// On the phone the mouse pointer is hidden (portrait.css), but a mouse paired
-// with the phone needs it. A tap jumps the pointer once, while a mouse moves
-// it in a run of small steps: after a few moves in a row with no button held,
-// show it, and hide it again once it's been still for a while.
+// On the phone the mouse pointer is hidden (portrait.css), but a mouse needs
+// it to reach the corner buttons. A tap jumps the pointer once, while a
+// mouse moves it in a run of small steps: after a few moves in a row with no
+// button held, over more than a nudge, show it, and hide it again once it's
+// been still for a while.
 const MOVES_TO_SHOW = 3;
+// How far (CSS pixels) a run must go: the small slips of a mouse being
+// clicked don't show the pointer.
+const TRAVEL_TO_SHOW = 24;
 // Moves further apart than this (ms) start a new run.
 const MOVE_RUN = 300;
 const HIDE_AFTER = 2000;
 let moves = 0;
+let travel = 0;
 let lastMove = 0;
 let hidePointer: number | undefined;
+const pointerClasses = document.documentElement.classList;
 document.addEventListener('pointermove', (event) => {
   if (event.pointerType !== 'mouse' || event.buttons) {
     return;
   }
-  moves = event.timeStamp - lastMove < MOVE_RUN ? moves + 1 : 1;
+  const inRun = event.timeStamp - lastMove < MOVE_RUN;
+  moves = inRun ? moves + 1 : 1;
+  travel = (inRun ? travel : 0) + Math.hypot(event.movementX, event.movementY);
   lastMove = event.timeStamp;
-  if (moves < MOVES_TO_SHOW) {
+  if (moves < MOVES_TO_SHOW || travel < TRAVEL_TO_SHOW) {
     return;
   }
-  document.documentElement.classList.add('pointer-shown');
+  pointerClasses.remove('pointer-hidden');
+  pointerClasses.add('pointer-shown');
   clearTimeout(hidePointer);
   hidePointer = window.setTimeout(
-    () => document.documentElement.classList.remove('pointer-shown'),
+    () => pointerClasses.remove('pointer-shown'),
     HIDE_AFTER,
   );
+});
+
+// In the reader a click anywhere moves the game on, so a mouse there is a
+// clicker: a click hides the pointer straight away (`pointer-hidden`), on the
+// PC too, until the mouse is moved again as above.
+document.addEventListener('pointerdown', (event) => {
+  if (event.pointerType !== 'mouse' || rawMode) {
+    return;
+  }
+  clearTimeout(hidePointer);
+  pointerClasses.remove('pointer-shown');
+  pointerClasses.add('pointer-hidden');
+  moves = 0;
+  travel = 0;
 });

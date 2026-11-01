@@ -286,10 +286,13 @@ body {
 /* On the phone, taps arrive as mouse clicks, so the stream would show the
    mouse pointer jumping to each tap. Hide it there; the ripple already shows
    where you tapped. A mouse moving it shows it for a while (`pointer-shown`,
-   set by portrait.ts). (`!important` beats the `cursor: pointer` of
-   buttons.) */
+   set by portrait.ts). A click in the reader hides it, on the PC too, until
+   the mouse moves again (`pointer-hidden`). (`!important` beats the
+   `cursor: pointer` of buttons.) */
 :root.on-phone:not(.pointer-shown),
-:root.on-phone:not(.pointer-shown) * {
+:root.on-phone:not(.pointer-shown) *,
+:root.pointer-hidden,
+:root.pointer-hidden * {
   cursor: none !important;
 }
 
