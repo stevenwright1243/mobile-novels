@@ -72,7 +72,8 @@ It reads the frame at 100%, 80% and 60% size, the way the portrait does.
 
 ## 4. Find the cause
 
-Where each kind of fault lives (see CLAUDE.md for the full rules):
+Where each kind of fault lives (the full rules are in `docs/ocr.md`, and
+`docs/memory-text.md` for text from the game's memory):
 
 | What you see                              | Where to look                                                                          |
 | ----------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -103,9 +104,11 @@ Some misses are already known (see the bench's list; e.g. the mouse pointer in
 
 ## 6. Commit and tell the user
 
-Run the checks (`npm run typecheck`, `npm run lint`), then commit and push per
-CLAUDE.md's git workflow: one change per commit, naming the test and the bench
-result in the message. Update CLAUDE.md where it describes the rule you
+When the fix is in one of `src/ocr.ts`'s clean-up rules, also add the case to
+`src/ocr.test.ts`. Run the checks (`npm run typecheck`, `npm run lint`,
+`npm test`), then commit and push per CLAUDE.md's git workflow: one change per
+commit, naming the test and the bench result in the message. Update
+`docs/ocr.md` (or `docs/memory-text.md`) where it describes the rule you
 changed.
 
 Which changes need an app restart:
