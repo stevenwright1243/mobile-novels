@@ -1,5 +1,5 @@
-# Runs the type check and lint on every pull request and every push to
-# master. Pull requests can only merge into master once this passes.
+# Runs the type check, lint and tests on every pull request and every push
+# to master. Pull requests can only merge into master once this passes.
 name: Check
 
 on:
@@ -16,9 +16,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # The Electron binary isn't needed to type check or lint.
+      # The Electron binary isn't needed to type check, lint or test.
       - run: npm ci
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm test

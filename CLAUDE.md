@@ -26,11 +26,11 @@ Their knowledge of web and tooling practices may be outdated, and they've asked 
 - `npm run lint`: oxlint plus an oxfmt format check. `npm run lint:fix` fixes both.
 - `npm run package` / `npm run make`: build a distributable (Squirrel installer on Windows).
 
-There's no test framework set up yet.
+- `npm test`: runs the unit tests once with Vitest (`vitest run`; `npx vitest` keeps watching and re-runs on each save). Tests sit beside the code as `*.test.ts` and import `describe`/`it`/`expect` from `vitest` (no globals). They run in plain Node, not Electron, so anything native (koffi, OneOCR) is swapped for a stand-in with `vi.mock`, as `src/ocr.test.ts` does for `recognize`, to test ocr.ts's clean-up rules through `readText`. When changing a rule that has tests, add a test for the new case; the OCR bench still checks whole frames.
 
 ## Git workflow
 
-Follows the light mode of the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck` and `npm run lint`; the **Check** workflow (`.github/workflows/check.yml`) runs both again on GitHub after each push.
+Follows the light mode of the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck`, `npm run lint` and `npm test`; the **Check** workflow (`.github/workflows/check.yml`) runs them again on GitHub after each push.
 
 ## Architecture
 
