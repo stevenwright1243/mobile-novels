@@ -27,7 +27,16 @@ app.whenReady().then(async () => {
   let ocrMs = 0;
   ipcMain.handle('read-text', async (_event, png) => {
     const started = performance.now();
-    const result = await readText(png);
+    let result;
+    try {
+      result = await readText(png);
+    } catch (error) {
+      // Every read would fail the same way (OneOCR not loading, say), and
+      // each test would wait out its timeout: stop now, with the reason.
+      console.error(`BENCH:error ${error.stack ?? error}`);
+      app.exit(1);
+      return null;
+    }
     ocrMs += performance.now() - started;
     // With --verbose, every OCR attempt (a box is read at least twice, and
     // retried other ways when the read fails), as in debug mode's log.
@@ -58,6 +67,8 @@ app.whenReady().then(async () => {
 
   const results = [];
   for (const scale of scales) {
+    // Progress for run.mjs, which shows a dot per read.
+    console.error(`BENCH:scale ${scale * 100}`);
     for (const test of tests) {
       for (const kind of ['text', 'name', 'page']) {
         if (!test[kind]) {
@@ -72,11 +83,12 @@ app.whenReady().then(async () => {
             // The same options the portrait gives each box (portrait.ts).
             {
               text: { textBox: true },
-              name: { retryFlattened: true },
+              name: {},
               page: { page: true },
             }[kind],
           )})`,
         );
+        console.error('BENCH:read');
         results.push({
           id: test.id,
           kind,

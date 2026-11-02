@@ -13,7 +13,7 @@
 // and the live capture can be any size in between). The
 // tests live in %APPDATA%\mobile-novel\ocr-tests (see src/ocr-tests.ts).
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -155,11 +155,16 @@ function build(version) {
 // --- Running a version ---
 // In Electron, since the reader needs a real page (canvases) and ocr.ts
 // needs Electron's `app`. Results come back as JSON in the build folder.
-function bench(version, dir) {
+// Progress comes back on stderr as "BENCH:" lines and is shown as it goes,
+// a dot per read, so a stall is plain to see (and a watchdog sees the
+// output grow); the rest of stderr is kept for the error message. An OCR
+// error stops the run at once (bench-main.cjs), instead of every test
+// waiting out its timeout.
+async function bench(version, dir) {
   const electron = createRequire(import.meta.url)('electron');
   const started = Date.now();
-  const result = spawnSync(electron, [path.join(here, 'bench-main.cjs')], {
-    encoding: 'utf8',
+  const child = spawn(electron, [path.join(here, 'bench-main.cjs')], {
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
       OCR_BENCH: JSON.stringify({
@@ -172,14 +177,31 @@ function bench(version, dir) {
       }),
     },
   });
+  let stdout = '';
+  let stderr = '';
+  let partial = '';
+  child.stdout.setEncoding('utf8').on('data', (chunk) => (stdout += chunk));
+  child.stderr.setEncoding('utf8').on('data', (chunk) => {
+    const lines = (partial + chunk).split('\n');
+    partial = lines.pop();
+    for (const line of lines) {
+      if (line === 'BENCH:read') {
+        process.stdout.write('.');
+      } else if (line.startsWith('BENCH:scale ')) {
+        process.stdout.write(`\n  ${version} at ${line.slice(12)}% `);
+      } else {
+        stderr += `${line.replace(/^BENCH:error /, '')}\n`;
+      }
+    }
+  });
+  await new Promise((resolve) => child.on('close', resolve));
+  process.stdout.write('\n');
   if (verbose) {
-    console.log(`\n${version}:\n${result.stdout}`);
+    console.log(`\n${version}:\n${stdout}`);
   }
   const file = path.join(dir, 'results.json');
   if (!existsSync(file)) {
-    throw new Error(
-      `Running ${version} failed:\n${(result.stderr || '').slice(-3000)}`,
-    );
+    throw new Error(`Running ${version} failed:\n${stderr.slice(-3000)}`);
   }
   console.log(`  ${version}: ${Math.round((Date.now() - started) / 1000)}s`);
   return JSON.parse(readFileSync(file, 'utf8'));
@@ -224,7 +246,7 @@ console.log(
 );
 const scored = {};
 for (const version of versions) {
-  scored[version] = bench(version, build(version)).map((r) => {
+  scored[version] = (await bench(version, build(version))).map((r) => {
     const got = even(r.kind === 'name' ? tidyName(r.got) : r.got);
     const expected = even(r.expected);
     return { ...r, got, expected, errors: distance(got, expected) };
