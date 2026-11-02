@@ -288,12 +288,16 @@ onAlphabetLearned((alphabet) => {
     void persistSettings();
   }
 });
+// The picked game's process, when its text is read from its memory, or null.
+function gameMemoryProcess(): number | null {
+  return profile?.textFromMemory && selectedSource
+    ? processIdOf(hwndFromSourceId(selectedSource.id))
+    : null;
+}
 function readGameMemory() {
-  if (profile?.textFromMemory && selectedSource) {
-    startReading(
-      processIdOf(hwndFromSourceId(selectedSource.id)),
-      settings.alphabets[profile.id] ?? null,
-    );
+  const processId = gameMemoryProcess();
+  if (processId !== null && profile) {
+    startReading(processId, settings.alphabets[profile.id] ?? null);
   } else {
     forgetGame();
   }
@@ -989,11 +993,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('get-memory-text-status', () => memoryTextStatus());
   // Whether text OCR read is the game's own (for Auto full-screen text,
   // auto-page.ts), or null if its memory isn't read.
-  ipcMain.handle('is-game-text', (_event, text: string) =>
-    profile?.textFromMemory && selectedSource
-      ? isGameText(processIdOf(hwndFromSourceId(selectedSource.id)), text)
-      : null,
-  );
+  ipcMain.handle('is-game-text', (_event, text: string) => {
+    const processId = gameMemoryProcess();
+    return processId === null ? null : isGameText(processId, text);
+  });
 
   // The game's short name, shown in the Menus sheet's Visual Novels; part
   // of its profile. An empty name clears it, so the title shows again.
@@ -1135,10 +1138,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-text-line', (_event, read: string) => {
     // When it's read from the game's memory (memory-text.ts), the game's own
     // text, or nothing new once its line buffer leads; otherwise OCR's read.
-    const line =
-      profile?.textFromMemory && selectedSource
-        ? lineForRead(processIdOf(hwndFromSourceId(selectedSource.id)), read)
-        : read;
+    const processId = gameMemoryProcess();
+    const line = processId === null ? read : lineForRead(processId, read);
     if (line !== null) {
       showLine(line);
     }
@@ -1190,10 +1191,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('set-speaker', (_event, read: string) => {
     // The game's own spelling of the name, when it's read from its memory
     // (memory-text.ts); whether a name shows at all stays OCR's call.
-    const name =
-      profile?.textFromMemory && selectedSource
-        ? nameForRead(processIdOf(hwndFromSourceId(selectedSource.id)), read)
-        : read;
+    const processId = gameMemoryProcess();
+    const name = processId === null ? read : nameForRead(processId, read);
     nameRead = name;
     const justChanged = performance.now() - lineChangedAt < SPEAKER_CATCH_UP;
     if (name !== speaker && justChanged) {
