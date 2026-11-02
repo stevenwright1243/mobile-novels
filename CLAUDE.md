@@ -8,6 +8,10 @@ An Electron app that turns a PC visual novel (VN) into a portrait, phone-friendl
 
 `getting-started.md` is the design and planning doc. It covers the four sub-problems (capture, reformat, stream, input), the chosen tools (desktopCapturer, OCR (now OneOCR, the Snipping Tool's engine) and the game's memory, koffi for `SendInput`/`PostMessage`, Apollo, Tailscale) and the milestone plan. Its **Status** section, at the top, says what's done, the key decisions, known gaps and the next step. Read it first in a new session, and check the plan before starting a milestone.
 
+## Words: GLOSSARY.md
+
+[GLOSSARY.md](GLOSSARY.md) is the project's shared language: the words for its own things (text box vs message window, region vs zone, spot, profile, copy, and the rest), each with the words to avoid. Use its words in replies, docs and new code names. When a new term is settled, or a term's meaning changes, update its entry in the same commit, keeping definitions to one or two sentences about what the thing is, with no code details.
+
 ## Docs: read the one for the area you're changing
 
 This file holds the rules for working here. How each part of the app works is in `docs/`, one file per area. **Before changing an area, read its doc**, and when a change alters what a doc describes, update that doc in the same commit, rewriting the passage rather than adding a note beside it, so each fact lives in one place.
