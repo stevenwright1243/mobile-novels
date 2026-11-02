@@ -37,6 +37,7 @@ import {
   openOnDisplay,
 } from './open-on-display';
 import { keepPhoneDisplayClear } from './keep-phone-clear';
+import { createLine } from './line';
 import { asOwnClick, parkOnGame } from './park-cursor';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
@@ -105,37 +106,13 @@ let portraitWindow: BrowserWindow | null = null;
 // The size of the portrait's background zone (see `setBackgroundZoneSize`).
 let backgroundZoneSize: Size | null = null;
 
-// The game's current line of text, as read by the portrait's text reader.
-let textLine = '';
-// Who's speaking ('' for narration): the name shown, which only changes
-// along with the text (see `set-speaker`), and the name box's latest read.
-let speaker = '';
-let nameRead = '';
-
-// The history log: the last lines read, oldest first. Cleared when another
-// game is picked.
-const HISTORY_LENGTH = 30;
-let textHistory: HistoryEntry[] = [];
-// When the line last changed (from `performance.now()`).
-let lineChangedAt = 0;
-// The name box and the text box are read separately, so a new speaker can be
-// confirmed a moment after their line. A speaker arriving this soon after a
-// line (in milliseconds) is taken to be that line's.
-const SPEAKER_CATCH_UP = 2000;
-
-// Shows a new speaker: tells the windows, and if the line was just read, it's
-// that line's speaker, so its history entry is corrected too.
-function changeSpeaker(name: string) {
-  speaker = name;
-  broadcast('speaker-changed', speaker);
-  const last = textHistory.at(-1);
-  if (
-    last?.line === textLine &&
-    performance.now() - lineChangedAt < SPEAKER_CATCH_UP
-  ) {
-    textHistory = [...textHistory.slice(0, -1), { ...last, speaker }];
-  }
-}
+// The game's current line, its speaker and the history log (line.ts). Every
+// window (the portrait included) hears about each change.
+const line = createLine({
+  now: () => performance.now(),
+  onLineChanged: (text) => broadcast('text-line-changed', text),
+  onSpeakerChanged: (speaker) => broadcast('speaker-changed', speaker),
+});
 
 // The phone's display while the phone is streaming (the portrait is full
 // screen on it), or null. See phone-display.ts.
@@ -676,13 +653,7 @@ app.whenReady().then(async () => {
     broadcast('text-style-changed', profile.textStyle);
     broadcast('background-y-changed', profile.backgroundY);
     broadcast('background-width-changed', profile.backgroundWidth);
-    // The last game's line no longer applies.
-    textLine = '';
-    speaker = '';
-    nameRead = '';
-    textHistory = [];
-    broadcast('text-line-changed', textLine);
-    broadcast('speaker-changed', speaker);
+    line.newGame();
     sendSaveState();
     muteOtherGames();
     readGameMemory();
@@ -885,12 +856,8 @@ app.whenReady().then(async () => {
       if (!windowExists(hwnd)) {
         selectedSource = null;
         forgetGame();
-        textLine = '';
-        speaker = '';
-        nameRead = '';
         broadcast('source-selected', null);
-        broadcast('text-line-changed', textLine);
-        broadcast('speaker-changed', speaker);
+        line.clearLine();
         muteOtherGames();
       } else if (isMinimized(hwnd)) {
         restoreBehind(hwnd);
@@ -1132,72 +1099,40 @@ app.whenReady().then(async () => {
     return result;
   });
 
-  // The current line: the portrait's text reader sets it, and every window
-  // (the portrait included) hears about the change.
-  ipcMain.handle('get-text-line', () => textLine);
+  // The current line: the portrait's text reader sets it (line.ts decides
+  // what shows, and tells every window).
+  ipcMain.handle('get-text-line', () => line.text);
   ipcMain.handle('set-text-line', (_event, read: string) => {
     // When it's read from the game's memory (memory-text.ts), the game's own
     // text, or nothing new once its line buffer leads; otherwise OCR's read.
     const processId = gameMemoryProcess();
-    const line = processId === null ? read : lineForRead(processId, read);
-    if (line !== null) {
-      showLine(line);
+    const text = processId === null ? read : lineForRead(processId, read);
+    if (text !== null) {
+      line.show(text);
     }
   });
   // Each new line the game writes to its line buffer, once that's found.
-  onMemoryLine((line) => {
+  onMemoryLine((text) => {
     if (profile?.textFromMemory && selectedSource) {
-      showLine(line);
+      line.show(text);
     }
   });
-  // The game's own text for a line OCR read, found a moment later: it
-  // replaces the read if that's still shown, in the history log too.
-  onMemoryCorrection((read, line) => {
-    if (!profile?.textFromMemory || !selectedSource || textLine !== read) {
-      return;
-    }
-    textLine = line;
-    broadcast('text-line-changed', textLine);
-    const last = textHistory.at(-1);
-    if (last?.line === read) {
-      textHistory = [...textHistory.slice(0, -1), { ...last, line }];
+  // The game's own text for a line OCR read, found a moment later.
+  onMemoryCorrection((read, text) => {
+    if (profile?.textFromMemory && selectedSource) {
+      line.correct(read, text);
     }
   });
-  function showLine(line: string) {
-    if (line !== textLine) {
-      lineChangedAt = performance.now();
-    }
-    textLine = line;
-    broadcast('text-line-changed', textLine);
-    // Add it to the history log, unless it's empty (no text box showing) or
-    // the same line again (the box was hidden and shown again). `.at(-1)` is
-    // the last item; `.slice(-N)` keeps the last N.
-    if (line && line !== textHistory.at(-1)?.line) {
-      textHistory = [...textHistory, { speaker, line }].slice(-HISTORY_LENGTH);
-    }
-    // The text moved on, so the name box's latest read is now shown.
-    if (nameRead !== speaker) {
-      changeSpeaker(nameRead);
-    }
-  }
-  ipcMain.handle('get-text-history', () => textHistory);
+  ipcMain.handle('get-text-history', () => line.history);
 
-  // The speaker's name, read from the name box the same way. Every change,
-  // a name appearing, going or switching, shows along with the text
-  // (`set-text-line` shows the latest read then), so the name always
-  // belongs to the line on screen. A name read just after the line changed
-  // belongs with that line, so it shows at once.
-  ipcMain.handle('get-speaker', () => speaker);
+  // The speaker's name, read from the name box the same way; line.ts shows
+  // it along with the line.
+  ipcMain.handle('get-speaker', () => line.speaker);
   ipcMain.handle('set-speaker', (_event, read: string) => {
     // The game's own spelling of the name, when it's read from its memory
     // (memory-text.ts); whether a name shows at all stays OCR's call.
     const processId = gameMemoryProcess();
-    const name = processId === null ? read : nameForRead(processId, read);
-    nameRead = name;
-    const justChanged = performance.now() - lineChangedAt < SPEAKER_CATCH_UP;
-    if (name !== speaker && justChanged) {
-      changeSpeaker(name);
-    }
+    line.nameRead(processId === null ? read : nameForRead(processId, read));
   });
 
   // The "Open on" monitor, saved straight away. Turned on (or changed),

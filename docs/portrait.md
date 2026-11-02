@@ -8,7 +8,7 @@ Each canvas is resized by a `ResizeObserver` to its box size × `devicePixelRati
 
 ## History log and shared looks
 
-Main also keeps the **history log**: the last 30 non-empty lines, each with its speaker (`HistoryEntry`, `getTextHistory`; a speaker confirmed within `SPEAKER_CATCH_UP` of a line is taken as that line's, since the two boxes are read separately), cleared when another game is picked. The portrait's Log button (top-right in Menus mode; the reader has Auto there) opens it as a native `<dialog>` (`showModal()`, `src/history-log.ts`): a snapshot shown one line at a time, newest first, with big ◀ / ▶ buttons and "Return to game".
+Main also keeps the **history log** (`src/line.ts`, with the line and speaker; tested in `line.test.ts`): the last 30 non-empty lines, each with its speaker (`HistoryEntry`, `getTextHistory`; a speaker confirmed within `SPEAKER_CATCH_UP` of a line is taken as that line's, since the two boxes are read separately), kept when the game's window closes and cleared when another game is picked. The portrait's Log button (top-right in Menus mode; the reader has Auto there) opens it as a native `<dialog>` (`showModal()`, `src/history-log.ts`): a snapshot shown one line at a time, newest first, with big ◀ / ▶ buttons and "Return to game".
 
 The frosted look is a shared `.glass` class in `portrait.css`; the corner pills share `.corner-button`.
 
