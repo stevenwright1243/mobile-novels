@@ -29,9 +29,7 @@ This file holds the rules for working here. How each part of the app works is in
 
 ## About the user
 
-They're returning to programming after ~7 years and are new to TypeScript. Explain unfamiliar patterns briefly, especially Electron's main/preload/renderer split and TypeScript-specific syntax. Prefer small, milestone-sized changes they can test and commit.
-
-Their knowledge of web and tooling practices may be outdated, and they've asked for guidance. When they suggest a technique and a better current best practice exists, don't just build what they asked. Say so before building, explain why the alternative is better in plain terms, and urge them to consider it. They make the final call. (Example: they suggested flexbox for the portrait zones; CSS Grid named areas fit better.)
+Who they are and how to work with them (explain as you go, push back on outdated practice) is in "About me" in `~/.claude/CLAUDE.md`. Here, explain Electron's main/preload/renderer split whenever it comes up, and keep changes milestone-sized.
 
 ## Commands
 
