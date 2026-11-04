@@ -46,7 +46,7 @@ Their knowledge of web and tooling practices may be outdated, and they've asked 
 
 ## Git workflow
 
-Follows the light mode of the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck`, `npm run lint` and `npm test`; the **Check** workflow (`.github/workflows/check.yml`) runs them again on GitHub after each push.
+Follows the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck`, `npm run lint` and `npm test`; the **Check** workflow (`.github/workflows/check.yml`) runs them again on GitHub after each push.
 
 ## Architecture
 
