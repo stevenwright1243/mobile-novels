@@ -48,6 +48,10 @@ Their knowledge of web and tooling practices may be outdated, and they've asked 
 
 Follows the user's git workflow in `~/.claude/CLAUDE.md`: after each finished change, once the checks pass, commit it on `master` and push. The checks are `npm run typecheck`, `npm run lint` and `npm test`; the **Check** workflow (`.github/workflows/check.yml`) runs them again on GitHub after each push.
 
+**OCR changes add the OCR bench to the checks.** When a change touches what the bench bundles (`ocr.ts`, `oneocr.ts`, `text-reader.ts`, `capture.ts`, or the OCR parts of `win32.ts`), run `npm run ocr-bench` on the change and on the commit before it. A test that read right before and reads worse after blocks the commit until it's fixed, or until the user agrees to the trade. Put the two scores in the commit message. GitHub can't run the bench (it needs Windows 11's OCR engine and the user's saved tests), so this check is local only.
+
+Most of the app (windows, Win32 calls, capture, the portrait's look) is only tested by running it, which Claude can't do here yet (see the data rule under Conventions), so commits to those parts end with `Not tried in the app.` until the user has tried them.
+
 ## Architecture
 
 Electron Forge's Vite plugin (`forge.config.mts`) builds three separate bundles, each with its own Vite config:
