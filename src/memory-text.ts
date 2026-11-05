@@ -588,14 +588,23 @@ function holdsWhole(line: string, read: string) {
   );
 }
 
+// A line that ends a sentence (closing quotes and brackets after it
+// allowed).
+const ENDS_SENTENCE = /[.!?…]["'”’)\]」』】]*$/u;
+
 // Whether a line from memory is clearly only part of what OCR read: OCR
 // has much more, and memory's matches the start of it (allowing a word or
-// so missing there). Junk OCR adds to a read doesn't count, since it seldom
-// lines up with memory's line like that.
-function isPartOf(line: string, read: string) {
+// so missing there). Not when memory's line ends a sentence: then it's
+// whole, and OCR's extra is junk read after it, such as writing in the art
+// behind a see-through text box (Aokana: "…with her mouth wide open. Y
+// MIZUKI YMIZUIKI", a logo on the boards behind it). Exported for tests.
+export function isPartOf(line: string, read: string) {
   const fromMemory = letters(line);
   const fromOcr = letters(read);
-  if (fromOcr.length <= fromMemory.length * 1.15 + 3) {
+  if (
+    fromOcr.length <= fromMemory.length * 1.15 + 3 ||
+    ENDS_SENTENCE.test(line.trim())
+  ) {
     return false;
   }
   return similarity(fromOcr.slice(0, fromMemory.length + 4), fromMemory) >= 0.8;
