@@ -1,7 +1,8 @@
 /**
  * The history log (portrait window): a pop-up that shows the last lines read
  * (kept by main, up to 30), each with who said it, one at a time, with big buttons to step back and
- * forward. It opens on the newest line. Opening it takes a snapshot, so new
+ * forward. It opens on the line before the newest (the newest is still showing
+ * in the text box). Opening it takes a snapshot, so new
  * lines arriving while you read don't shift what you're looking at.
  */
 
@@ -44,7 +45,10 @@ function showLine() {
 
 logButton.addEventListener('click', async () => {
   lines = await window.vn.getTextHistory();
-  index = lines.length - 1;
+  // Open on the line before the newest: the newest is still on screen in the
+  // text box, so the one before it is the one you'd want to look back at.
+  // Math.max keeps it at 0 when there are fewer than two lines.
+  index = Math.max(0, lines.length - 2);
   showLine();
   // `showModal()` opens the dialog on top of everything, with a backdrop, and
   // blocks taps to the page underneath (so nothing reaches the game).
