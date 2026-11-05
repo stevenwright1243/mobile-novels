@@ -10,13 +10,17 @@
  *
  * Just for now, not saved: portrait.ts resets it when Menus mode is left or
  * another game is picked.
+ *
+ * With drags set to go to the game (drag-mode.ts), the pinch, drag and
+ * wheel are off, so they reach the game instead; the zoom pad still zooms.
  */
+import { dragMode } from './drag-mode';
 
 // How far in it can zoom, as times the whole-game size.
 const MAX_ZOOM = 4;
 // How far (in CSS pixels) a finger or the mouse must move before it's a
-// drag rather than a tap.
-const DRAG_START = 8;
+// drag rather than a tap. game-drag.ts uses it too.
+export const DRAG_START = 8;
 // How much the wheel zooms, per pixel of its `deltaY`.
 const WHEEL_ZOOM = 0.002;
 // The zoom pad's steps (zoom-pad.ts): each zoom tap zooms by √2, so two
@@ -231,7 +235,7 @@ export function zoomByGestures(
       moved = false;
     }
     const point = toCanvas(event);
-    if (!now || !inSlot(point, now)) {
+    if (!now || !inSlot(point, now) || dragMode() === 'game') {
       return;
     }
     if (pointers.size === 0) {
@@ -308,7 +312,7 @@ export function zoomByGestures(
     (event) => {
       const now = place();
       const point = toCanvas(event);
-      if (!now || !inSlot(point, now)) {
+      if (!now || !inSlot(point, now) || dragMode() === 'game') {
         return;
       }
       event.preventDefault();

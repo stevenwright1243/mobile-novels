@@ -36,6 +36,10 @@ interface GamePoint {
   y: number;
 }
 
+// One step of a drag on the game: the button pressed, the pointer moved with
+// it held, or the button let go.
+type DragStep = 'down' | 'move' | 'up';
+
 // The spots the Menus sheet's q.Save and q.Load buttons tap for the player:
 // the game's own quick save and quick load buttons. Each is placed in the
 // picker, and is null until then.
@@ -312,6 +316,9 @@ interface Window {
     // `park`, a tap in the reader: on the phone, the cursor is then parked
     // on the game beside that box.
     clickGame(point: GamePoint, park?: ParkSpot): Promise<void>;
+    // One step of a drag on the game (Menus mode, with drags passed to the
+    // game), at a point given as fractions of its client area.
+    dragGame(step: DragStep, point: GamePoint): Promise<void>;
     // A click straight on the game while the cursor is parked there.
     onGameClicked(callback: () => void): void;
     // Has Steam screenshot the game (presses its F12 key in the game).

@@ -38,7 +38,7 @@ import {
 } from './open-on-display';
 import { keepPhoneDisplayClear } from './keep-phone-clear';
 import { createLine } from './line';
-import { asOwnClick, parkOnGame } from './park-cursor';
+import { asOwnClick, parkOnGame, stopWatching } from './park-cursor';
 import { followPhoneDisplay } from './phone-display';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import { steamAppIdOf } from './steam';
@@ -62,10 +62,12 @@ import {
   hwndFromSourceId,
   isMinimized,
   postClick,
+  postDrag,
   pressKey,
   processIdOf,
   restoreBehind,
   sendClick,
+  sendDrag,
   sendToBack,
   bringToFront,
   setMutes,
@@ -814,6 +816,36 @@ app.whenReady().then(async () => {
       }
     },
   );
+
+  // A drag on the game in Menus mode, with drags passed to the game
+  // (drag-mode.ts): its press, each move and its release, one IPC call
+  // each. They're run one after another (`dragSteps`), since the press
+  // waits a moment for the hover and the moves mustn't overtake it.
+  let dragSteps = Promise.resolve();
+  ipcMain.handle('drag-game', (_event, step: DragStep, point: GamePoint) => {
+    dragSteps = dragSteps.then(async () => {
+      if (!selectedSource) {
+        return;
+      }
+      const hwnd = hwndFromSourceId(selectedSource.id);
+      if (step === 'down') {
+        // The cursor isn't parked on the game for the reader any more.
+        stopWatching();
+        if (isMinimized(hwnd)) {
+          restoreBehind(hwnd);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+      if (profile?.clickMethod === 'mouse') {
+        await sendDrag(hwnd, step, point);
+      } else {
+        postDrag(hwnd, step, point);
+      }
+    });
+    // A step that fails mustn't stop the ones after it.
+    dragSteps = dragSteps.catch((error) => console.error(error));
+    return dragSteps;
+  });
 
   // The Menus sheet's Screenshot button. All the games are Steam games for
   // now, so Steam takes it, on its screenshot key (F12, the user's) pressed

@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('vn', {
     );
   },
   clickGame: (point, park) => ipcRenderer.invoke('click-game', point, park),
+  dragGame: (step, point) => ipcRenderer.invoke('drag-game', step, point),
   onGameClicked: (callback) => {
     ipcRenderer.on('game-clicked', () => callback());
   },

@@ -39,6 +39,8 @@ import { isPageMode, onPageModeChanged } from './page-mode';
 import { redrawPage, showPage } from './page-view';
 import { dragToScroll, updateScrollState } from './drag-scroll';
 import { resetZoom, zoomByGestures, zoomedPlace } from './game-zoom';
+import { dragMode } from './drag-mode';
+import { dragOnGame } from './game-drag';
 import {
   backgroundWidth,
   backgroundY,
@@ -538,6 +540,14 @@ zoomByGestures(
       ? placeZone(backgroundZone, regions)
       : null,
   (event) => inCanvasPixels(backgroundCanvas, event),
+);
+// Or, with drags set to go to the game (drag-mode.ts), dragging holds the
+// game's mouse button down and moves it (game-drag.ts), for its sliders.
+// Also before the tap below, for the same reason.
+dragOnGame(
+  backgroundCanvas,
+  () => rawMode && dragMode() === 'game',
+  (event) => tapToGame(backgroundZone, event),
 );
 
 backgroundCanvas.addEventListener('click', (event) => {

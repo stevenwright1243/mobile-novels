@@ -5,16 +5,46 @@
  * and `sendClick`), and whether lines are read exactly from the game's
  * memory (memory-text.ts), with how finding them is going. Both are part of
  * the game's profile, so they're unsaved edits until Save, with their own
- * Save and Reset. Under them, buttons that bring
+ * Save and Reset. Above them, in the Menus sheet only, what dragging on the
+ * game does in Menus mode (drag-mode.ts; not saved). Under them, buttons that bring
  * the game's window to the front or send it to the back. Each page has an
  * empty `#input-settings .input-body` that this fills, so the panel is
  * written once (styled by settings-panel.css).
  */
 
+import { dragMode, onDragModeChanged, setDragMode } from './drag-mode';
+
 const container = document.querySelector<HTMLElement>('#input-settings')!;
 const body = container.querySelector<HTMLElement>('.input-body')!;
+// The portrait's Menus sheet has it as a drop-down; the picker as a page.
+const inSheet = container instanceof HTMLDetailsElement;
+
+// What dragging on the game does in Menus mode, so only in the sheet.
+const dragModeRow = `
+  <div class="toggle-row">
+    <span id="drag-mode-label">Dragging on the game</span>
+    <span class="toggle">
+      <span class="toggle-side">Zoom</span>
+      <button
+        id="drag-mode"
+        class="toggle-switch"
+        role="switch"
+        aria-checked="false"
+        aria-labelledby="drag-mode-label"
+      >
+        <span class="toggle-knob"></span>
+      </button>
+      <span class="toggle-side">Game</span>
+    </span>
+  </div>
+  <p class="sheet-note">
+    Zoom: pinch to zoom in on the game, and drag to move around it. Game:
+    drags go to the game instead, for its sliders and scroll bars. The zoom
+    buttons work either way. Not saved.
+  </p>`;
 
 body.innerHTML = `
+  ${inSheet ? dragModeRow : ''}
   <div class="toggle-row">
     <span id="click-method-label">Taps click by</span>
     <span class="toggle">
@@ -116,6 +146,17 @@ const showMemoryStatus = (status: MemoryTextStatus) =>
   (memoryStatus.textContent = statusNotes[status]);
 window.vn.onMemoryTextStatusChanged(showMemoryStatus);
 window.vn.getMemoryTextStatus().then(showMemoryStatus);
+
+const dragSwitch = body.querySelector<HTMLButtonElement>('#drag-mode');
+if (dragSwitch) {
+  const showDragMode = () =>
+    dragSwitch.setAttribute('aria-checked', String(dragMode() === 'game'));
+  onToggle(dragSwitch, () =>
+    setDragMode(dragMode() === 'game' ? 'zoom' : 'game'),
+  );
+  onDragModeChanged(showDragMode);
+  showDragMode();
+}
 
 body
   .querySelector('#game-to-front')!

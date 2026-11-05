@@ -497,6 +497,86 @@ export async function sendClick(hwnd: number, point: { x: number; y: number }) {
   SetCursorPos(previousCursor.x, previousCursor.y);
 }
 
+// --- Dragging ------------------------------------------------------------------
+
+/**
+ * A drag step by posted messages, like `postClick`: the press (after a hover,
+ * as a click does), each move with the button held (`MK_LBUTTON`), and the
+ * release.
+ */
+export function postDrag(
+  hwnd: number,
+  step: DragStep,
+  point: { x: number; y: number },
+) {
+  const pixels = clientPixels(hwnd, point);
+  if (!pixels) {
+    return;
+  }
+  const position = (pixels.y << 16) | (pixels.x & 0xffff);
+  if (step === 'down') {
+    PostMessage(hwnd, WM_MOUSEMOVE, 0, position);
+    PostMessage(hwnd, WM_LBUTTONDOWN, MK_LBUTTON, position);
+  } else if (step === 'move') {
+    PostMessage(hwnd, WM_MOUSEMOVE, MK_LBUTTON, position);
+  } else {
+    PostMessage(hwnd, WM_LBUTTONUP, 0, position);
+  }
+}
+
+// Where the real cursor was before a `sendDrag`, put back when it ends.
+let cursorBeforeDrag: { x: number; y: number } | null = null;
+
+/**
+ * A drag step with simulated real mouse input, like `sendClick`: the press
+ * brings the game to the front and holds the button down over the spot, each
+ * move moves the real cursor (the button still held, so it drags), and the
+ * release lets go and puts the cursor back.
+ */
+export async function sendDrag(
+  hwnd: number,
+  step: DragStep,
+  point: { x: number; y: number },
+) {
+  const pixels = clientPixels(hwnd, point);
+  const onScreen = pixels && { ...pixels };
+  if (!onScreen || !ClientToScreen(hwnd, onScreen)) {
+    return;
+  }
+  const mouseButton = (flags: number) => ({
+    type: INPUT_MOUSE,
+    u: {
+      mi: {
+        dx: 0,
+        dy: 0,
+        mouseData: 0,
+        dwFlags: flags,
+        time: 0,
+        dwExtraInfo: 0,
+      },
+    },
+  });
+  if (step === 'down') {
+    cursorBeforeDrag = { x: 0, y: 0 };
+    GetCursorPos(cursorBeforeDrag);
+    SetForegroundWindow(hwnd);
+    SetCursorPos(onScreen.x, onScreen.y);
+    // Let the game notice the hover before pressing.
+    await sleep(30);
+    SendInput(1, [mouseButton(MOUSEEVENTF_LEFTDOWN)], koffi.sizeof(INPUT));
+  } else if (step === 'move') {
+    SetCursorPos(onScreen.x, onScreen.y);
+  } else {
+    SetCursorPos(onScreen.x, onScreen.y);
+    SendInput(1, [mouseButton(MOUSEEVENTF_LEFTUP)], koffi.sizeof(INPUT));
+    await sleep(30);
+    if (cursorBeforeDrag) {
+      SetCursorPos(cursorBeforeDrag.x, cursorBeforeDrag.y);
+      cursorBeforeDrag = null;
+    }
+  }
+}
+
 // --- Parking the cursor --------------------------------------------------------
 
 // The high bit (0x8000, so negative as a 16-bit number) is set while the key
