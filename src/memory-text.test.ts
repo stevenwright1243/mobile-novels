@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { isPartOf } from './memory-text';
+import { isPartOf, withoutJunkAfter } from './memory-text';
 
 vi.mock('./win32', () => ({}));
 
@@ -39,5 +39,36 @@ describe('isPartOf', () => {
 
   it('ignores a read about as long as the line', () => {
     expect(isPartOf('Is that so', 'Is that so?')).toBe(false);
+  });
+});
+
+describe('withoutJunkAfter', () => {
+  it('leaves out junk OCR read after a whole line', () => {
+    expect(withoutJunkAfter('Cool.', 'Cool. ÝMIZUKI')).toBe('Cool.');
+  });
+
+  it('allows for OCR misreading the line itself', () => {
+    expect(
+      withoutJunkAfter(
+        'She just gave me a call and said I should pick out some good ones for you.',
+        'She iust gave me a cal and said I should pick out some good ones for you. YMIZUKI',
+      ),
+    ).toBe(
+      'She iust gave me a cal and said I should pick out some good ones for you.',
+    );
+  });
+
+  it('keeps the whole read when there is nothing after the line', () => {
+    expect(withoutJunkAfter('Cool.', 'Cool.')).toBe('Cool.');
+  });
+
+  it("keeps the read when memory's line doesn't end a sentence", () => {
+    expect(withoutJunkAfter('Cool, so', 'Cool, so we go')).toBe(
+      'Cool, so we go',
+    );
+  });
+
+  it("keeps the read when it isn't the line", () => {
+    expect(withoutJunkAfter('Cool.', 'Fine by me.')).toBe('Fine by me.');
   });
 });

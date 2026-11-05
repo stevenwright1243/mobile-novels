@@ -525,7 +525,7 @@ export function lineForRead(processId: number, read: string): string | null {
   if (buffer) {
     if (
       letters(read).length < MIN_OCR_ONLY_LETTERS ||
-      alike(read, buffer.line) >= LOOSE_MATCH ||
+      alike(withoutJunkAfter(buffer.line, read), buffer.line) >= LOOSE_MATCH ||
       performance.now() - buffer.changedAt < OCR_CATCH_UP
     ) {
       memory.misses = 0;
@@ -608,6 +608,31 @@ export function isPartOf(line: string, read: string) {
     return false;
   }
   return similarity(fromOcr.slice(0, fromMemory.length + 4), fromMemory) >= 0.8;
+}
+
+// OCR's read without any junk it read after a whole line from memory (one
+// that ends a sentence, see `isPartOf`): the start of the read, word by
+// word, that's most alike to the line, when that's a match (Aokana: "Cool.
+// ÝMIZUKI" for "Cool.", a logo behind the text box). The read as it is
+// otherwise. Exported for tests.
+export function withoutJunkAfter(line: string, read: string) {
+  if (!ENDS_SENTENCE.test(line.trim())) {
+    return read;
+  }
+  const fromMemory = letters(line);
+  const words = read.split(' ');
+  let best = read;
+  let bestScore = alike(line, read);
+  // The whole read wins a tie, and among starts the shorter.
+  for (let count = 1; count < words.length; count++) {
+    const start = words.slice(0, count).join(' ');
+    const score = similarity(letters(start), fromMemory);
+    if (score > bestScore) {
+      best = start;
+      bestScore = score;
+    }
+  }
+  return bestScore >= MATCH ? best : read;
 }
 
 // Starts following the copies that changed to `read` as the game's line.
@@ -1086,17 +1111,24 @@ function followChangedCopies(memory: GameMemory, read: string) {
   // ones the game draws from (its UTF-8 one is followed by a stray "A").
   // A pointer's string must be just the line, nothing after it (a pointer
   // to the script's entry, with every language's version, isn't followed).
+  // OCR's read of the line, junk read after it left out.
+  const reads = new Map<Spot, string>();
   const holding = changed
     .filter((spot) => {
       const text = textAt(memory, spot);
       if (text === null) {
         return false;
       }
-      const stop = endFor(text, read);
+      let stop = endFor(text, read);
+      const ofLine = withoutJunkAfter(text.slice(0, stop), read);
+      if (ofLine !== read) {
+        stop = endFor(text, ofLine);
+      }
       const line = text.slice(0, stop);
+      reads.set(spot, ofLine);
       return (
-        alike(line, read) >= MATCH &&
-        holdsWhole(line, read) &&
+        alike(line, ofLine) >= MATCH &&
+        holdsWhole(line, ofLine) &&
         (!spot.pointer || letters(text.slice(stop)) === '')
       );
     })
@@ -1107,7 +1139,7 @@ function followChangedCopies(memory: GameMemory, read: string) {
   if (holding.length === 0) {
     return false;
   }
-  useBuffer(memory, holding, read);
+  useBuffer(memory, holding, reads.get(holding[0]) ?? read);
   return true;
 }
 
@@ -1238,6 +1270,7 @@ function catchUp(memory: GameMemory, searched: string) {
 // where a run of its words puts it, and its end where it best matches.
 function bestCopy(copies: Spot[], read: string, needles: string[]) {
   let best: string | null = null;
+  let bestRead = read;
   let bestSpot: Spot | null = null;
   let bestScore = MATCH;
   const known = knownTo(read);
@@ -1271,10 +1304,16 @@ function bestCopy(copies: Spot[], read: string, needles: string[]) {
         continue;
       }
       const rest = text.slice(start);
-      const line = polish(rest.slice(0, endFor(rest, read)), read);
-      const score = alike(line, read);
+      let line = polish(rest.slice(0, endFor(rest, read)), read);
+      // OCR's read of the line, junk read after it left out.
+      const ofLine = withoutJunkAfter(line, read);
+      if (ofLine !== read) {
+        line = polish(rest.slice(0, endFor(rest, ofLine)), read);
+      }
+      const score = alike(line, ofLine);
       if (score > bestScore) {
         best = line;
+        bestRead = ofLine;
         bestSpot = spot;
         bestScore = score;
       }
@@ -1282,7 +1321,7 @@ function bestCopy(copies: Spot[], read: string, needles: string[]) {
   }
   return best === null || bestSpot === null
     ? null
-    : { line: withQuotes(best, read), spot: bestSpot };
+    : { line: withQuotes(best, bestRead), spot: bestSpot };
 }
 
 // Whether a character is in the writing systems of the read: a letter from
@@ -1375,16 +1414,19 @@ function nextInScript(memory: GameMemory, read: string) {
     // of an older, longer one ("rude?#8c> handmade soba…" in Aokana), so the
     // line is cut where it best matches the read, and must match all of it.
     const ended = codec instanceof AlphabetCodec;
-    let raw = codec.decode(bytes, at, end).split('\0')[0];
-    if (!ended) {
-      raw = raw.slice(0, endFor(raw, read));
+    const whole = codec.decode(bytes, at, end).split('\0')[0];
+    let raw = ended ? whole : whole.slice(0, endFor(whole, read));
+    // OCR's read of the line, junk read after it left out.
+    const ofLine = withoutJunkAfter(polish(raw, read), read);
+    if (!ended && ofLine !== read) {
+      raw = whole.slice(0, endFor(whole, ofLine));
     }
     // The last line itself only when it's clearly the same line (a new line
     // can be much like the last: "Is that true?" after "Is that so?").
     const matches =
       i === 0
-        ? alike(polish(raw, read), read) >= SAME_LINE
-        : isNextLine(polish(raw, read), read, ended);
+        ? alike(polish(raw, read), ofLine) >= SAME_LINE
+        : isNextLine(polish(raw, read), ofLine, ended);
     if (matches) {
       memory.lastLine = { codec, address: last.address + at };
       // OCR's read of it (even just its start) can teach a game's own
@@ -1403,7 +1445,7 @@ function nextInScript(memory: GameMemory, read: string) {
       }
       const line = polish(raw, read);
       // When OCR read only the start, the end is as memory has it.
-      return withQuotes(line, read, alike(line, read) >= MATCH);
+      return withQuotes(line, ofLine, alike(line, ofLine) >= MATCH);
     }
     at = end;
   }
