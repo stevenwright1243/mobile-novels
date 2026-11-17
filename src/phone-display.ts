@@ -16,6 +16,14 @@
  * the display while paused, so the portrait would stay out of sight on it.
  * The picker's PC / Phone switch (`setOnPhone`, saved in settings.ts) keeps
  * it on the PC instead.
+ *
+ * While the portrait is on it, the phone's display's own taskbar is kept
+ * hidden: swiping up to leave Artemis reaches the PC as a touch swipe up from
+ * the display's bottom edge, which would show it. (Windows' per-window block
+ * on edge swipes, `blockEdgeSwipesWhenFullScreen`, only works for the active
+ * window, which the portrait never is.) That taskbar goes with the display,
+ * so if the app stops without showing it again, the next session's display
+ * still has one. Same fix as Hermit Purple's, tried there on the phone.
  */
 
 import {
@@ -24,19 +32,42 @@ import {
   type Display,
   type Rectangle,
 } from 'electron';
-import { displayAdapterAt } from './win32';
+import { displayAdapterAt, hideTaskbarAt, showTaskbars } from './win32';
 
 const VIRTUAL_DISPLAY_ADAPTER = /SudoMaker|SudoVDA/i;
 
-export const isPhoneDisplay = (display: Display) => {
+// The middle of a display in real pixels, for asking Windows about it.
+// Electron's positions are scaled for each display's scaling; Windows wants
+// real pixels. The middle of the display is safely inside it.
+const realMiddleOf = (display: Display) => {
   const { x, y, width, height } = display.bounds;
-  // Electron's positions are scaled for each display's scaling; Windows
-  // wants real pixels. The middle of the display is safely inside it.
-  const middle = screen.dipToScreenPoint({
-    x: x + width / 2,
-    y: y + height / 2,
-  });
-  return VIRTUAL_DISPLAY_ADAPTER.test(displayAdapterAt(middle) ?? '');
+  return screen.dipToScreenPoint({ x: x + width / 2, y: y + height / 2 });
+};
+
+export const isPhoneDisplay = (display: Display) =>
+  VIRTUAL_DISPLAY_ADAPTER.test(displayAdapterAt(realMiddleOf(display)) ?? '');
+
+// How often to hide the phone's display's taskbar again, in ms: Windows adds
+// it a moment after the display appears, and shows it again on a swipe up.
+const TASKBAR_CHECK = 250;
+
+// Keeps the taskbar on one display hidden until `stop()`, then shows it.
+const keepTaskbarHidden = (display: Display) => {
+  const middle = realMiddleOf(display);
+  const hidden = new Set<number>();
+  const hide = () => {
+    for (const hwnd of hideTaskbarAt(middle)) {
+      hidden.add(hwnd);
+    }
+  };
+  hide();
+  const timer = setInterval(hide, TASKBAR_CHECK);
+  return {
+    stop: () => {
+      clearInterval(timer);
+      showTaskbars(hidden);
+    },
+  };
 };
 
 // The phone's display, if one is connected.
@@ -93,6 +124,9 @@ export function followPhoneDisplay(
   let placedOn: string | null = null;
   // What `onChange` last heard, so it only hears about changes.
   let reported: string | null = null;
+  // The phone's display's hidden taskbar while the portrait is on it. `?.`
+  // below calls `stop` only if there is one.
+  let taskbar: { stop: () => void } | null = null;
 
   const update = () => {
     const phone = findPhoneDisplay();
@@ -106,12 +140,15 @@ export function followPhoneDisplay(
       if (window.isFullScreen()) {
         window.setFullScreen(false);
       }
+      taskbar?.stop();
+      taskbar = null;
       if (target) {
         if (placedOn === null) {
           pcBounds = window.getNormalBounds();
         }
         window.setBounds(target.workArea);
         window.setFullScreen(true);
+        taskbar = keepTaskbarHidden(target);
       } else {
         // Twice, on purpose: the phone's display and the PC's monitor can
         // have different scaling (100% and 150%, say). Crossing between
@@ -144,6 +181,9 @@ export function followPhoneDisplay(
   screen.on('display-metrics-changed', updateSoon);
   window.on('closed', () => {
     clearTimeout(timer);
+    // Show the phone's display's taskbar again (the app quitting).
+    taskbar?.stop();
+    taskbar = null;
     screen.off('display-added', updateSoon);
     screen.off('display-removed', updateSoon);
     screen.off('display-metrics-changed', updateSoon);

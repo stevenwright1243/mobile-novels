@@ -1360,3 +1360,68 @@ export function placeWindow(
     SWP_NOZORDER | SWP_NOACTIVATE,
   );
 }
+
+// --- Hiding a monitor's taskbar -----------------------------------------------
+// (phone-display.ts: swiping up to leave Artemis would show the phone's
+// display's taskbar.) Copied from Hermit Purple's win32.ts.
+
+// Each monitor but the main one has its own taskbar window, of the class
+// "Shell_SecondaryTrayWnd" (the main one's is "Shell_TrayWnd", never touched
+// here). `FindWindowExW` finds them one after another: each call starts after
+// the one before (0 to start), and gives 0 when there are no more.
+const FindWindowEx = user32.func(
+  'intptr_t __stdcall FindWindowExW(intptr_t hWndParent, intptr_t hWndChildAfter, const char16_t *lpszClass, const char16_t *lpszWindow)',
+);
+const MonitorFromWindow = user32.func(
+  'intptr_t __stdcall MonitorFromWindow(intptr_t hwnd, uint32_t dwFlags)',
+);
+const SW_SHOWNA = 8; // Show, without making it the active window.
+
+// Every non-main monitor's taskbar window.
+function secondaryTaskbars() {
+  const found: number[] = [];
+  for (
+    let hwnd = Number(FindWindowEx(0, 0, 'Shell_SecondaryTrayWnd', null));
+    hwnd !== 0;
+    hwnd = Number(FindWindowEx(0, hwnd, 'Shell_SecondaryTrayWnd', null))
+  ) {
+    found.push(hwnd);
+  }
+  return found;
+}
+
+/**
+ * Hides the taskbar on the (non-main) monitor at a point (in real pixels), if
+ * it's showing, and returns the windows it hid (for `showTaskbars`).
+ */
+export function hideTaskbarAt(point: { x: number; y: number }) {
+  const monitor = MonitorFromPoint(
+    { x: Math.round(point.x), y: Math.round(point.y) },
+    MONITOR_DEFAULTTONULL,
+  );
+  if (!monitor) {
+    return [];
+  }
+  const hidden = secondaryTaskbars().filter(
+    (hwnd) =>
+      MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL) === monitor &&
+      IsWindowVisible(hwnd),
+  );
+  for (const hwnd of hidden) {
+    ShowWindow(hwnd, SW_HIDE);
+  }
+  return hidden;
+}
+
+/**
+ * Shows taskbars hidden by `hideTaskbarAt` again. Only ones that are still
+ * taskbars: once a window is gone (its monitor removed), Windows can give its
+ * handle to another window.
+ */
+export function showTaskbars(hwnds: ReadonlySet<number>) {
+  for (const hwnd of secondaryTaskbars()) {
+    if (hwnds.has(hwnd)) {
+      ShowWindow(hwnd, SW_SHOWNA);
+    }
+  }
+}
