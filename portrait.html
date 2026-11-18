@@ -39,8 +39,9 @@
       <section id="menus-sheet" class="glass" aria-label="Settings">
         <!-- q.Save over q.Load on the left, tapping the game's own quick
              save and quick load buttons (quick-save.ts). On the right, zoom
-             in and out beside a d-pad to move around the game, the zoom
-             level in its middle: tap it for the whole game (zoom-pad.ts). -->
+             in over the drag mode button over zoom out, beside a d-pad to
+             move around the game, the zoom level in its middle: tap it for
+             the whole game (zoom-pad.ts). -->
         <div
           id="zoom-pad"
           role="group"
@@ -65,6 +66,20 @@
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   d="M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M15.5 15.5 20 20M8 10.5h5M10.5 8v5"
+                />
+              </svg>
+            </button>
+            <!-- Drags go to the game (lit) or zoom and move it: the same
+                 as the Dragging on the game switch (drag-mode.ts). -->
+            <button
+              id="drag-mode-button"
+              class="chip"
+              aria-label="Drag on the game"
+              aria-pressed="false"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"
                 />
               </svg>
             </button>

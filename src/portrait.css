@@ -508,9 +508,19 @@ body {
   }
 }
 
+/* Zoom in over the drag mode button over zoom out: three rows, spaced as
+   the d-pad's beside them. */
 .zoom-buttons {
   display: grid;
-  gap: 0.5em;
+  gap: 0.3em;
+}
+
+/* The drag mode button while drags go to the game: the accent colour, like
+   Auto while on. */
+#drag-mode-button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--on-accent) 50%, transparent);
+  background: linear-gradient(var(--accent), var(--accent-deep));
+  color: var(--on-accent);
 }
 
 /* The same height as the zoom buttons beside them, both as wide as the

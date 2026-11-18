@@ -1,11 +1,13 @@
 /**
- * The zoom pad at the top of the Menus sheet: zoom in and out on the left,
+ * The zoom pad at the top of the Menus sheet: zoom in and out on the left
+ * (with the drag mode button between them),
  * a d-pad on the right to move around the zoomed-in game a step per tap
  * (the steps are in game-zoom.ts), and in its middle the zoom level, which
  * goes back to the whole game when tapped. Buttons that would do nothing
  * (zoom out at 1×, a direction at that edge of the game) are disabled.
  */
 
+import { dragMode, onDragModeChanged, setDragMode } from './drag-mode';
 import {
   moveStep,
   onZoomChanged,
@@ -13,6 +15,20 @@ import {
   zoomState,
   zoomStep,
 } from './game-zoom';
+
+// Between zoom in and zoom out, the drag mode button: lit while drags go
+// to the game ('game'), not lit while they zoom and move it ('zoom'). The
+// same setting as Input Settings' Dragging on the game switch, so each
+// shows a change made with the other.
+const dragButton =
+  document.querySelector<HTMLButtonElement>('#drag-mode-button')!;
+dragButton.addEventListener('click', () =>
+  setDragMode(dragMode() === 'game' ? 'zoom' : 'game'),
+);
+const showDragMode = () =>
+  dragButton.setAttribute('aria-pressed', String(dragMode() === 'game'));
+onDragModeChanged(showDragMode);
+showDragMode();
 
 const zoomIn = document.querySelector<HTMLButtonElement>('#zoom-in')!;
 const zoomOut = document.querySelector<HTMLButtonElement>('#zoom-out')!;
