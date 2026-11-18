@@ -6,6 +6,15 @@ This is the project's planning doc. It assumes a **Windows PC** (where most VNs 
 
 **Read this first when picking the project up in a new chat or tool.**
 
+**To look at, from Hermit Purple (2026-11-18), the user's ask:** a way for a session to see the portrait's layout in any state without launching the app. Here that matters more than there, since sessions here mustn't launch the app at all (see Conventions in CLAUDE.md). Hermit Purple's retro found layout states behind a tap (menus, panels) going unseen before commits, and fits worked out by hand. Its answer, to copy and adapt:
+
+- **A stand-in for the preload API** (`src/preview-hermit.ts` there): when the page is opened in a plain browser in development, with no preload, it sets `window.hermit` (here `window.vn`) to answers with sample data, doing nothing on the PC. It's imported first by the page's script; in the app, preload has already set it, so it does nothing.
+- **A state in the address**: `#open=<state>` clicks the page's own buttons inside the page to open a menu or panel (`PREVIEW_STATES` there). Here: the Menus sheet, the history log, the settings panel.
+- **A capture script** (`scripts/preview-shot.mjs` there, `npm run preview-shot -- <out.png> [state] [width]`): Electron as its own main process starts a Vite server with the renderer config on a spare port, loads the page in a hidden offscreen window at the phone's shape, saves a PNG and quits. Pitfall: run the work from `app.whenReady().then(...)`, not a top-level `await` in the ES module, or it hangs, since Electron holds "ready" until the module has run.
+- **The `run-app` skill there** starts with it for anything about layout.
+
+Here the portrait draws the game from a capture, so the stand-in would also need a sample game picture (a still image) for the background zone, and sample text for the reader. Decide with the user whether to build it, and when.
+
 **Done:** milestones 1a–1c, 2, 3a and 3d (see the table in section 3).
 
 - The picker window lists open windows and saved **game profiles**. The portrait window draws the background and text zone live.
