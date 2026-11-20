@@ -13,7 +13,15 @@ import {
   type Rectangle,
 } from 'electron';
 import { isPhoneDisplay } from './phone-display';
-import { moveWindow, windowBounds } from './win32';
+import { widenedClient } from './game-size';
+import {
+  clientSize,
+  isMaximized,
+  isResizable,
+  moveWindow,
+  placeWindow,
+  windowBounds,
+} from './win32';
 
 /** The monitors that can be picked, main display first. */
 export function monitors(): Monitor[] {
@@ -83,8 +91,9 @@ export function moveAppWindows(windows: BrowserWindow[], display: Display) {
   });
 }
 
-/** Moves a game's window onto `display`, centered, if it isn't on it. Its
- * size is left alone: the game decides that. */
+/** Moves a game's window onto `display`, centered, if it isn't on it, and
+ * widens it if it's resizable and narrower than `GAME_WIDTH` of the
+ * monitor (game-size.ts). */
 export function moveGameWindow(hwnd: number, display: Display) {
   const bounds = windowBounds(hwnd);
   if (!bounds) {
@@ -92,6 +101,33 @@ export function moveGameWindow(hwnd: number, display: Display) {
   }
   // Win32 works in real pixels; Electron's positions are scaled per display.
   const area = screen.dipToScreenRect(null, display.workArea);
+  const client = clientSize(hwnd);
+  const widened =
+    client && isResizable(hwnd) && !isMaximized(hwnd)
+      ? widenedClient(
+          client,
+          {
+            width: bounds.width - client.width,
+            height: bounds.height - client.height,
+          },
+          area,
+        )
+      : null;
+  if (client && widened) {
+    const width = bounds.width - client.width + widened.width;
+    const height = bounds.height - client.height + widened.height;
+    const to = {
+      x: area.x + Math.round((area.width - width) / 2),
+      y: area.y + Math.round((area.height - height) / 2),
+      width,
+      height,
+    };
+    // Twice, as in moveAppWindows: moving onto a monitor with different
+    // scaling makes Windows rescale the window after the first move.
+    placeWindow(hwnd, to);
+    placeWindow(hwnd, to);
+    return;
+  }
   const middle = {
     x: bounds.x + bounds.width / 2,
     y: bounds.y + bounds.height / 2,

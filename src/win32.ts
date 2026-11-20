@@ -72,8 +72,16 @@ const GetWindowLongPtr = user32.func(
 const SetWindowLongPtr = user32.func(
   'intptr_t __stdcall SetWindowLongPtrW(intptr_t hWnd, int nIndex, intptr_t dwNewLong)',
 );
+const GWL_STYLE = -16;
 const GWL_EXSTYLE = -20;
+const WS_THICKFRAME = 0x00040000;
 const WS_EX_APPWINDOW = 0x00040000;
+
+/** Whether a window has a border that resizes it (Unity and Ren'Py games
+ * do; fixed-size games and splash screens don't). */
+export function isResizable(hwnd: number) {
+  return (Number(GetWindowLongPtr(hwnd, GWL_STYLE)) & WS_THICKFRAME) !== 0;
+}
 
 // For window properties (Windows' per-window settings, kept in a "property
 // store"). The store is a COM object: a pointer to a table of function
