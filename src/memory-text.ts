@@ -783,6 +783,10 @@ function dropBuffer(memory: GameMemory) {
   }
 }
 
+// Whether a read is mostly undecodable: a string being rewritten.
+const mostlyGarbage = (raw: string) =>
+  (raw.match(/�/g)?.length ?? 0) * 4 > letters(raw).length;
+
 // A copy as the debug log names it.
 const nameOf = (copy: Copy) =>
   `copy 0x${copy.spot.address.toString(16)}${copy.spot.pointer ? ' (pointer)' : ''}`;
@@ -807,11 +811,13 @@ function checkBuffer(memory: GameMemory) {
       continue;
     }
     copy.failedReads = 0;
-    // A cleared buffer, or one being rewritten (undecodable, as a pointer
-    // can be while the game moves its string), isn't a line: between lines
-    // Wonderful Everyday clears one copy and not the other, and taking that
-    // for disagreement dropped a good copy.
-    if (!raw.trim() || raw.includes('�')) {
+    // A cleared buffer, or one being rewritten (mostly undecodable, as a
+    // pointer can be while the game moves its string: "�f�X�e�Xt"), isn't
+    // a line: between lines Wonderful Everyday clears one copy and not the
+    // other, and taking that for disagreement dropped a good copy. A line
+    // with the odd undecodable mark is still one (that game's text is
+    // Shift-JIS, so its dashes don't read as UTF-8).
+    if (!raw.trim() || mostlyGarbage(raw)) {
       continue;
     }
     if (raw === copy.raw) {
