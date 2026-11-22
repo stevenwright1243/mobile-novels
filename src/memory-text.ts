@@ -74,7 +74,9 @@ const OCR_CATCH_UP = 3000;
 const MIN_OCR_ONLY_LETTERS = 8;
 // How often the buffer is checked once found, in milliseconds. A change
 // shows once two checks in a row agree, so a half-written line never does.
-const POLL_EVERY = 150;
+// Each check reads 1 KB per copy, so often is cheap; at 150 ms, clicking
+// fast through Wonderful Everyday skipped lines shown for under 0.3 s.
+const POLL_EVERY = 50;
 // The most text read from a spot, in characters.
 const MAX_LINE = 1024;
 // How alike two reads must be to count as the same line read again.
@@ -781,6 +783,10 @@ function dropBuffer(memory: GameMemory) {
   }
 }
 
+// A copy as the debug log names it.
+const nameOf = (copy: Copy) =>
+  `copy 0x${copy.spot.address.toString(16)}${copy.spot.pointer ? ' (pointer)' : ''}`;
+
 // Looks for a new line in the copies, and passes it on once they agree on
 // it. A copy changes once two checks in a row see the same new text. When
 // only some change, the others get `FOLLOW_WAIT` to follow, and then the
@@ -793,6 +799,7 @@ function checkBuffer(memory: GameMemory) {
     return;
   }
   const now = performance.now();
+  const abandoned: { copy: Copy; text: string }[] = [];
   for (const copy of buffer.copies) {
     const raw = textAt(memory, copy.spot);
     if (raw === null) {
@@ -800,17 +807,31 @@ function checkBuffer(memory: GameMemory) {
       continue;
     }
     copy.failedReads = 0;
+    // A cleared buffer, or one being rewritten (undecodable, as a pointer
+    // can be while the game moves its string), isn't a line: between lines
+    // Wonderful Everyday clears one copy and not the other, and taking that
+    // for disagreement dropped a good copy.
+    if (!raw.trim() || raw.includes('�')) {
+      continue;
+    }
     if (raw === copy.raw) {
       copy.pending = null;
       copy.steady = false;
     } else if (raw === copy.pending) {
       copy.steady = true;
     } else {
+      // A copy settled on a line that's moving on before the line showed
+      // (the others were still catching up): it's shown now, not lost.
+      if (copy.steady) {
+        abandoned.push({ copy, text: copy.pending! });
+      }
       copy.pending = raw;
       copy.seenAt = now;
       copy.steady = false;
+      log(`${nameOf(copy)} now holds "${raw.slice(0, 40)}"`);
     }
   }
+  showAbandoned(memory, buffer, abandoned, now);
   buffer.copies = buffer.copies.filter(
     (copy) => copy.failedReads < MAX_FAILED_READS,
   );
@@ -859,7 +880,10 @@ function checkBuffer(memory: GameMemory) {
   const kept = best?.copies ?? [];
   const dropped = buffer.copies.length - kept.length;
   if (dropped > 0) {
-    log(`dropped ${dropped} of ${buffer.copies.length} copies`);
+    const gone = buffer.copies.filter((copy) => !kept.includes(copy));
+    log(
+      `dropped ${dropped} of ${buffer.copies.length} copies: ${gone.map(nameOf).join(', ')}`,
+    );
   }
   buffer.copies = kept;
   if (!best) {
@@ -872,31 +896,87 @@ function checkBuffer(memory: GameMemory) {
     copy.pending = null;
     copy.steady = false;
   }
-  if (!buffer.end && best.mark) {
-    buffer.end = best.mark;
-    log(`lines end with "${best.mark}"`);
+  showNewLine(memory, buffer, best, kept.length, now);
+}
+
+// Shows the line the copies changed to (`found`, from `newLine`), unless
+// it's empty or the line already shown.
+function showNewLine(
+  memory: GameMemory,
+  buffer: LineBuffer,
+  found: { piece: string; ended: boolean; mark: string },
+  agreeing: number,
+  now: number,
+) {
+  if (!buffer.end && found.mark) {
+    buffer.end = found.mark;
+    log(`lines end with "${found.mark}"`);
   }
-  const line = tidy(best.piece, buffer.end);
+  const line = tidy(found.piece, buffer.end);
   if (!line || line === buffer.line) {
     return;
   }
   // Writing systems only the more trusted lines teach: ones two copies
   // agree on.
-  if (kept.length > 1) {
+  if (agreeing > 1) {
     for (const system of writingSystems(line)) {
       buffer.systems.add(system);
     }
   }
   buffer.line = line;
   buffer.changedAt = now;
-  buffer.inMemory = best.piece;
+  buffer.inMemory = found.piece;
   memory.misses = 0;
-  if (best.ended) {
+  if (found.ended) {
     log(`new line: "${line}"`);
     showLine(memory, buffer);
   } else {
-    void showWhole(memory, buffer, best.piece);
+    void showWhole(memory, buffer, found.piece);
   }
+}
+
+// Lines copies settled on and then moved on from before they showed: while
+// the copies disagree (one reads garbage while the game moves its string),
+// `checkBuffer` waits up to `FOLLOW_WAIT` for the rest, and a quick reader
+// can click to the next line in that time. Wonderful Everyday (BGI) lost 5
+// of 49 lines that way, clicking fast. The line most copies settled on
+// shows, if it's in the game's writing systems; those copies then hold it,
+// so the next line is told apart from it.
+function showAbandoned(
+  memory: GameMemory,
+  buffer: LineBuffer,
+  abandoned: { copy: Copy; text: string }[],
+  now: number,
+) {
+  const groups = new Map<
+    string,
+    { found: { piece: string; ended: boolean; mark: string }; copies: Copy[] }
+  >();
+  for (const { copy, text } of abandoned) {
+    const found = copy.spot.pointer
+      ? { piece: text, ended: true, mark: '' }
+      : newLine(text, copy.raw, buffer.end);
+    const key = letters(found.piece).slice(0, 24);
+    if (!key) {
+      continue;
+    }
+    const group = groups.get(key) ?? { found, copies: [] };
+    group.copies.push(copy);
+    groups.set(key, group);
+  }
+  const best = [...groups.values()]
+    .filter(({ found }) => familiar(buffer, tidy(found.piece, buffer.end)))
+    .sort((a, b) => b.copies.length - a.copies.length)[0];
+  if (!best) {
+    return;
+  }
+  for (const { copy, text } of abandoned) {
+    if (best.copies.includes(copy)) {
+      copy.raw = text;
+    }
+  }
+  log('showing a line the copies moved on from');
+  showNewLine(memory, buffer, best.found, best.copies.length, now);
 }
 
 // --- Telling the game's text from other text ---------------------------------
