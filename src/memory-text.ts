@@ -89,6 +89,9 @@ const MAX_SEARCHES = 6;
 // UTF-8 text: Steins;Gate). Each reads all of it, 0.15 to 1 s in the
 // background, and 5 s in Steins;Gate's 839 MB.
 const MAX_EMPTY_SEARCHES = 5;
+// Searches for the buffer while each line is found as the next in the
+// script (engines that write no buffer never end such a search well).
+const MAX_HUNTS = 8;
 // OCR reads in a row with more of the line than the followed copies hold,
 // before they're dropped for good this run (see `lineForRead`).
 const MAX_WRONG_FOLLOWS = 2;
@@ -234,6 +237,9 @@ interface GameMemory {
   pointerCandidates: Spot[];
   findingPointers: boolean;
   pointerSearches: number;
+  // Searches for a line already found as the next in the script
+  // (`huntBuffer`).
+  hunts: number;
 }
 let game: GameMemory | null = null;
 
@@ -311,6 +317,7 @@ function memoryOf(processId: number) {
       pointerCandidates: [],
       findingPointers: false,
       pointerSearches: 0,
+      hunts: 0,
     };
     setStatus('searching');
   }
@@ -563,6 +570,7 @@ export function lineForRead(processId: number, read: string): string | null {
     setStatus('matching');
     log(`next in the script: "${read}" → "${next}"`);
     lookForPointers(memory, next);
+    huntBuffer(memory, next);
     return next;
   }
   // Checking the last search's candidates happens straight away, so the
@@ -570,6 +578,18 @@ export function lineForRead(processId: number, read: string): string | null {
   void search(memory, read);
   const found = memory.buffer as LineBuffer | null;
   return found ? found.line : read;
+}
+
+// A line found as the next in the game's script says nothing of where the
+// game writes the line it shows: its copies are searched for all the same, so
+// the next line shows which of them is the buffer. (Once the candidates were
+// only copies in the script, from text read off a picture, each line was the
+// next there and the buffer was never found.)
+function huntBuffer(memory: GameMemory, line: string) {
+  if (!memory.noFollowing && memory.hunts < MAX_HUNTS) {
+    memory.hunts++;
+    void search(memory, line);
+  }
 }
 
 // Whether a line from memory holds all of what OCR read: not clearly
@@ -777,6 +797,7 @@ function dropBuffer(memory: GameMemory) {
     memory.searchedFor = '';
     memory.searches = 0;
     memory.misses = 0;
+    memory.hunts = 0;
     if (game === memory) {
       setStatus('searching');
     }
@@ -1347,6 +1368,7 @@ function catchUp(memory: GameMemory, searched: string) {
   log(`next in the script (after the search): "${read}" → "${next}"`);
   correctionListener(read, next);
   lookForPointers(memory, next);
+  huntBuffer(memory, next);
 }
 
 // The line OCR read as the game has it: of the copies found, the one that
