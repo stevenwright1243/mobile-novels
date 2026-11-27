@@ -24,7 +24,7 @@
  * not a pause: Auto carries on through it, as a line of the usual length.
  */
 
-import { similarity } from './text-similarity';
+import { similarity } from 'vn-memory-text/text-similarity';
 
 // A reading pace: a pause every line takes, plus a time per letter (ms).
 interface Pace {

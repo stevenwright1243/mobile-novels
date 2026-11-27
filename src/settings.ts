@@ -8,7 +8,7 @@ import { app } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DEFAULT_BUTTON_SIZE } from './default-sizes';
-import type { Alphabet } from './text-codec';
+import type { Alphabet } from 'vn-memory-text';
 
 export type Settings = {
   // The picker's PC / Phone switch: whether the portrait goes full screen on

@@ -16,6 +16,17 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # vn-memory-text is the user's private package: npm fetches it over SSH
+      # with a deploy key that can only read that repo (the secret's private
+      # half; its public half is the deploy key on vn-memory-text).
+      - name: Key for the vn-memory-text package
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+        env:
+          KEY: ${{ secrets.VN_MEMORY_TEXT_KEY }}
       # The Electron binary isn't needed to type check, lint or test.
       - run: npm ci
         env:

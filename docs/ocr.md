@@ -1,6 +1,6 @@
 # Reading the text box (OCR)
 
-How the app reads the game's text from the picture: OneOCR, the clean-up rules in `src/ocr.ts`, the readers in `src/text-reader.ts`, and the debug tools and OCR bench used to check them. Exact text read from the game's memory is in [memory-text.md](memory-text.md).
+How the app reads the game's text from the picture: OneOCR, the clean-up rules in `src/ocr.ts`, the readers in `src/text-reader.ts`, and the debug tools and OCR bench used to check them. Exact text read from the game's memory is the vn-memory-text package's (its `docs/memory-text.md`).
 
 ## Debug mode
 

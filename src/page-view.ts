@@ -6,7 +6,7 @@
  */
 
 import { dragToScroll, updateScrollState } from './drag-scroll';
-import { similarity } from './text-similarity';
+import { similarity } from 'vn-memory-text/text-similarity';
 
 const pageText = document.querySelector<HTMLElement>('#page-text')!;
 

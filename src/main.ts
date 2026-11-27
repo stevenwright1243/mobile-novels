@@ -29,7 +29,7 @@ import {
   onMemoryTextStatus,
   setMemoryTextDebug,
   startReading,
-} from './memory-text';
+} from 'vn-memory-text';
 import {
   monitors,
   moveAppWindows,
